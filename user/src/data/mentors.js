@@ -1,0 +1,138 @@
+export const mentorProfiles = [
+  {
+    id: 'alex-johnson',
+    name: 'Alex Johnson',
+    position: 'Senior Software Engineer · Google',
+    avatar: 'https://images.unsplash.com/photo-1504593811423-6dd665756598?auto=format&fit=crop&w=200&q=80',
+    tags: ['React', 'Career'],
+    industry: 'technology',
+    experience: '8-12 years',
+    rating: 4.8,
+    availability: ['Video Call', 'Chat / Email'],
+    bio:
+      'Alex has led cross-functional engineering teams for over a decade, helping launch global-scale products and mentoring developers into technical leads.',
+    expertise: ['React & Frontend Architecture', 'Technical Leadership', 'Career Roadmapping', 'Interview Preparation'],
+    services: [
+      {
+        name: '1:1 Career Guidance',
+        duration: '45 mins',
+        mode: 'Video Call',
+        status: 'Active',
+        description: 'Clarify your growth path and define actionable next steps toward senior roles.',
+      },
+      {
+        name: 'Portfolio Review',
+        duration: '30 mins',
+        mode: 'Video Call',
+        status: 'Active',
+        description: 'Polish your case studies and storytelling for recruiting conversations.',
+      },
+    ],
+    resources: [
+      { name: 'System Design Playbook.pdf', type: 'PDF', link: '#', downloads: 124 },
+      { name: 'Leadership Principles Checklist', type: 'Document', link: '#', downloads: 89 },
+    ],
+  },
+  {
+    id: 'emily-chen',
+    name: 'Emily Chen',
+    position: 'Design Lead · Airbnb',
+    avatar: 'https://images.unsplash.com/photo-1502720705749-3c92562f09c8?auto=format&fit=crop&w=200&q=80',
+    tags: ['UX', 'Portfolio'],
+    industry: 'design',
+    experience: '8-12 years',
+    rating: 4.7,
+    availability: ['Video Call'],
+    bio:
+      'Emily specializes in research-backed product design. She mentors designers on crafting inclusive experiences and building strong portfolios.',
+    expertise: ['UX Research', 'Inclusive Design', 'Portfolio Storytelling', 'Workshop Facilitation'],
+    services: [
+      {
+        name: 'Portfolio Deep Dive',
+        duration: '60 mins',
+        mode: 'Video Call',
+        status: 'Active',
+        description: 'Walk through your portfolio projects and receive actionable feedback.',
+      },
+      {
+        name: 'Design Career Coaching',
+        duration: '45 mins',
+        mode: 'Video Call',
+        status: 'Active',
+        description: 'Map your goals and build a plan to reach senior design roles.',
+      },
+    ],
+    resources: [
+      { name: 'Inclusive Design Checklist', type: 'PDF', link: '#', downloads: 152 },
+      { name: 'Research Interview Guide', type: 'Template', link: '#', downloads: 97 },
+    ],
+  },
+  {
+    id: 'marcus-taylor',
+    name: 'Marcus Taylor',
+    position: 'Product Manager · Stripe',
+    avatar: 'https://images.unsplash.com/photo-1544723795-3fb6469f5b39?auto=format&fit=crop&w=200&q=80',
+    tags: ['Product', 'Leadership'],
+    industry: 'finance',
+    experience: '12+ years',
+    rating: 4.6,
+    availability: ['Video Call', 'In person'],
+    bio:
+      'Marcus helps PMs level up their strategy chops. He mentors on roadmap storytelling, stakeholder alignment, and experimentation frameworks.',
+    expertise: ['Product Strategy', 'Stakeholder Alignment', 'Roadmaps & Prioritization', 'Experimentation'],
+    services: [
+      {
+        name: 'Roadmap Review',
+        duration: '45 mins',
+        mode: 'Video Call',
+        status: 'Active',
+        description: 'Evaluate your roadmap narrative and ensure clear priorities.',
+      },
+      {
+        name: 'Stakeholder Storytelling',
+        duration: '40 mins',
+        mode: 'Video Call',
+        status: 'Active',
+        description: 'Practice compelling updates that keep teams aligned.',
+      },
+    ],
+    resources: [
+      { name: 'Product Experiment Canvas', type: 'Template', link: '#', downloads: 73 },
+      { name: 'Stakeholder Update Outline', type: 'Document', link: '#', downloads: 65 },
+    ],
+  },
+  {
+    id: 'sofia-martinez',
+    name: 'Sofia Martinez',
+    position: 'Cloud Architect · Amazon',
+    avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=200&q=80',
+    tags: ['Cloud', 'DevOps'],
+    industry: 'technology',
+    experience: '8-12 years',
+    rating: 4.9,
+    availability: ['Video Call'],
+    bio:
+      'Sofia guides engineers transitioning into cloud-native roles. She mentors on distributed systems, DevOps tooling, and multi-cloud strategies.',
+    expertise: ['AWS & Multi-cloud', 'DevOps Tooling', 'System Design', 'Career Transitions'],
+    services: [
+      {
+        name: 'System Design Practice',
+        duration: '60 mins',
+        mode: 'Video Call',
+        status: 'Active',
+        description: 'Practice authentic system design interviews with targeted feedback.',
+      },
+      {
+        name: 'DevOps Tooling Audit',
+        duration: '45 mins',
+        mode: 'Video Call',
+        status: 'Active',
+        description: 'Review your pipeline and identify opportunities for automation.',
+      },
+    ],
+    resources: [
+      { name: 'AWS Architecture Patterns.pdf', type: 'PDF', link: '#', downloads: 138 },
+      { name: 'DevOps Automation Checklist', type: 'Document', link: '#', downloads: 92 },
+    ],
+  },
+]
