@@ -6,7 +6,8 @@ import { useDirectoryData } from '../../../hooks/useDirectoryData'
 const roleLabels = {
   students: 'Students',
   alumni: 'Alumni', 
-  faculty: 'Faculty'
+  faculty: 'Faculty',
+  coordinators: 'Coordinators'
 }
 
 const FILTER_OPTIONS = {
@@ -19,6 +20,9 @@ const FILTER_OPTIONS = {
     passoutYears: ['2020', '2021', '2022', '2023', '2024']
   },
   faculty: {
+    departments: ['Computer Science', 'Engineering', 'Business', 'Medicine', 'Arts', 'Science']
+  },
+  coordinators: {
     departments: ['Computer Science', 'Engineering', 'Business', 'Medicine', 'Arts', 'Science']
   }
 }
@@ -212,6 +216,13 @@ const ImprovedDirectory = ({ role }) => {
               {role === 'faculty' && (
                 <div className="text-sm text-slate-500 italic flex items-center">
                   Faculty profiles can be filtered by department only.
+                </div>
+              )}
+
+              {/* Coordinators only has department filter */}
+              {role === 'coordinators' && (
+                <div className="text-sm text-slate-500 italic flex items-center">
+                  Coordinator profiles can be filtered by department only.
                 </div>
               )}
             </div>

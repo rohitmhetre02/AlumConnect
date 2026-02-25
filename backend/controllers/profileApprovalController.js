@@ -1,40 +1,169 @@
-const { getModelByRole } = require('../utils/roleModels')
+const mongoose = require('mongoose')
 const { PROFILE_STATUS, normalizeProfileStatus } = require('../utils/profileStatus')
 const { sendProfileApprovalStatusEmail } = require('../utils/email')
+const { normalizeDepartment } = require('../utils/departments')
+const { REGISTRATION_STATUS } = require('../utils/registrationStatus')
+const Student = require('../models/Student')
+const Alumni = require('../models/Alumni')
+const Faculty = require('../models/Faculty')
+const Coordinator = require('../models/Coordinator')
+const Admin = require('../models/Admin')
+
+const COORDINATOR_APPROVAL_ROLES = ['student', 'alumni', 'faculty']
+const ADMIN_APPROVAL_ROLES = ['faculty', 'coordinator']
+
+const ensureObjectId = (value) => {
+  if (!mongoose.Types.ObjectId.isValid(value)) {
+    throw Object.assign(new Error('Invalid profile id provided.'), { status: 400 })
+  }
+  return new mongoose.Types.ObjectId(String(value))
+}
+
+const getAdminContext = async (adminId) => {
+  const admin = await Admin.findById(adminId).lean()
+  if (!admin) {
+    throw Object.assign(new Error('Admin profile not found.'), { status: 404 })
+  }
+
+  const displayName = [admin.firstName, admin.lastName].filter(Boolean).join(' ').trim() || admin.email || 'Admin'
+  return { admin, displayName }
+}
+
+const getCoordinatorContext = async (coordinatorId) => {
+  const coordinator = await Coordinator.findById(coordinatorId).lean()
+  if (!coordinator) {
+    throw Object.assign(new Error('Coordinator profile not found.'), { status: 404 })
+  }
+
+  const department = normalizeDepartment(coordinator.department)
+  const displayName = [coordinator.firstName, coordinator.lastName].filter(Boolean).join(' ').trim() || coordinator.email || 'Coordinator'
+
+  return { coordinator, department, displayName }
+}
+
+const mapPendingProfile = (doc, role) => {
+  if (!doc) return null
+  const snapshot = doc.toObject ? doc.toObject() : doc
+  return {
+    ...snapshot,
+    id: snapshot._id,
+    role,
+  }
+}
+
+const buildStatsTemplate = (roles) => {
+  const template = {}
+  Object.values(PROFILE_STATUS).forEach((status) => {
+    template[status] = roles.reduce(
+      (acc, role) => ({
+        ...acc,
+        [role]: 0,
+      }),
+      { total: 0 },
+    )
+  })
+  return template
+}
+
+const accumulateStats = (aggregate, template, role) => {
+  aggregate.forEach(({ _id, count }) => {
+    const status = normalizeProfileStatus(_id)
+    if (!template[status]) return
+    template[status][role] = count
+    template[status].total += count
+  })
+}
 
 const getPendingProfiles = async (req, res) => {
   try {
-    const { role } = req.query
-    const pendingProfiles = []
+    const actorRole = String(req.user?.role || '').toLowerCase()
 
-    if (!role || role === 'student') {
-      const Student = require('../models/Student')
-      const students = await Student.find({ 
-        profileApprovalStatus: PROFILE_STATUS.IN_REVIEW 
-      }).select('firstName lastName email department prnNumber admissionYear createdAt')
-      pendingProfiles.push(...students.map(s => ({ ...s.toObject(), role: 'student' })))
+    if (actorRole === 'admin') {
+      await getAdminContext(req.user.id)
+
+      const [faculty, coordinators] = await Promise.all([
+        Faculty.find({ profileApprovalStatus: PROFILE_STATUS.IN_REVIEW })
+          .sort({ createdAt: -1 })
+          .lean(),
+        Coordinator.find({ profileApprovalStatus: PROFILE_STATUS.IN_REVIEW })
+          .sort({ createdAt: -1 })
+          .lean(),
+      ])
+
+      // Also find coordinators without profileApprovalStatus field and treat them as pending
+      const coordinatorsWithoutStatus = await Coordinator.find({ 
+        profileApprovalStatus: { $exists: false } 
+      })
+        .sort({ createdAt: -1 })
+        .lean()
+
+      console.log(`Found ${coordinatorsWithoutStatus.length} coordinators without profileApprovalStatus`)
+
+      // Update those coordinators to have IN_REVIEW status
+      if (coordinatorsWithoutStatus.length > 0) {
+        await Coordinator.updateMany(
+          { profileApprovalStatus: { $exists: false } },
+          { 
+            $set: { 
+              profileApprovalStatus: PROFILE_STATUS.IN_REVIEW,
+              isProfileApproved: false
+            } 
+          }
+        )
+        console.log(`Updated ${coordinatorsWithoutStatus.length} coordinators with IN_REVIEW status`)
+      }
+
+      const combined = [
+        ...faculty.map((doc) => mapPendingProfile(doc, 'faculty')),
+        ...coordinators.map((doc) => mapPendingProfile(doc, 'coordinator')),
+        ...coordinatorsWithoutStatus.map((doc) => mapPendingProfile(doc, 'coordinator')),
+      ]
+
+      return res.json({
+        success: true,
+        data: combined,
+        meta: { reviewerRole: 'admin' },
+      })
     }
 
-    if (!role || role === 'alumni') {
-      const Alumni = require('../models/Alumni')
-      const alumni = await Alumni.find({ 
-        profileApprovalStatus: PROFILE_STATUS.IN_REVIEW 
-      }).select('firstName lastName email department prnNumber passoutYear createdAt')
-      pendingProfiles.push(...alumni.map(a => ({ ...a.toObject(), role: 'alumni' })))
+    if (actorRole === 'coordinator') {
+      const { department } = await getCoordinatorContext(req.user.id)
+
+      const [students, alumni, faculty] = await Promise.all([
+        Student.find({
+          department,
+          profileApprovalStatus: PROFILE_STATUS.IN_REVIEW,
+        })
+          .sort({ createdAt: -1 })
+          .lean(),
+        Alumni.find({
+          department,
+          profileApprovalStatus: PROFILE_STATUS.IN_REVIEW,
+        })
+          .sort({ createdAt: -1 })
+          .lean(),
+        Faculty.find({
+          department,
+          profileApprovalStatus: PROFILE_STATUS.IN_REVIEW,
+        })
+          .sort({ createdAt: -1 })
+          .lean(),
+      ])
+
+      const combined = [
+        ...students.map((doc) => mapPendingProfile(doc, 'student')),
+        ...alumni.map((doc) => mapPendingProfile(doc, 'alumni')),
+        ...faculty.map((doc) => mapPendingProfile(doc, 'faculty')),
+      ]
+
+      return res.json({
+        success: true,
+        data: combined,
+        meta: { reviewerRole: 'coordinator', department },
+      })
     }
 
-    if (!role || role === 'faculty') {
-      const Faculty = require('../models/Faculty')
-      const faculty = await Faculty.find({ 
-        profileApprovalStatus: PROFILE_STATUS.IN_REVIEW 
-      }).select('firstName lastName email department title createdAt')
-      pendingProfiles.push(...faculty.map(f => ({ ...f.toObject(), role: 'faculty' })))
-    }
-
-    res.json({
-      success: true,
-      data: pendingProfiles.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-    })
+    return res.status(403).json({ success: false, message: 'You do not have permission to view profile approvals.' })
   } catch (error) {
     console.error('Error fetching pending profiles:', error)
     res.status(500).json({
@@ -44,47 +173,183 @@ const getPendingProfiles = async (req, res) => {
   }
 }
 
+const getApprovedProfiles = async (req, res) => {
+  try {
+    const actorRole = String(req.user?.role || '').toLowerCase()
+
+    if (actorRole === 'admin') {
+      await getAdminContext(req.user.id)
+
+      const [faculty, coordinators] = await Promise.all([
+        Faculty.find({ profileApprovalStatus: PROFILE_STATUS.APPROVED })
+          .sort({ createdAt: -1 })
+          .lean(),
+        Coordinator.find({ profileApprovalStatus: PROFILE_STATUS.APPROVED })
+          .sort({ createdAt: -1 })
+          .lean(),
+      ])
+
+      const combined = [
+        ...faculty.map((doc) => mapPendingProfile(doc, 'faculty')),
+        ...coordinators.map((doc) => mapPendingProfile(doc, 'coordinator')),
+      ]
+
+      return res.json({
+        success: true,
+        data: combined,
+        meta: { reviewerRole: 'admin' },
+      })
+    }
+
+    if (actorRole === 'coordinator') {
+      const { department } = await getCoordinatorContext(req.user.id)
+
+      const [students, alumni, faculty] = await Promise.all([
+        Student.find({
+          department,
+          profileApprovalStatus: PROFILE_STATUS.APPROVED,
+        })
+          .sort({ createdAt: -1 })
+          .lean(),
+        Alumni.find({
+          department,
+          profileApprovalStatus: PROFILE_STATUS.APPROVED,
+        })
+          .sort({ createdAt: -1 })
+          .lean(),
+        Faculty.find({
+          department,
+          profileApprovalStatus: PROFILE_STATUS.APPROVED,
+        })
+          .sort({ createdAt: -1 })
+          .lean(),
+      ])
+
+      const combined = [
+        ...students.map((doc) => mapPendingProfile(doc, 'student')),
+        ...alumni.map((doc) => mapPendingProfile(doc, 'alumni')),
+        ...faculty.map((doc) => mapPendingProfile(doc, 'faculty')),
+      ]
+
+      return res.json({
+        success: true,
+        data: combined,
+        meta: { reviewerRole: 'coordinator', department },
+      })
+    }
+
+    return res.status(403).json({ success: false, message: 'You do not have permission to view profile approvals.' })
+  } catch (error) {
+    console.error('Error fetching approved profiles:', error)
+    res.status(500).json({
+      success: false,
+      message: 'Unable to fetch approved profiles'
+    })
+  }
+}
+
 const approveProfile = async (req, res) => {
   try {
     const { id, role } = req.body
-    const { adminName } = req.user
-
     if (!id || !role) {
-      return res.status(400).json({
-        success: false,
-        message: 'Profile ID and role are required'
-      })
+      return res.status(400).json({ success: false, message: 'Profile ID and role are required' })
     }
 
-    const Model = getModelByRole(role)
-    if (!Model) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid role'
-      })
-    }
+    const actorRole = String(req.user?.role || '').toLowerCase()
+    const normalizedRole = String(role).trim().toLowerCase()
+    const profileId = ensureObjectId(id)
 
-    const updatedProfile = await Model.findByIdAndUpdate(
-      id,
-      {
+    let update
+    let updatedProfile
+    let displayName
+
+    if (actorRole === 'admin') {
+      if (!ADMIN_APPROVAL_ROLES.includes(normalizedRole)) {
+        return res.status(403).json({ success: false, message: 'Admins may only approve faculty or coordinator profiles.' })
+      }
+
+      const Model = normalizedRole === 'faculty' ? Faculty : Coordinator
+      ;({ displayName } = await getAdminContext(req.user.id))
+
+      const now = new Date()
+      update = {
         isProfileApproved: true,
         profileApprovalStatus: PROFILE_STATUS.APPROVED,
-        profileReviewedAt: new Date(),
-        profileReviewedBy: adminName,
+        profileReviewedAt: now,
+        profileReviewedBy: displayName,
         profileRejectionReason: undefined,
-      },
-      { new: true }
-    )
+        registrationStatus: REGISTRATION_STATUS.APPROVED,
+        registrationReviewedAt: now,
+        registrationReviewedBy: displayName,
+        registrationDecisionByRole: 'admin',
+        registrationRejectionReason: '',
+      }
+
+      updatedProfile = await Model.findOneAndUpdate(
+        { _id: profileId, profileApprovalStatus: PROFILE_STATUS.IN_REVIEW },
+        update,
+        { new: true },
+      )
+    } else if (actorRole === 'coordinator') {
+      if (!COORDINATOR_APPROVAL_ROLES.includes(normalizedRole)) {
+        return res.status(403).json({ success: false, message: 'Coordinators may only approve student, alumni, or faculty profiles.' })
+      }
+
+      const { coordinator, department, displayName: coordinatorName } = await getCoordinatorContext(req.user.id)
+      let Model
+      if (normalizedRole === 'student') {
+        Model = Student
+      } else if (normalizedRole === 'alumni') {
+        Model = Alumni
+      } else if (normalizedRole === 'faculty') {
+        Model = Faculty
+      }
+
+      const now = new Date()
+      update = {
+        isProfileApproved: true,
+        profileApprovalStatus: PROFILE_STATUS.APPROVED,
+        profileReviewedAt: now,
+        profileReviewedBy: coordinatorName,
+        profileRejectionReason: undefined,
+        registrationStatus: REGISTRATION_STATUS.APPROVED,
+        registrationReviewedAt: now,
+        registrationReviewedBy: coordinatorName,
+        registrationDecisionByRole: 'coordinator',
+        registrationRejectionReason: '',
+      }
+
+      // Add departmentCoordinator only for student and alumni
+      if (normalizedRole === 'student' || normalizedRole === 'alumni') {
+        update.departmentCoordinator = coordinator._id
+      }
+
+      const updateQuery = {
+        _id: profileId,
+        profileApprovalStatus: PROFILE_STATUS.IN_REVIEW,
+      }
+      
+      // Add department filter for student, alumni, and faculty
+      if (normalizedRole === 'student' || normalizedRole === 'alumni' || normalizedRole === 'faculty') {
+        updateQuery.department = department
+      }
+
+      updatedProfile = await Model.findOneAndUpdate(
+        updateQuery,
+        update,
+        { new: true },
+      )
+      displayName = coordinatorName
+    } else {
+      return res.status(403).json({ success: false, message: 'You do not have permission to approve profiles.' })
+    }
 
     if (!updatedProfile) {
-      return res.status(404).json({
-        success: false,
-        message: 'Profile not found'
-      })
+      return res.status(404).json({ success: false, message: 'Profile not found or already reviewed.' })
     }
 
     if (updatedProfile.email) {
-      const displayName = [updatedProfile.firstName, updatedProfile.lastName]
+      const recipientName = [updatedProfile.firstName, updatedProfile.lastName]
         .filter(Boolean)
         .join(' ')
         .trim() || updatedProfile.name || updatedProfile.email
@@ -92,9 +357,9 @@ const approveProfile = async (req, res) => {
       try {
         await sendProfileApprovalStatusEmail({
           to: updatedProfile.email,
-          name: displayName,
+          name: recipientName,
           status: 'approved',
-          role,
+          role: normalizedRole,
         })
       } catch (emailError) {
         console.warn('Failed to send approval email:', emailError)
@@ -104,7 +369,8 @@ const approveProfile = async (req, res) => {
     res.json({
       success: true,
       message: 'Profile approved successfully',
-      data: updatedProfile
+      data: mapPendingProfile(updatedProfile, normalizedRole),
+      reviewer: displayName,
     })
   } catch (error) {
     console.error('Error approving profile:', error)
@@ -118,44 +384,107 @@ const approveProfile = async (req, res) => {
 const rejectProfile = async (req, res) => {
   try {
     const { id, role, reason } = req.body
-    const { adminName } = req.user
-
     if (!id || !role) {
-      return res.status(400).json({
-        success: false,
-        message: 'Profile ID and role are required'
-      })
+      return res.status(400).json({ success: false, message: 'Profile ID and role are required' })
     }
 
-    const Model = getModelByRole(role)
-    if (!Model) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid role'
-      })
+    const actorRole = String(req.user?.role || '').toLowerCase()
+    const normalizedRole = String(role).trim().toLowerCase()
+    const profileId = ensureObjectId(id)
+    const rejectionReason = reason?.trim()
+
+    if (!rejectionReason) {
+      return res.status(400).json({ success: false, message: 'Rejection reason is required.' })
     }
 
-    const updatedProfile = await Model.findByIdAndUpdate(
-      id,
-      {
+    let updatedProfile
+    let displayName
+
+    if (actorRole === 'admin') {
+      if (!ADMIN_APPROVAL_ROLES.includes(normalizedRole)) {
+        return res.status(403).json({ success: false, message: 'Admins may only reject faculty or coordinator profiles.' })
+      }
+
+      const Model = normalizedRole === 'faculty' ? Faculty : Coordinator
+      ;({ displayName } = await getAdminContext(req.user.id))
+
+      const now = new Date()
+      updatedProfile = await Model.findOneAndUpdate(
+        { _id: profileId, profileApprovalStatus: PROFILE_STATUS.IN_REVIEW },
+        {
+          isProfileApproved: false,
+          profileApprovalStatus: PROFILE_STATUS.REJECTED,
+          profileReviewedAt: now,
+          profileReviewedBy: displayName,
+          profileRejectionReason: rejectionReason,
+          registrationStatus: REGISTRATION_STATUS.REJECTED,
+          registrationReviewedAt: now,
+          registrationReviewedBy: displayName,
+          registrationDecisionByRole: 'admin',
+          registrationRejectionReason: rejectionReason,
+        },
+        { new: true },
+      )
+    } else if (actorRole === 'coordinator') {
+      if (!COORDINATOR_APPROVAL_ROLES.includes(normalizedRole)) {
+        return res.status(403).json({ success: false, message: 'Coordinators may only reject student, alumni, or faculty profiles.' })
+      }
+
+      const { coordinator, department, displayName: coordinatorName } = await getCoordinatorContext(req.user.id)
+      let Model
+      if (normalizedRole === 'student') {
+        Model = Student
+      } else if (normalizedRole === 'alumni') {
+        Model = Alumni
+      } else if (normalizedRole === 'faculty') {
+        Model = Faculty
+      }
+
+      const now = new Date()
+      const update = {
         isProfileApproved: false,
         profileApprovalStatus: PROFILE_STATUS.REJECTED,
-        profileReviewedAt: new Date(),
-        profileReviewedBy: adminName,
-        profileRejectionReason: reason || 'Profile does not meet requirements',
-      },
-      { new: true }
-    )
+        profileReviewedAt: now,
+        profileReviewedBy: coordinatorName,
+        profileRejectionReason: rejectionReason,
+        registrationStatus: REGISTRATION_STATUS.REJECTED,
+        registrationReviewedAt: now,
+        registrationReviewedBy: coordinatorName,
+        registrationDecisionByRole: 'coordinator',
+        registrationRejectionReason: rejectionReason,
+      }
+
+      // Add departmentCoordinator only for student and alumni
+      if (normalizedRole === 'student' || normalizedRole === 'alumni') {
+        update.departmentCoordinator = null
+      }
+
+      const updateQuery = {
+        _id: profileId,
+        profileApprovalStatus: PROFILE_STATUS.IN_REVIEW,
+      }
+      
+      // Add department filter for student, alumni, and faculty
+      if (normalizedRole === 'student' || normalizedRole === 'alumni' || normalizedRole === 'faculty') {
+        updateQuery.department = department
+      }
+
+      updatedProfile = await Model.findOneAndUpdate(
+        updateQuery,
+        update,
+        { new: true },
+      )
+      displayName = coordinatorName
+    } else {
+      return res.status(403).json({ success: false, message: 'You do not have permission to reject profiles.' })
+    }
 
     if (!updatedProfile) {
-      return res.status(404).json({
-        success: false,
-        message: 'Profile not found'
-      })
+      return res.status(404).json({ success: false, message: 'Profile not found or already reviewed.' })
     }
 
     if (updatedProfile.email) {
-      const displayName = [updatedProfile.firstName, updatedProfile.lastName]
+      const recipientName = [updatedProfile.firstName, updatedProfile.lastName]
         .filter(Boolean)
         .join(' ')
         .trim() || updatedProfile.name || updatedProfile.email
@@ -163,10 +492,10 @@ const rejectProfile = async (req, res) => {
       try {
         await sendProfileApprovalStatusEmail({
           to: updatedProfile.email,
-          name: displayName,
+          name: recipientName,
           status: 'rejected',
-          role,
-          reason: updatedProfile.profileRejectionReason,
+          role: normalizedRole,
+          reason: rejectionReason,
         })
       } catch (emailError) {
         console.warn('Failed to send rejection email:', emailError)
@@ -176,7 +505,8 @@ const rejectProfile = async (req, res) => {
     res.json({
       success: true,
       message: 'Profile rejected successfully',
-      data: updatedProfile
+      data: mapPendingProfile(updatedProfile, normalizedRole),
+      reviewer: displayName,
     })
   } catch (error) {
     console.error('Error rejecting profile:', error)
@@ -189,43 +519,74 @@ const rejectProfile = async (req, res) => {
 
 const getProfileApprovalStats = async (req, res) => {
   try {
-    const stats = {
-      [PROFILE_STATUS.IN_REVIEW]: { student: 0, alumni: 0, faculty: 0, total: 0 },
-      [PROFILE_STATUS.APPROVED]: { student: 0, alumni: 0, faculty: 0, total: 0 },
-      [PROFILE_STATUS.REJECTED]: { student: 0, alumni: 0, faculty: 0, total: 0 },
-    }
+    const actorRole = String(req.user?.role || '').toLowerCase()
 
-    const Student = require('../models/Student')
-    const Alumni = require('../models/Alumni')
-    const Faculty = require('../models/Faculty')
+    if (actorRole === 'admin') {
+      await getAdminContext(req.user.id)
+      const roles = ADMIN_APPROVAL_ROLES
+      const statsTemplate = buildStatsTemplate(roles)
 
-    const studentStats = await Student.aggregate([
-      { $group: { _id: '$profileApprovalStatus', count: { $sum: 1 } } }
-    ])
-    const alumniStats = await Alumni.aggregate([
-      { $group: { _id: '$profileApprovalStatus', count: { $sum: 1 } } }
-    ])
-    const facultyStats = await Faculty.aggregate([
-      { $group: { _id: '$profileApprovalStatus', count: { $sum: 1 } } }
-    ])
-
-    const processStats = (roleStats, role) => {
-      roleStats.forEach(stat => {
-        const status = normalizeProfileStatus(stat._id)
-        if (!stats[status]) return
-        stats[status][role] = stat.count
-        stats[status].total += stat.count
+      // First, update coordinators without profileApprovalStatus
+      const coordinatorsWithoutStatus = await Coordinator.find({ 
+        profileApprovalStatus: { $exists: false } 
       })
+      
+      if (coordinatorsWithoutStatus.length > 0) {
+        await Coordinator.updateMany(
+          { profileApprovalStatus: { $exists: false } },
+          { 
+            $set: { 
+              profileApprovalStatus: PROFILE_STATUS.IN_REVIEW,
+              isProfileApproved: false
+            } 
+          }
+        )
+        console.log(`Updated ${coordinatorsWithoutStatus.length} coordinators with IN_REVIEW status in stats endpoint`)
+      }
+
+      const [facultyStats, coordinatorStats] = await Promise.all([
+        Faculty.aggregate([
+          { $group: { _id: '$profileApprovalStatus', count: { $sum: 1 } } },
+        ]),
+        Coordinator.aggregate([
+          { $group: { _id: '$profileApprovalStatus', count: { $sum: 1 } } },
+        ]),
+      ])
+
+      accumulateStats(facultyStats, statsTemplate, 'faculty')
+      accumulateStats(coordinatorStats, statsTemplate, 'coordinator')
+
+      return res.json({ success: true, data: statsTemplate })
     }
 
-    processStats(studentStats, 'student')
-    processStats(alumniStats, 'alumni')
-    processStats(facultyStats, 'faculty')
+    if (actorRole === 'coordinator') {
+      const { department } = await getCoordinatorContext(req.user.id)
+      const roles = COORDINATOR_APPROVAL_ROLES
+      const statsTemplate = buildStatsTemplate(roles)
 
-    res.json({
-      success: true,
-      data: stats
-    })
+      const [studentStats, alumniStats, facultyStats] = await Promise.all([
+        Student.aggregate([
+          { $match: { department } },
+          { $group: { _id: '$profileApprovalStatus', count: { $sum: 1 } } },
+        ]),
+        Alumni.aggregate([
+          { $match: { department } },
+          { $group: { _id: '$profileApprovalStatus', count: { $sum: 1 } } },
+        ]),
+        Faculty.aggregate([
+          { $match: { department } },
+          { $group: { _id: '$profileApprovalStatus', count: { $sum: 1 } } },
+        ]),
+      ])
+
+      accumulateStats(studentStats, statsTemplate, 'student')
+      accumulateStats(alumniStats, statsTemplate, 'alumni')
+      accumulateStats(facultyStats, statsTemplate, 'faculty')
+
+      return res.json({ success: true, data: statsTemplate })
+    }
+
+    return res.status(403).json({ success: false, message: 'You do not have permission to view profile approval statistics.' })
   } catch (error) {
     console.error('Error fetching approval stats:', error)
     res.status(500).json({
@@ -237,6 +598,7 @@ const getProfileApprovalStats = async (req, res) => {
 
 module.exports = {
   getPendingProfiles,
+  getApprovedProfiles,
   approveProfile,
   rejectProfile,
   getProfileApprovalStats

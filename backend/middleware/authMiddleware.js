@@ -1,5 +1,14 @@
 const jwt = require('jsonwebtoken')
 
+const normalizeId = (value) => {
+  if (!value) return ''
+  if (typeof value === 'string') return value
+  if (typeof value.toHexString === 'function') return value.toHexString()
+  if (typeof value.toString === 'function') return value.toString()
+  if (typeof value === 'object' && value.$oid) return value.$oid
+  return String(value)
+}
+
 const authMiddleware = (req, res, next) => {
   const authHeader = req.headers.authorization
 
@@ -16,10 +25,9 @@ const authMiddleware = (req, res, next) => {
     }
 
     const decoded = jwt.verify(token, secret)
-    req.user = { id: decoded.id, role: decoded.role }
+    req.user = { id: normalizeId(decoded.id), role: decoded.role }
     return next()
   } catch (error) {
-    console.error('JWT verification failed:', error)
     return res.status(401).json({ message: 'Invalid or expired token.' })
   }
 }

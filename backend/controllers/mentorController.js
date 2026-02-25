@@ -66,8 +66,8 @@ const mapResource = (resourceDoc = {}) => {
 
 const formatMentor = (applicationDoc, alumnusDoc, extras = {}) => {
   if (!applicationDoc) return null
-  const doc = applicationDoc.toObject()
-  const owner = alumnusDoc ? alumnusDoc.toObject() : doc.user
+  const doc = applicationDoc.toObject ? applicationDoc.toObject() : applicationDoc
+  const owner = alumnusDoc ? (alumnusDoc.toObject ? alumnusDoc.toObject() : alumnusDoc) : doc.user
 
   const fullName = doc.fullName || owner?.fullName || `${owner?.firstName ?? ''} ${owner?.lastName ?? ''}`.trim()
   const slug = buildSlug(fullName) || buildSlug(owner?.email) || doc._id?.toString() || ''
@@ -95,14 +95,15 @@ const formatMentor = (applicationDoc, alumnusDoc, extras = {}) => {
     status: doc.status,
     fullName,
     email: doc.email || owner?.email || '',
-    contactNumber: doc.contactNumber || owner?.phone || '',
+    phoneNumber: doc.phoneNumber || owner?.phone || '', // Updated field name
     graduationYear: doc.graduationYear || '',
+    degree: doc.degree || '', // Added degree field
     department: doc.department || '',
-    location: doc.location || owner?.location || '',
+    currentLocation: doc.currentLocation || owner?.location || '', // Updated field name
     linkedin: doc.linkedin || getSocialValue(owner?.socials, 'linkedin'),
     portfolio: doc.portfolio || '',
-    jobRole: doc.jobRole || owner?.title || '',
-    companyName: doc.companyName || owner?.companyName || '',
+    currentJobTitle: doc.currentJobTitle || owner?.title || '', // Updated field name
+    company: doc.company || owner?.companyName || '', // Updated field name
     industry: doc.industry || '',
     experience: doc.experience || '',
     expertise,
@@ -110,14 +111,20 @@ const formatMentor = (applicationDoc, alumnusDoc, extras = {}) => {
     categories,
     availability: doc.availability || '',
     modes,
-    preferredStudents: doc.preferredStudents || '',
-    maxStudents: doc.maxStudents || '',
+    mentorshipMode: doc.mentorshipMode || '', // Added new field
+    availableDays: doc.availableDays || '', // Added new field
+    timeCommitment: doc.timeCommitment || '', // Added new field
+    mentorshipPreference: doc.preferredStudents || '', // Updated field name
+    maxMentees: doc.maxMentees || '', // Updated field name
+    maxStudents: doc.maxStudents || '', // Keep for backward compatibility
     weeklyHours: doc.weeklyHours || '',
+    preferredStudents: doc.preferredStudents || '', // Keep for backward compatibility
     bio: doc.bio || owner?.about || '',
     motivation: doc.motivation || '',
     avatar: owner?.avatar || '',
+    profilePhoto: doc.profilePhoto || owner?.avatar || '', // Added profile photo field
     tags: categories,
-    position: doc.jobRole || owner?.title || '',
+    position: doc.currentJobTitle || owner?.title || '', // Updated field name
     rating: doc.rating ?? null,
     createdAt: doc.createdAt ?? null,
     updatedAt: doc.updatedAt ?? null,
@@ -132,8 +139,11 @@ const escapeRegex = (value = '') => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 
 const submitMentorApplication = async (req, res) => {
   try {
+    console.log('submitMentorApplication called')
     const userId = req.user?.id
     const role = req.user?.role
+
+    console.log('User ID:', userId, 'Role:', role)
 
     if (!userId) {
       return res.status(401).json({ message: 'Authentication required.' })
@@ -143,90 +153,93 @@ const submitMentorApplication = async (req, res) => {
       return res.status(403).json({ message: 'Only alumni can apply to be mentors.' })
     }
 
+    // Handle both JSON and multipart form data
+    let formData
+    console.log('Content-Type:', req.headers['content-type'])
+    
+    if (req.headers['content-type']?.includes('multipart/form-data')) {
+      // For multipart form data (file upload)
+      formData = {}
+      Object.keys(req.body).forEach(key => {
+        if (key === 'mentorshipAreas' || key === 'expertise') {
+          try {
+            formData[key] = JSON.parse(req.body[key] || '[]')
+          } catch (e) {
+            console.log('JSON parse error for', key, ':', e.message)
+            formData[key] = []
+          }
+        } else if (key.startsWith('consent')) {
+          formData[key] = req.body[key] === 'true'
+        } else {
+          formData[key] = req.body[key]
+        }
+      })
+    } else {
+      formData = req.body || {}
+    }
+
+    console.log('Form data:', formData)
+
     const {
       fullName = '',
       email = '',
-      contactNumber = '',
-      linkedin = '',
-      jobRole = '',
-      experience = '',
-      expertise = [],
-      skills = '',
-      bio = '',
-      motivation = '',
-      categories = [],
-      availability = '',
-      modes = [],
+      phoneNumber = '',
       graduationYear = '',
+      degree = '',
       department = '',
-      location = '',
-      companyName = '',
+      currentLocation = '',
+      currentJobTitle = '',
+      company = '',
       industry = '',
-      preferredStudents = '',
-      maxStudents = '',
-      weeklyHours = '',
-      workExperience = [],
-      education = [],
-      termsAccepted = false,
-    } = req.body ?? {}
+      mentorshipAreas = [],
+      expertise = [],
+      mentorshipMode = '',
+      availableDays = '',
+      timeCommitment = '',
+      mentorshipPreference = '',
+      maxMentees = '',
+      consent1 = false,
+      consent2 = false,
+      consent3 = false,
+    } = formData
 
-    if (!termsAccepted) {
-      return res.status(400).json({ message: 'Terms must be accepted before submitting the application.' })
+    // Validate all consent checkboxes
+    if (!consent1 || !consent2 || !consent3) {
+      return res.status(400).json({ message: 'All consent checkboxes must be checked before submitting the application.' })
     }
 
-    const expertiseArray = ensureArray(expertise)
-    const categoriesArray = ensureArray(categories)
-    const modesArray = ensureArray(modes)
-    const workExperienceArray = Array.isArray(workExperience)
-      ? workExperience.map((exp) => ({
-          company: exp?.company?.trim() || '',
-          role: exp?.role?.trim() || '',
-          startDate: exp?.startDate?.trim() || '',
-          endDate: exp?.endDate?.trim() || '',
-          isCurrentJob: Boolean(exp?.isCurrentJob),
-          description: exp?.description?.trim() || '',
-        }))
-      : []
-    const educationArray = Array.isArray(education)
-      ? education.map((edu) => ({
-          institution: edu?.institution?.trim() || '',
-          degree: edu?.degree?.trim() || '',
-          field: edu?.field?.trim() || '',
-          department: edu?.department?.trim() || '',
-          admissionYear: edu?.admissionYear?.trim() || '',
-          passoutYear: edu?.passoutYear?.trim() || '',
-          cgpa: edu?.cgpa?.trim() || '',
-          isCurrentlyPursuing: Boolean(edu?.isCurrentlyPursuing),
-          description: edu?.description?.trim() || '',
-        }))
-      : []
+    // Handle profile photo upload
+    let profilePhotoUrl = ''
+    if (req.file) {
+      profilePhotoUrl = `/uploads/mentors/${req.file.filename}`
+    }
+
+    const mentorshipAreasArray = Array.isArray(mentorshipAreas) ? mentorshipAreas : []
+    const expertiseArray = Array.isArray(expertise) ? expertise : []
 
     const payload = {
       user: userId,
       fullName: fullName.trim(),
       email: email.trim(),
-      contactNumber: contactNumber.trim(),
-      linkedin: linkedin.trim(),
-      jobRole: jobRole.trim(),
-      experience: experience.trim(),
-      expertise: expertiseArray,
-      skills: typeof skills === 'string' ? skills.trim() : skills,
-      bio: bio.trim(),
-      motivation: motivation.trim(),
-      categories: categoriesArray,
-      availability: availability.trim(),
-      modes: modesArray,
+      phoneNumber: phoneNumber.trim(),
       graduationYear: graduationYear.trim(),
+      degree: degree.trim(),
       department: department.trim(),
-      location: location.trim(),
-      companyName: companyName.trim(),
+      currentLocation: currentLocation.trim(),
+      currentJobTitle: currentJobTitle.trim(),
+      company: company.trim(),
       industry: industry.trim(),
-      preferredStudents: preferredStudents.trim(),
-      maxStudents: maxStudents.trim(),
-      weeklyHours: weeklyHours.trim(),
-      workExperience: workExperienceArray,
-      education: educationArray,
-      termsAccepted: true,
+      mentorshipAreas: mentorshipAreasArray,
+      expertise: expertiseArray,
+      mentorshipMode: mentorshipMode.trim(),
+      availableDays: availableDays.trim(),
+      timeCommitment: timeCommitment.trim(),
+      mentorshipPreference: mentorshipPreference.trim(),
+      maxMentees: maxMentees.trim(),
+      consent1: true,
+      consent2: true,
+      consent3: true,
+      profilePhoto: profilePhotoUrl,
       status: 'approved',
     }
 
@@ -239,27 +252,65 @@ const submitMentorApplication = async (req, res) => {
     const alumnus = await Alumni.findById(userId)
 
     if (alumnus) {
-      alumnus.about = alumnus.about || payload.bio
+      alumnus.about = alumnus.about || `Mentor specializing in ${mentorshipAreasArray.join(', ')}`
       alumnus.skills = alumnus.skills?.length ? alumnus.skills : expertiseArray
-      alumnus.title = alumnus.title || payload.jobRole
-      if (payload.linkedin) {
-        if (alumnus.socials?.set) {
-          alumnus.socials.set('linkedin', payload.linkedin)
-        } else if (alumnus.socials) {
-          alumnus.socials.linkedin = payload.linkedin
-        } else {
-          alumnus.socials = { linkedin: payload.linkedin }
-        }
+      alumnus.title = alumnus.title || payload.currentJobTitle
+      alumnus.companyName = alumnus.companyName || payload.company
+      alumnus.industry = alumnus.industry || payload.industry
+      alumnus.location = alumnus.location || payload.currentLocation
+      alumnus.graduationYear = alumnus.graduationYear || payload.graduationYear
+      alumnus.department = alumnus.department || payload.department
+      if (profilePhotoUrl) {
+        alumnus.profilePhoto = profilePhotoUrl
       }
       await alumnus.save()
     }
 
-    const result = formatMentor(application, alumnus)
+    const result = {
+      id: application._id,
+      fullName: application.fullName,
+      email: application.email,
+      currentJobTitle: application.currentJobTitle,
+      company: application.company,
+      industry: application.industry,
+      mentorshipAreas: application.mentorshipAreas,
+      expertise: application.expertise,
+      status: application.status,
+      createdAt: application.createdAt
+    }
 
-    return res.status(201).json({ message: 'Mentor application submitted successfully.', data: result })
+    return res.status(201).json({ success: true, message: 'Mentor registration successful.', data: result })
   } catch (error) {
     console.error('submitMentorApplication error:', error)
-    return res.status(500).json({ message: 'Unable to submit mentor application.' })
+    console.error('Error stack:', error.stack)
+    console.error('Error details:', {
+      message: error.message,
+      name: error.name,
+      code: error.code
+    })
+    
+    // Handle specific validation errors
+    if (error.name === 'ValidationError') {
+      const validationErrors = Object.values(error.errors).map(err => err.message)
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Validation failed', 
+        errors: validationErrors 
+      })
+    }
+    
+    // Handle duplicate key errors
+    if (error.code === 11000) {
+      return res.status(409).json({ 
+        success: false, 
+        message: 'You have already submitted a mentor application.' 
+      })
+    }
+    
+    return res.status(500).json({ 
+      success: false, 
+      message: `Unable to register as mentor: ${error.message}` 
+    })
   }
 }
 
@@ -340,12 +391,13 @@ const getMyProfile = async (req, res) => {
       return res.status(404).json({ message: 'Mentor profile not found.' })
     }
 
-    const [services, resources] = await Promise.all([
+    const [services, resources, alumnus] = await Promise.all([
       MentorService.find({ user: userId }),
       MentorResource.find({ user: userId }),
+      Alumni.findById(userId)
     ])
 
-    const result = formatMentor(application, application.user, { services, resources })
+    const result = formatMentor(application, alumnus || application.user, { services, resources })
     return res.status(200).json(result)
   } catch (error) {
     console.error('getMyProfile error:', error)
@@ -393,7 +445,6 @@ const getMentorProfile = async (req, res) => {
 
 const updateMyProfile = async (req, res) => {
   try {
-    console.log('Incoming updateMyProfile request body:', req.body)
     const userId = req.user?.id
     const role = req.user?.role
 
@@ -408,24 +459,27 @@ const updateMyProfile = async (req, res) => {
     const {
       fullName,
       email,
-      contactNumber,
+      phoneNumber, // Updated field name
       linkedin,
-      jobRole,
-      experience,
+      currentJobTitle, // Updated field name
+      company, // Updated field name
+      industry,
       expertise,
       skills,
       bio,
       motivation,
       categories,
-      availability,
+      mentorshipMode, // Added new field
+      availableDays, // Added new field
+      timeCommitment, // Added new field
       modes,
       graduationYear,
+      degree, // Added degree field
       department,
-      location,
-      companyName,
-      industry,
-      preferredStudents,
-      maxStudents,
+      currentLocation, // Updated field name
+      mentorshipPreference, // Updated field name
+      maxMentees, // Updated field name
+      maxStudents, // Keep for backward compatibility
       weeklyHours,
       workExperience,
       education,
@@ -438,24 +492,27 @@ const updateMyProfile = async (req, res) => {
     const payload = {
       fullName: fullName?.trim() || undefined,
       email: email?.trim() || undefined,
-      contactNumber: contactNumber?.trim() || undefined,
+      phoneNumber: phoneNumber?.trim() || undefined, // Updated field name
       linkedin: linkedin?.trim() || undefined,
-      jobRole: jobRole?.trim() || undefined,
-      experience: experience?.trim() || undefined,
+      currentJobTitle: currentJobTitle?.trim() || undefined, // Updated field name
+      company: company?.trim() || undefined, // Updated field name
+      industry: industry?.trim() || undefined,
       expertise: expertiseArray,
       skills: typeof skills === 'string' ? skills.trim() : skills,
       bio: bio?.trim() || undefined,
       motivation: motivation?.trim() || undefined,
       categories: categoriesArray,
-      availability: availability?.trim() || undefined,
+      mentorshipMode: mentorshipMode?.trim() || undefined, // Added new field
+      availableDays: availableDays?.trim() || undefined, // Added new field
+      timeCommitment: timeCommitment?.trim() || undefined, // Added new field
       modes: modesArray,
       graduationYear: graduationYear?.trim() || undefined,
+      degree: degree?.trim() || undefined, // Added degree field
       department: department?.trim() || undefined,
-      location: location?.trim() || undefined,
-      companyName: companyName?.trim() || undefined,
-      industry: industry?.trim() || undefined,
-      preferredStudents: preferredStudents?.trim() || undefined,
-      maxStudents: maxStudents?.trim() || undefined,
+      currentLocation: currentLocation?.trim() || undefined, // Updated field name
+      mentorshipPreference: mentorshipPreference?.trim() || undefined, // Updated field name
+      maxMentees: maxMentees?.trim() || undefined, // Updated field name
+      maxStudents: maxStudents?.trim() || undefined, // Keep for backward compatibility
       weeklyHours: weeklyHours?.trim() || undefined,
       workExperience: Array.isArray(workExperience) ? workExperience.map(exp => ({
         company: exp.company?.trim() || '',
@@ -478,13 +535,11 @@ const updateMyProfile = async (req, res) => {
       })) : undefined,
     }
 
-    console.log('Constructed payload:', payload)
-
     const application = await MentorApplication.findOneAndUpdate(
       { user: userId },
       payload,
       { new: true, runValidators: true }
-    )
+    ).populate('user')
 
     if (!application) {
       return res.status(404).json({ message: 'Mentor profile not found.' })
@@ -492,30 +547,41 @@ const updateMyProfile = async (req, res) => {
 
     const alumnus = await Alumni.findById(userId)
     if (alumnus) {
-      if (payload.bio) alumnus.about = payload.bio
-      if (payload.expertise?.length) alumnus.skills = payload.expertise
-      if (payload.jobRole) alumnus.title = payload.jobRole
-      if (payload.linkedin) {
-        if (alumnus.socials?.set) {
-          alumnus.socials.set('linkedin', payload.linkedin)
-        } else if (alumnus.socials) {
-          alumnus.socials.linkedin = payload.linkedin
-        } else {
-          alumnus.socials = { linkedin: payload.linkedin }
-        }
-      }
+      alumnus.fullName = alumnus.fullName || payload.fullName
+      alumnus.companyName = alumnus.companyName || payload.company
+      alumnus.industry = alumnus.industry || payload.industry
+      alumnus.location = alumnus.location || payload.currentLocation
+      alumnus.graduationYear = alumnus.graduationYear || payload.graduationYear
+      alumnus.department = alumnus.department || payload.department
       await alumnus.save()
     }
 
-    const result = formatMentor(application, alumnus)
-    console.log('Sending response:', result)
-    return res.status(200).json({ message: 'Mentor profile updated successfully.', data: result })
+    const [services, resources] = await Promise.all([
+      MentorService.find({ user: userId }),
+      MentorResource.find({ user: userId }),
+    ])
+
+    const result = formatMentor(application, alumnus || application.user, { services, resources })
+    return res.status(200).json({ success: true, message: 'Profile updated successfully.', data: result })
   } catch (error) {
     console.error('updateMyProfile error:', error)
-    return res.status(500).json({ message: 'Unable to update mentor profile.' })
+    
+    // Handle specific validation errors
+    if (error.name === 'ValidationError') {
+      const validationErrors = Object.values(error.errors).map(err => err.message)
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Validation failed', 
+        errors: validationErrors 
+      })
+    }
+    
+    return res.status(500).json({ 
+      success: false, 
+      message: `Unable to update mentor profile: ${error.message}` 
+    })
   }
 }
-
 module.exports = {
   submitMentorApplication,
   listMentors,

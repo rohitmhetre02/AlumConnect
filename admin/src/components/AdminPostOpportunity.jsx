@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
 import { api } from '../utils/api'
 
 const allowedOpportunityTypes = [
@@ -11,6 +11,8 @@ const allowedOpportunityTypes = [
 
 const AdminPostOpportunity = () => {
   const navigate = useNavigate()
+  const { opportunityId } = useParams()
+  const isEditing = !!opportunityId
   
   const [form, setForm] = useState({
     title: '',
@@ -24,6 +26,40 @@ const AdminPostOpportunity = () => {
     deadline: '',
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
+
+  // Load opportunity data for editing
+  useEffect(() => {
+    if (isEditing) {
+      loadOpportunity()
+    }
+  }, [opportunityId])
+
+  const loadOpportunity = async () => {
+    setIsLoading(true)
+    try {
+      const response = await api.get(`/opportunities/${opportunityId}`)
+      const opportunity = response.data
+      
+      setForm({
+        title: opportunity.title || '',
+        company: opportunity.company || '',
+        type: opportunity.type || 'full-time',
+        location: opportunity.location || '',
+        isRemote: opportunity.isRemote || false,
+        description: opportunity.description || '',
+        skills: Array.isArray(opportunity.skills) ? opportunity.skills.join(', ') : '',
+        contactEmail: opportunity.contactEmail || '',
+        deadline: opportunity.deadline ? new Date(opportunity.deadline).toISOString().split('T')[0] : '',
+      })
+    } catch (error) {
+      console.error('Failed to load opportunity:', error)
+      alert('Failed to load opportunity. Please try again.')
+      navigate('/admin/opportunities')
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
   const handleChange = (field) => (event) => {
     setForm((prev) => ({ ...prev, [field]: event.target.value }))
@@ -61,22 +97,27 @@ const AdminPostOpportunity = () => {
         type: form.type,
         location: form.isRemote ? 'Remote' : form.location.trim(),
         description: form.description.trim(),
-        skills: form.skills.trim(),
+        skills: form.skills.trim().split(',').map(skill => skill.trim()).filter(skill => skill.length > 0),
         contactEmail: form.contactEmail.trim(),
         deadline: form.deadline,
         postedBy: 'Admin',
       }
       
-      console.log('Submitting opportunity data:', opportunityData)
+      let result
+      if (isEditing) {
+        result = await api.put(`/opportunities/${opportunityId}`, opportunityData)
+        console.log('Opportunity updated successfully:', result)
+        alert('Opportunity has been successfully updated.')
+      } else {
+        result = await api.post('/opportunities', opportunityData)
+        console.log('Opportunity created successfully:', result)
+        alert('Opportunity has been successfully created.')
+      }
       
-      const result = await api.post('/opportunities', opportunityData)
-      
-      console.log('Opportunity created successfully:', result)
-      alert('Opportunity has been successfully created.')
       navigate('/admin/opportunities')
-    } catch (createError) {
-      console.error('Failed to create opportunity:', createError)
-      alert(`Failed to create opportunity: ${createError.message || 'Unknown error'}`)
+    } catch (error) {
+      console.error(`Failed to ${isEditing ? 'update' : 'create'} opportunity:`, error)
+      alert(`Failed to ${isEditing ? 'update' : 'create'} opportunity: ${error.message || 'Unknown error'}`)
     } finally {
       setIsSubmitting(false)
     }
@@ -102,11 +143,22 @@ const AdminPostOpportunity = () => {
 
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-slate-900 mb-2">Post New Opportunity</h1>
-          <p className="text-slate-600">Share job opportunities with the alumni community</p>
+          <h1 className="text-3xl font-bold text-slate-900 mb-2">
+            {isEditing ? 'Edit Opportunity' : 'Post New Opportunity'}
+          </h1>
+          <p className="text-slate-600">
+            {isEditing ? 'Update opportunity details and information' : 'Share job opportunities with the alumni community'}
+          </p>
         </div>
 
-        {/* Form */}
+        {isLoading ? (
+          <div className="rounded-3xl bg-white shadow-xl p-8">
+            <div className="flex items-center justify-center py-12">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600"></div>
+              <span className="ml-3 text-slate-600">Loading opportunity...</span>
+            </div>
+          </div>
+        ) : (
         <div className="rounded-3xl bg-white shadow-xl p-8">
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Basic Information */}
@@ -275,11 +327,12 @@ const AdminPostOpportunity = () => {
                 className="rounded-full bg-primary px-6 py-3 text-sm font-semibold text-white transition hover:bg-primary-dark disabled:cursor-not-allowed disabled:bg-primary/50"
                 disabled={isSubmitting}
               >
-                {isSubmitting ? 'Publishing...' : 'Publish Opportunity'}
+                {isSubmitting ? (isEditing ? 'Updating...' : 'Publishing...') : (isEditing ? 'Update Opportunity' : 'Publish Opportunity')}
               </button>
             </div>
           </form>
         </div>
+        )}
       </div>
     </div>
   )

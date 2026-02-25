@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
 import { api } from '../utils/api'
 
 const DEFAULT_FORM_STATE = {
@@ -29,10 +29,54 @@ const capitalize = (value = '') => value.charAt(0).toUpperCase() + value.slice(1
 
 const AdminPostEvent = () => {
   const navigate = useNavigate()
+  const { eventId } = useParams()
+  const isEditing = !!eventId
   
   const [form, setForm] = useState(DEFAULT_FORM_STATE)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [uploadingImage, setUploadingImage] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
+
+  // Load event data for editing
+  useEffect(() => {
+    if (isEditing) {
+      loadEvent()
+    }
+  }, [eventId])
+
+  const loadEvent = async () => {
+    setIsLoading(true)
+    try {
+      const response = await api.get(`/events/${eventId}`)
+      const event = response.data
+      
+      // Parse dates and times
+      const startAt = event.startAt ? new Date(event.startAt) : null
+      const endAt = event.endAt ? new Date(event.endAt) : null
+      
+      setForm({
+        title: event.title || '',
+        description: event.description || '',
+        startDate: startAt ? startAt.toISOString().split('T')[0] : '',
+        startTime: startAt ? startAt.toTimeString().slice(0, 5) : '',
+        endDate: endAt ? endAt.toISOString().split('T')[0] : '',
+        endTime: endAt ? endAt.toTimeString().slice(0, 5) : '',
+        location: event.location || '',
+        coverImage: event.coverImage || '',
+        mode: event.mode || 'in-person',
+        registrationLink: event.registrationLink || '',
+        organization: event.organization || '',
+        department: event.department || '',
+        branch: event.branch || ''
+      })
+    } catch (error) {
+      console.error('Failed to load event:', error)
+      alert('Failed to load event. Please try again.')
+      navigate('/admin/events')
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
   const departments = [
     'Computer Science',
@@ -143,14 +187,21 @@ const AdminPostEvent = () => {
       
       console.log('Submitting event data:', eventData)
       
-      const result = await api.post('/events', eventData)
+      let result
+      if (isEditing) {
+        result = await api.put(`/events/${eventId}`, eventData)
+        console.log('Event updated successfully:', result)
+        alert('Event has been successfully updated.')
+      } else {
+        result = await api.post('/events', eventData)
+        console.log('Event created successfully:', result)
+        alert('Event has been successfully created.')
+      }
       
-      console.log('Event created successfully:', result)
-      alert('Event has been successfully created.')
       navigate('/admin/events')
-    } catch (createError) {
-      console.error('Failed to create event:', createError)
-      alert(`Failed to create event: ${createError.message || 'Unknown error'}`)
+    } catch (error) {
+      console.error(`Failed to ${isEditing ? 'update' : 'create'} event:`, error)
+      alert(`Failed to ${isEditing ? 'update' : 'create'} event: ${error.message || 'Unknown error'}`)
     } finally {
       setIsSubmitting(false)
     }
@@ -172,8 +223,12 @@ const AdminPostEvent = () => {
 
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-slate-900 mb-2">Create New Event</h1>
-          <p className="text-slate-600">Create and manage events for the alumni community</p>
+          <h1 className="text-3xl font-bold text-slate-900 mb-2">
+            {isEditing ? 'Edit Event' : 'Create New Event'}
+          </h1>
+          <p className="text-slate-600">
+            {isEditing ? 'Update event details and settings' : 'Create and manage events for the alumni community'}
+          </p>
         </div>
 
         {/* Form */}

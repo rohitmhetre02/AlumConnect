@@ -1,4 +1,5 @@
 const mongoose = require('mongoose')
+const { REGISTRATION_STATUS, normalizeRegistrationStatus } = require('../utils/registrationStatus')
 
 const facultySchema = new mongoose.Schema(
   {
@@ -134,6 +135,29 @@ const facultySchema = new mongoose.Schema(
       trim: true,
       default: '',
     },
+    registrationStatus: {
+      type: String,
+      enum: Object.values(REGISTRATION_STATUS),
+      default: REGISTRATION_STATUS.PENDING,
+      uppercase: true,
+      set: normalizeRegistrationStatus,
+    },
+    registrationReviewedAt: {
+      type: Date,
+    },
+    registrationReviewedBy: {
+      type: String,
+    },
+    registrationDecisionByRole: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+    registrationRejectionReason: {
+      type: String,
+      trim: true,
+      default: '',
+    },
     isProfileApproved: {
       type: Boolean,
       default: false,
@@ -161,6 +185,11 @@ const facultySchema = new mongoose.Schema(
     },
     profileRejectionReason: {
       type: String,
+    },
+    status: {
+      type: String,
+      enum: ['Active', 'Inactive', 'Suspended', 'Pending'],
+      default: 'Active',
     },
     postedOpportunities: {
       type: [mongoose.Schema.Types.ObjectId],

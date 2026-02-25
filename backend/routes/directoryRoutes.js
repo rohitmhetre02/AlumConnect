@@ -6,6 +6,8 @@ const {
   listAlumni,
   listFaculty,
   getDirectoryProfile,
+  updateMemberStatus,
+  deleteMember,
 } = require('../controllers/directoryController')
 const authMiddleware = require('../middleware/authMiddleware')
 
@@ -16,5 +18,7 @@ router.get('/students', authMiddleware, listStudents)
 router.get('/alumni', authMiddleware, listAlumni)
 router.get('/faculty', authMiddleware, listFaculty)
 router.get('/:role', authMiddleware, listDirectoryMembers)
+router.put('/:role/:id/status', authMiddleware, updateMemberStatus)
+router.delete('/:role/:id', authMiddleware, deleteMember)
 
 module.exports = router

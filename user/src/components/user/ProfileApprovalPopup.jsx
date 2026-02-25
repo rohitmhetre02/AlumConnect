@@ -97,15 +97,11 @@ const ProfileApprovalPopup = ({ user, onClose }) => {
               <ul className="space-y-2 text-xs text-slate-600">
                 <li className="flex items-start gap-2">
                   <span className="text-primary mt-0.5 text-xs">•</span>
-                  <span>Complete your profile with detailed information</span>
+                  <span>You can access only your profile page</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-primary mt-0.5 text-xs">•</span>
-                  <span>Add a professional profile photo</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-primary mt-0.5 text-xs">•</span>
-                  <span>Include your academic and professional background</span>
+                  <span>Update your profile information</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-primary mt-0.5 text-xs">•</span>
@@ -114,13 +110,20 @@ const ProfileApprovalPopup = ({ user, onClose }) => {
               </ul>
             </div>
 
-            <div className={`rounded-xl p-3 bg-slate-50 border border-slate-200`}>
+            <div className={`rounded-xl p-3 ${
+              isRejected ? 'bg-rose-50 border border-rose-200' : 'bg-slate-50 border border-slate-200'
+            }`}>
               <div className="flex items-start gap-3">
                 <Mail className="h-4 w-4 text-slate-600 flex-shrink-0 mt-0.5" />
                 <div>
-                  <h3 className="text-sm font-semibold text-slate-900 mb-1">Need Help?</h3>
+                  <h3 className="text-sm font-semibold text-slate-900 mb-1">
+                    {isRejected ? 'Contact Your Department Coordinator' : 'Need Help?'}
+                  </h3>
                   <p className="text-xs text-slate-700">
-                    Contact our support team at support@alumconnect.com
+                    {isRejected 
+                      ? 'Please contact your department coordinator for assistance with your profile approval.'
+                      : 'Contact our support team at support@alumconnect.com'
+                    }
                   </p>
                 </div>
               </div>

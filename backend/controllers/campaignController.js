@@ -2,6 +2,8 @@ const mongoose = require('mongoose')
 
 const Campaign = require('../models/Campaign')
 const { getModelByRole } = require('../utils/roleModels')
+const { CONTENT_APPROVAL_STATUS } = require('../utils/contentApprovalStatus')
+const { normalizeDepartment } = require('../utils/departments')
 
 const formatCampaign = (doc) => {
   if (!doc) return null
@@ -24,6 +26,11 @@ const formatCampaign = (doc) => {
     createdByName: doc.createdByName,
     featured: doc.featured,
     priority: doc.priority,
+    approvalStatus: doc.approvalStatus ?? CONTENT_APPROVAL_STATUS.PENDING,
+    approvalDepartment: doc.approvalDepartment ?? '',
+    approvalDecisions: Array.isArray(doc.approvalDecisions) ? doc.approvalDecisions : [],
+    approvedAt: doc.approvedAt ?? null,
+    rejectedAt: doc.rejectedAt ?? null,
     donorCount: doc.donations?.length || 0,
     recentDonations: doc.donations?.slice(-5).reverse().map(donation => ({
       id: donation._id || `${doc._id}-${donation.donatedAt.getTime()}`,
@@ -38,9 +45,13 @@ const formatCampaign = (doc) => {
   }
 }
 
+// Get all campaigns (public)
 const listCampaigns = async (_req, res) => {
   try {
-    const items = await Campaign.find({ status: 'active' })
+    const items = await Campaign.find({ 
+      approvalStatus: CONTENT_APPROVAL_STATUS.APPROVED,
+      status: 'active'
+    })
       .sort({ featured: -1, priority: -1, createdAt: -1 })
       .lean()
     return res.status(200).json({ success: true, data: items.map(formatCampaign).filter(Boolean) })
@@ -50,6 +61,7 @@ const listCampaigns = async (_req, res) => {
   }
 }
 
+// Get campaign by ID
 const getCampaignById = async (req, res) => {
   try {
     const { id } = req.params
@@ -71,6 +83,59 @@ const getCampaignById = async (req, res) => {
   }
 }
 
+// Get campaigns for logged-in user (their own + approved campaigns)
+const listUserCampaigns = async (req, res) => {
+  try {
+    const user = req.user
+    if (!user) {
+      return res.status(401).json({ success: false, message: 'Authentication required.' })
+    }
+
+    const userRole = user?.role?.toLowerCase() ?? ''
+    const isAdmin = userRole === 'admin' || userRole === 'coordinator'
+
+    let filter = { status: 'active' }
+    if (!isAdmin) {
+      filter = {
+        ...filter,
+        '$or': [
+          { approvalStatus: CONTENT_APPROVAL_STATUS.APPROVED },
+          { createdBy: user.id }
+        ]
+      }
+    }
+
+    const items = await Campaign.find(filter)
+      .sort({ featured: -1, priority: -1, createdAt: -1 })
+      .lean()
+    
+    return res.status(200).json({ success: true, data: items.map(formatCampaign).filter(Boolean) })
+  } catch (error) {
+    console.error('listUserCampaigns error:', error)
+    return res.status(500).json({ success: false, message: 'Unable to fetch campaigns.' })
+  }
+}
+
+// Get user's own campaigns
+const listMyCampaigns = async (req, res) => {
+  try {
+    const user = req.user
+    if (!user) {
+      return res.status(401).json({ success: false, message: 'Authentication required.' })
+    }
+
+    const campaigns = await Campaign.find({ createdBy: user.id })
+      .sort({ createdAt: -1 })
+      .lean()
+
+    return res.status(200).json({ success: true, data: campaigns.map(formatCampaign).filter(Boolean) })
+  } catch (error) {
+    console.error('listMyCampaigns error:', error)
+    return res.status(500).json({ success: false, message: 'Unable to fetch your campaigns.' })
+  }
+}
+
+// Create new campaign
 const createCampaign = async (req, res) => {
   try {
     const user = req.user
@@ -102,10 +167,25 @@ const createCampaign = async (req, res) => {
 
     const CreatorModel = getModelByRole(role)
     if (!CreatorModel) {
-      // For admin and coordinator users, create a simple creator object
       if (role === 'admin' || role === 'coordinator') {
         const createdByName = user.email || role.charAt(0).toUpperCase() + role.slice(1)
         
+        const isReviewer = role === 'admin' || role === 'coordinator'
+        const decisionTimestamp = new Date()
+        const approvalStatus = isReviewer ? CONTENT_APPROVAL_STATUS.APPROVED : CONTENT_APPROVAL_STATUS.PENDING
+        const approvalDecisions = isReviewer
+          ? [
+              {
+                status: approvalStatus,
+                decidedByRole: role,
+                decidedByName: createdByName,
+                decidedById: user.id,
+                decidedAt: decisionTimestamp,
+                reason: '',
+              },
+            ]
+          : []
+
         const campaignData = {
           title: title.trim(),
           description: description.trim(),
@@ -119,6 +199,12 @@ const createCampaign = async (req, res) => {
           createdBy: user.id,
           createdByRole: role,
           createdByName,
+          approvalStatus,
+          approvalDepartment: '',
+          approvalDecisions,
+          approvedAt: isReviewer ? decisionTimestamp : null,
+          rejectedAt: null,
+          approvalRejectionReason: '',
         }
 
         const campaign = await Campaign.create(campaignData)
@@ -127,10 +213,29 @@ const createCampaign = async (req, res) => {
       return res.status(403).json({ success: false, message: 'Unsupported creator role.' })
     }
 
-    const creator = await CreatorModel.findById(user.id).select('firstName lastName email').lean()
+    const creator = await CreatorModel.findById(user.id).select('firstName lastName email department').lean()
     if (!creator) {
       return res.status(404).json({ success: false, message: 'Creator profile not found.' })
     }
+
+    const createdByName = `${creator.firstName ?? ''} ${creator.lastName ?? ''}`.trim() || creator.email || ''
+    const derivedDepartment = normalizeDepartment(creator.department || '')
+
+    const isReviewer = role === 'admin' || role === 'coordinator'
+    const decisionTimestamp = new Date()
+    const approvalStatus = isReviewer ? CONTENT_APPROVAL_STATUS.APPROVED : CONTENT_APPROVAL_STATUS.PENDING
+    const approvalDecisions = isReviewer
+      ? [
+          {
+            status: approvalStatus,
+            decidedByRole: role,
+            decidedByName: createdByName,
+            decidedById: user.id,
+            decidedAt: decisionTimestamp,
+            reason: '',
+          },
+        ]
+      : []
 
     const campaignData = {
       title: title.trim(),
@@ -144,7 +249,13 @@ const createCampaign = async (req, res) => {
       priority: Number(priority) || 0,
       createdBy: user.id,
       createdByRole: role,
-      createdByName: `${creator.firstName || ''} ${creator.lastName || ''}`.trim() || 'Anonymous',
+      createdByName,
+      approvalStatus,
+      approvalDepartment: derivedDepartment,
+      approvalDecisions,
+      approvedAt: isReviewer ? decisionTimestamp : null,
+      rejectedAt: null,
+      approvalRejectionReason: '',
     }
 
     const campaign = await Campaign.create(campaignData)
@@ -155,6 +266,7 @@ const createCampaign = async (req, res) => {
   }
 }
 
+// Update campaign
 const updateCampaign = async (req, res) => {
   try {
     const { id } = req.params
@@ -170,7 +282,6 @@ const updateCampaign = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Campaign not found.' })
     }
 
-    // Check if user is the creator or admin
     if (campaign.createdBy.toString() !== user.id && role !== 'admin') {
       return res.status(403).json({ success: false, message: 'Only campaign creator can update this campaign.' })
     }
@@ -202,6 +313,7 @@ const updateCampaign = async (req, res) => {
   }
 }
 
+// Delete campaign
 const deleteCampaign = async (req, res) => {
   try {
     const { id } = req.params
@@ -217,7 +329,6 @@ const deleteCampaign = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Campaign not found.' })
     }
 
-    // Check if user is the creator or admin
     if (campaign.createdBy.toString() !== user.id && role !== 'admin') {
       return res.status(403).json({ success: false, message: 'Only campaign creator can delete this campaign.' })
     }
@@ -230,13 +341,23 @@ const deleteCampaign = async (req, res) => {
   }
 }
 
+// Donate to campaign (add donation to campaign)
 const donateToCampaign = async (req, res) => {
   try {
     const { id } = req.params
-    const { donorName, donorEmail, amount, message, anonymous, paymentMethod, paymentId } = req.body
+    const { donorName, donorEmail, amount, message, anonymous } = req.body
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({ success: false, message: 'Invalid campaign id.' })
+    }
+
+    if (!donorName || !donorEmail || !amount) {
+      return res.status(400).json({ success: false, message: 'donorName, donorEmail, and amount are required.' })
+    }
+
+    const numericAmount = Number(amount)
+    if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
+      return res.status(400).json({ success: false, message: 'amount must be a positive number.' })
     }
 
     const campaign = await Campaign.findById(id)
@@ -244,73 +365,32 @@ const donateToCampaign = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Campaign not found.' })
     }
 
-    if (campaign.status !== 'active') {
-      return res.status(400).json({ success: false, message: 'Campaign is not accepting donations.' })
-    }
-
-    // Validate required fields
-    if (!donorName || !donorEmail || !amount) {
-      return res.status(400).json({ success: false, message: 'donorName, donorEmail, and amount are required.' })
-    }
-
-    // Validate email
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    if (!emailRegex.test(donorEmail)) {
-      return res.status(400).json({ success: false, message: 'Invalid email format.' })
-    }
-
-    // Validate amount
-    const numericAmount = Number(amount)
-    if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
-      return res.status(400).json({ success: false, message: 'Amount must be a positive number.' })
-    }
-
-    // TODO: Integrate with payment gateway here
-    // For now, we'll simulate payment processing
-    let paymentStatus = 'pending'
-    let paymentTransactionId = null
-    
-    if (paymentMethod && paymentId) {
-      // This would be where you integrate with Razorpay, Stripe, or other payment gateway
-      paymentStatus = 'completed'
-      paymentTransactionId = paymentId
-    }
-
-    const donationData = {
+    // Add donation to campaign
+    const donation = {
       donorName: donorName.trim(),
       donorEmail: donorEmail.trim().toLowerCase(),
       amount: numericAmount,
       message: message?.trim() || '',
       anonymous: Boolean(anonymous),
       donatedAt: new Date(),
-      paymentMethod: paymentMethod || 'offline',
-      paymentStatus,
-      paymentTransactionId,
+      paymentMethod: 'offline',
+      paymentStatus: 'completed',
     }
 
-    // Add donation to campaign
-    await Campaign.findByIdAndUpdate(id, {
-      $push: { donations: donationData },
-      $inc: { raisedAmount: numericAmount }
-    })
+    campaign.donations.push(donation)
+    campaign.raisedAmount += numericAmount
 
-    // Get updated campaign
-    const updatedCampaign = await Campaign.findById(id).lean()
-    return res.status(200).json({ 
-      success: true, 
-      data: formatCampaign(updatedCampaign),
-      payment: {
-        status: paymentStatus,
-        transactionId: paymentTransactionId
-      }
-    })
+    await campaign.save()
+
+    return res.status(200).json({ success: true, data: formatCampaign(campaign) })
   } catch (error) {
     console.error('donateToCampaign error:', error)
     return res.status(500).json({ success: false, message: 'Unable to process donation.' })
   }
 }
 
-const getCampaignStats = async (req, res) => {
+// Get campaign statistics
+const getCampaignStats = async (_req, res) => {
   try {
     const stats = await Campaign.aggregate([
       {
@@ -322,45 +402,39 @@ const getCampaignStats = async (req, res) => {
           },
           totalRaised: { $sum: '$raisedAmount' },
           totalGoal: { $sum: '$goalAmount' },
-          totalDonors: { $sum: { $size: '$donations' } }
+          totalDonors: { $sum: { $size: '$donations' } },
+          approvedCampaigns: {
+            $sum: { $cond: [{ $eq: ['$approvalStatus', 'APPROVED'] }, 1, 0] }
+          },
+          pendingCampaigns: {
+            $sum: { $cond: [{ $eq: ['$approvalStatus', 'PENDING'] }, 1, 0] }
+          },
         }
       }
     ])
 
-    const categoryStats = await Campaign.aggregate([
-      { $match: { status: 'active' } },
-      {
-        $group: {
-          _id: '$category',
-          count: { $sum: 1 },
-          totalRaised: { $sum: '$raisedAmount' },
-          totalGoal: { $sum: '$goalAmount' }
-        }
-      }
-    ])
+    const result = stats[0] || {
+      totalCampaigns: 0,
+      activeCampaigns: 0,
+      totalRaised: 0,
+      totalGoal: 0,
+      totalDonors: 0,
+      approvedCampaigns: 0,
+      pendingCampaigns: 0,
+    }
 
-    return res.status(200).json({
-      success: true,
-      data: {
-        overview: stats[0] || {
-          totalCampaigns: 0,
-          activeCampaigns: 0,
-          totalRaised: 0,
-          totalGoal: 0,
-          totalDonors: 0
-        },
-        byCategory: categoryStats
-      }
-    })
+    return res.status(200).json({ success: true, data: result })
   } catch (error) {
     console.error('getCampaignStats error:', error)
-    return res.status(500).json({ success: false, message: 'Unable to fetch campaign stats.' })
+    return res.status(500).json({ success: false, message: 'Unable to fetch campaign statistics.' })
   }
 }
 
 module.exports = {
   listCampaigns,
   getCampaignById,
+  listUserCampaigns,
+  listMyCampaigns,
   createCampaign,
   updateCampaign,
   deleteCampaign,

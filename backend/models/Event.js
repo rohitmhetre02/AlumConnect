@@ -1,4 +1,6 @@
 const mongoose = require('mongoose')
+const { CONTENT_APPROVAL_STATUS, normalizeContentApprovalStatus } = require('../utils/contentApprovalStatus')
+const { normalizeDepartment } = require('../utils/departments')
 
 const eventSchema = new mongoose.Schema(
   {
@@ -47,6 +49,7 @@ const eventSchema = new mongoose.Schema(
     department: {
       type: String,
       trim: true,
+      set: normalizeDepartment,
     },
     branch: {
       type: String,
@@ -99,6 +102,69 @@ const eventSchema = new mongoose.Schema(
       trim: true,
     },
     createdByName: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+    approvalStatus: {
+      type: String,
+      enum: Object.values(CONTENT_APPROVAL_STATUS),
+      default: CONTENT_APPROVAL_STATUS.PENDING,
+      uppercase: true,
+      set: normalizeContentApprovalStatus,
+    },
+    approvalDepartment: {
+      type: String,
+      trim: true,
+      default: '',
+      set: normalizeDepartment,
+    },
+    approvalDecisions: {
+      type: [
+        new mongoose.Schema(
+          {
+            status: {
+              type: String,
+              enum: Object.values(CONTENT_APPROVAL_STATUS),
+              required: true,
+            },
+            decidedByRole: {
+              type: String,
+              trim: true,
+              default: '',
+            },
+            decidedByName: {
+              type: String,
+              trim: true,
+              default: '',
+            },
+            decidedById: {
+              type: String,
+              trim: true,
+              default: '',
+            },
+            decidedAt: {
+              type: Date,
+              default: Date.now,
+            },
+            reason: {
+              type: String,
+              trim: true,
+              default: '',
+            },
+          },
+          { _id: false },
+        ),
+      ],
+      default: [],
+    },
+    approvedAt: {
+      type: Date,
+    },
+    rejectedAt: {
+      type: Date,
+    },
+    approvalRejectionReason: {
       type: String,
       trim: true,
       default: '',

@@ -93,6 +93,43 @@ export const useOpportunities = () => {
   )
 }
 
+export const useMyOpportunities = () => {
+  const [items, setItems] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+  const addToast = useToast()
+
+  const fetchItems = useCallback(async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const response = await get('/opportunities/mine')
+      const data = Array.isArray(response?.data) ? response.data : []
+      setItems(data)
+      return data
+    } catch (fetchError) {
+      setError(fetchError)
+      addToast?.({
+        title: 'Unable to load your opportunities',
+        description: fetchError.message ?? 'Please try again later.',
+        tone: 'error',
+      })
+      throw fetchError
+    } finally {
+      setLoading(false)
+    }
+  }, [addToast])
+
+  useEffect(() => {
+    fetchItems()
+  }, [fetchItems])
+
+  return useMemo(
+    () => ({ items, loading, error, refresh: fetchItems }),
+    [items, loading, error, fetchItems],
+  )
+}
+
 export const useOpportunity = (id) => {
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)

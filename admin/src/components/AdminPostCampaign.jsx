@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
 import { api } from '../utils/api'
 
 const DEFAULT_IMAGE =
@@ -23,6 +23,8 @@ const CAMPAIGN_CATEGORIES = [
 
 const AdminPostCampaign = () => {
   const navigate = useNavigate()
+  const { campaignId } = useParams()
+  const isEditing = !!campaignId
   
   const [form, setForm] = useState({
     title: '',
@@ -38,6 +40,41 @@ const AdminPostCampaign = () => {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [uploadingImage, setUploadingImage] = useState(false)
   const [imagePreview, setImagePreview] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
+
+  // Load campaign data for editing
+  useEffect(() => {
+    if (isEditing) {
+      loadCampaign()
+    }
+  }, [campaignId])
+
+  const loadCampaign = async () => {
+    setIsLoading(true)
+    try {
+      const response = await api.get(`/campaigns/${campaignId}`)
+      const campaign = response.data
+      
+      setForm({
+        title: campaign.title || '',
+        goalAmount: campaign.goalAmount || '',
+        description: campaign.description || '',
+        coverImage: campaign.coverImage || '',
+        deadline: campaign.deadline ? new Date(campaign.deadline).toISOString().split('T')[0] : '',
+        category: campaign.category || 'community',
+        tags: Array.isArray(campaign.tags) ? campaign.tags.join(', ') : '',
+        featured: campaign.featured || false,
+        priority: campaign.priority || 0,
+      })
+      setImagePreview(campaign.coverImage || '')
+    } catch (error) {
+      console.error('Failed to load campaign:', error)
+      alert('Failed to load campaign. Please try again.')
+      navigate('/admin/campaigns')
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
   const handleChange = (field) => (event) => {
     const value = event.target.type === 'checkbox' ? event.target.checked : event.target.value
@@ -108,14 +145,21 @@ const AdminPostCampaign = () => {
       
       console.log('Submitting campaign data:', campaignData)
       
-      const result = await api.post('/campaigns', campaignData)
+      let result
+      if (isEditing) {
+        result = await api.put(`/campaigns/${campaignId}`, campaignData)
+        console.log('Campaign updated successfully:', result)
+        alert('Campaign has been successfully updated.')
+      } else {
+        result = await api.post('/campaigns', campaignData)
+        console.log('Campaign created successfully:', result)
+        alert('Campaign has been successfully created.')
+      }
       
-      console.log('Campaign created successfully:', result)
-      alert('Campaign has been successfully created.')
       navigate('/admin/campaigns')
-    } catch (createError) {
-      console.error('Failed to create campaign:', createError)
-      alert(`Failed to create campaign: ${createError.message || 'Unknown error'}`)
+    } catch (error) {
+      console.error(`Failed to ${isEditing ? 'update' : 'create'} campaign:`, error)
+      alert(`Failed to ${isEditing ? 'update' : 'create'} campaign: ${error.message || 'Unknown error'}`)
     } finally {
       setIsSubmitting(false)
     }
@@ -141,8 +185,12 @@ const AdminPostCampaign = () => {
 
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-slate-900 mb-2">Create New Campaign</h1>
-          <p className="text-slate-600">Launch fundraising campaigns for the alumni community</p>
+          <h1 className="text-3xl font-bold text-slate-900 mb-2">
+            {isEditing ? 'Edit Campaign' : 'Create New Campaign'}
+          </h1>
+          <p className="text-slate-600">
+            {isEditing ? 'Update campaign details and settings' : 'Launch fundraising campaigns for the alumni community'}
+          </p>
         </div>
 
         {/* Form */}

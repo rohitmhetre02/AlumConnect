@@ -17,6 +17,7 @@ const roleLabels = {
   students: 'Student',
   alumni: 'Alumni',
   faculty: 'Faculty',
+  coordinators: 'Coordinator',
 }
 
 const UserDirectoryCard = ({ person, onOpen }) => {

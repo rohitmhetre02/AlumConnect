@@ -25,6 +25,6 @@ router.get('/oauth/google', startOAuth('google'))
 router.get('/oauth/google/callback', handleOAuthCallback('google'))
 router.get('/oauth/linkedin', startOAuth('linkedin'))
 router.get('/oauth/linkedin/callback', handleOAuthCallback('linkedin'))
-router.get('/profile/me', authMiddleware, getMyProfile)
+router.get('/profile', authMiddleware, getMyProfile)
 
 module.exports = router

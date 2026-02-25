@@ -1,10 +1,9 @@
 import React, { useMemo } from 'react'
-import { useLocation } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import useDirectoryMembers from '../hooks/useDirectoryMembers'
 
 const AdminProfileView = ({ profileId, role, onBack, profileData }) => {
   const { data, isLoading, error } = useDirectoryMembers(role)
-  const location = useLocation()
 
   const resolvedSource = useMemo(() => {
     if (profileData) return profileData
@@ -168,12 +167,21 @@ const AdminProfileView = ({ profileId, role, onBack, profileData }) => {
       resolvedSource.picture ||
       ''
 
+    const cover =
+      resolvedSource.cover ||
+      resolvedSource.coverImage ||
+      resolvedSource.banner ||
+      ''
+
+    const skills = Array.isArray(resolvedSource.skills) ? resolvedSource.skills : []
+
     return {
       id: resolvedSource.id || resolvedSource._id || profileId,
       name,
       email,
       phone,
       avatar,
+      cover,
       department,
       status,
       year,
@@ -184,26 +192,33 @@ const AdminProfileView = ({ profileId, role, onBack, profileData }) => {
       experiences,
       education,
       certifications,
+      skills,
     }
   }, [resolvedSource, role, profileId])
 
   const renderHeader = () => (
-    <header className="flex flex-wrap items-center justify-between gap-4">
-      <div className="flex items-center gap-3 text-sm font-semibold text-slate-600">
-        <button
-          type="button"
-          onClick={onBack}
-          className="inline-flex items-center gap-2 rounded-full border border-slate-200 px-4 py-2 text-slate-600 transition hover:border-primary/30 hover:text-primary"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
-            <path d="M15 18l-6-6 6-6" />
-          </svg>
-          Back to {role === 'students' ? 'Student' : role === 'faculty' ? 'Faculty' : 'Alumni'} Management
-        </button>
-        <span className="hidden text-xs uppercase tracking-[0.2em] text-slate-400 sm:inline">Profile</span>
-      </div>
-      <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-primary">
-        Admin Panel
+    <header className="bg-white border-b border-slate-200 px-6 py-4">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <button
+            type="button"
+            onClick={onBack}
+            className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 hover:border-slate-400 transition-colors"
+          >
+            <svg className="h-4 w-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path d="M10 19l-7-7m0 0l7-7m-7 7h14" />
+            </svg>
+            Back to {role === 'students' ? 'Student' : role === 'faculty' ? 'Faculty' : 'Alumni'} Management
+          </button>
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium text-slate-500">Profile Details</span>
+            <span className="text-xs font-medium text-slate-400">•</span>
+            <span className="text-xs font-medium text-primary">{role === 'students' ? 'Student' : role === 'faculty' ? 'Faculty' : 'Alumni'}</span>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-medium text-slate-500">Admin Panel</span>
+        </div>
       </div>
     </header>
   )
@@ -223,8 +238,24 @@ const AdminProfileView = ({ profileId, role, onBack, profileData }) => {
 
   if (!profile && !profileData && isLoading) {
     return (
-      <div className="space-y-6">
-        {renderHeader()}
+      <div className="space-y-10 font-profile">
+        <header className="flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center gap-3 text-sm font-semibold text-slate-600">
+            <Link
+              to="/admin/dashboard"
+              className="inline-flex items-center gap-2 rounded-full border border-slate-200 px-4 py-2 text-slate-600 transition hover:border-primary/30 hover:text-primary"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
+                <path d="M15 18l-6-6 6-6" />
+              </svg>
+              Back
+            </Link>
+            <span className="hidden text-xs uppercase tracking-[0.2em] text-slate-400 sm:inline">Profile</span>
+          </div>
+          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-primary">
+            Admin Panel
+          </div>
+        </header>
         {renderStatusCard('Loading profile details…')}
       </div>
     )
@@ -232,8 +263,24 @@ const AdminProfileView = ({ profileId, role, onBack, profileData }) => {
 
   if (!profile && !profileData && error) {
     return (
-      <div className="space-y-6">
-        {renderHeader()}
+      <div className="space-y-10 font-profile">
+        <header className="flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center gap-3 text-sm font-semibold text-slate-600">
+            <Link
+              to="/admin/dashboard"
+              className="inline-flex items-center gap-2 rounded-full border border-slate-200 px-4 py-2 text-slate-600 transition hover:border-primary/30 hover:text-primary"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
+                <path d="M15 18l-6-6 6-6" />
+              </svg>
+              Back
+            </Link>
+            <span className="hidden text-xs uppercase tracking-[0.2em] text-slate-400 sm:inline">Profile</span>
+          </div>
+          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-primary">
+            Admin Panel
+          </div>
+        </header>
         {renderStatusCard(error?.message || 'Unable to load profile details. Please try again later.', 'error')}
       </div>
     )
@@ -241,84 +288,107 @@ const AdminProfileView = ({ profileId, role, onBack, profileData }) => {
 
   if (!profile) {
     return (
-      <div className="space-y-6">
-        {renderHeader()}
+      <div className="space-y-10 font-profile">
+        <header className="flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center gap-3 text-sm font-semibold text-slate-600">
+            <Link
+              to="/admin/dashboard"
+              className="inline-flex items-center gap-2 rounded-full border border-slate-200 px-4 py-2 text-slate-600 transition hover:border-primary/30 hover:text-primary"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
+                <path d="M15 18l-6-6 6-6" />
+              </svg>
+              Back
+            </Link>
+            <span className="hidden text-xs uppercase tracking-[0.2em] text-slate-400 sm:inline">Profile</span>
+          </div>
+          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-primary">
+            Admin Panel
+          </div>
+        </header>
         {renderStatusCard('Profile details are unavailable for this member.', 'info')}
       </div>
     )
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      {renderHeader()}
+    <div className="space-y-10 font-profile">
+      <header className="flex flex-wrap items-center justify-between gap-4">
+        <div className="flex items-center gap-3 text-sm font-semibold text-slate-600">
+          <Link
+            to="/admin/dashboard"
+            className="inline-flex items-center gap-2 rounded-full border border-slate-200 px-4 py-2 text-slate-600 transition hover:border-primary/30 hover:text-primary"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
+              <path d="M15 18l-6-6 6-6" />
+            </svg>
+            Back
+          </Link>
+          <span className="hidden text-xs uppercase tracking-[0.2em] text-slate-400 sm:inline">Profile</span>
+        </div>
+        <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-primary">
+          Admin Panel
+        </div>
+      </header>
 
-      {/* Profile Header */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <div className="flex flex-wrap items-start gap-6">
-          <div className="flex-shrink-0">
-            {profile.avatar && (profile.avatar.startsWith('http') || profile.avatar.startsWith('/')) ? (
-              <img
-                src={profile.avatar}
-                alt={profile.name}
-                className="h-24 w-24 rounded-full object-cover border-2 border-slate-200"
-                onError={(e) => {
-                  e.target.style.display = 'none'
-                  e.target.nextElementSibling.style.display = 'grid'
-                }}
-              />
-            ) : null}
-            <div
-              className={`h-24 w-24 place-items-center rounded-full bg-primary/10 text-2xl font-bold text-primary ${
-                profile.avatar && (profile.avatar.startsWith('http') || profile.avatar.startsWith('/')) ? 'hidden' : 'grid'
-              }`}
-            >
-              {profile.name ? profile.name.charAt(0).toUpperCase() : 'M'}
-            </div>
-          </div>
-          <div className="flex-1 space-y-2">
-            <h1 className="text-2xl font-bold text-slate-900">{profile.name}</h1>
-            <p className="text-slate-600">{profile.department}</p>
-            <div className="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
-              <span>PATH</span>
-              <span className="rounded-full bg-slate-100 px-2 py-1 text-[10px] font-mono lowercase text-slate-500">
-                {location.pathname}
-              </span>
-              <span>ID</span>
-              <span className="rounded-full bg-slate-100 px-2 py-1 text-[10px] font-mono text-slate-500">
-                {profile.id ?? '—'}
-              </span>
-            </div>
-            <div className="flex flex-wrap gap-4 text-sm text-slate-500">
-              <span className="flex items-center gap-1">
-                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                </svg>
-                {profile.email || 'No email available'}
-              </span>
-              <span className="flex items-center gap-1">
-                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                </svg>
-                {profile.phone || 'No phone available'}
-              </span>
-            </div>
-            <div className="flex items-center gap-3">
-              <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
-                profile.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-              }`}>
-                {profile.status}
-              </span>
-              {profile.timelineLabel ? (
-                <span className="inline-flex rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-800">
-                  {profile.timelineLabel}
-                </span>
+      {/* Profile Header with Cover */}
+      <div className="relative">
+        <div className="h-56 rounded-2xl bg-gradient-to-r from-primary/20 to-primary/10">
+          {profile.cover && (profile.cover.startsWith('http') || profile.cover.startsWith('/')) ? (
+            <img
+              src={profile.cover}
+              alt="Cover"
+              className="h-full w-full rounded-2xl object-cover"
+              onError={(e) => { e.target.style.display = 'none' }}
+            />
+          ) : null}
+        </div>
+        
+        <div className="px-6 pb-6">
+          <div className="flex flex-wrap items-end gap-6 -mt-12">
+            <div className="flex-shrink-0">
+              {profile.avatar && (profile.avatar.startsWith('http') || profile.avatar.startsWith('/')) ? (
+                <img
+                  src={profile.avatar}
+                  alt={profile.name}
+                  className="h-24 w-24 rounded-full border-4 border-white object-cover shadow-lg"
+                  onError={(e) => {
+                    e.target.style.display = 'none'
+                    e.target.nextElementSibling.style.display = 'grid'
+                  }}
+                />
               ) : null}
+              <div
+                className={`h-24 w-24 place-items-center rounded-full border-4 border-white bg-primary/10 text-2xl font-bold text-primary shadow-lg ${
+                  profile.avatar && (profile.avatar.startsWith('http') || profile.avatar.startsWith('/')) ? 'hidden' : 'grid'
+                }`}
+              >
+                {profile.name ? profile.name.charAt(0).toUpperCase() : 'M'}
+              </div>
+            </div>
+            
+            <div className="flex-1 pb-2">
+              <h1 className="text-2xl font-bold text-slate-900">{profile.name}</h1>
+              <p className="text-slate-600">{profile.department}</p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
+                  profile.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                }`}>
+                  {profile.status}
+                </span>
+                {profile.timelineLabel ? (
+                  <span className="inline-flex rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-800">
+                    {profile.timelineLabel}
+                  </span>
+                ) : null}
+              </div>
+            </div>
+            
+            <div className="flex gap-2 pb-2">
               <button
                 type="button"
                 className="inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-xs font-semibold uppercase tracking-[0.1em] text-white shadow-sm transition hover:bg-primary-dark"
                 onClick={() => {
-                  // Placeholder for message action; integrate messaging modal here
                   console.info('AdminProfileView: Message button clicked for', profile.id)
                 }}
               >
@@ -332,14 +402,13 @@ const AdminProfileView = ({ profileId, role, onBack, profileData }) => {
         </div>
       </div>
 
-      {/* Profile Content */}
+      {/* Content Grid - Sidebar and Main */}
       <div className="grid gap-8 lg:grid-cols-[320px_1fr] xl:gap-10">
         {/* Sidebar */}
         <div className="space-y-6">
-          {/* Contact Information */}
           <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
             <header className="flex items-center justify-between">
-              <h2 className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Contact Information</h2>
+              <h2 className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Contact</h2>
             </header>
             <div className="mt-4 space-y-3 text-sm text-slate-600">
               <div className="flex items-center gap-3 rounded-xl border border-slate-100 bg-slate-50 px-3 py-2">
@@ -359,154 +428,217 @@ const AdminProfileView = ({ profileId, role, onBack, profileData }) => {
                 </span>
                 <span className="text-sm font-medium text-slate-600">{profile.contact?.phone || 'Not available'}</span>
               </div>
-              <div className="flex items-center gap-3 rounded-xl border border-slate-100 bg-slate-50 px-3 py-2">
-                <span className="text-primary">
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
-                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
-                    <circle cx="12" cy="10" r="3"/>
-                  </svg>
-                </span>
-                <span className="text-sm font-medium text-slate-600">{profile.contact?.address || 'Not available'}</span>
-              </div>
             </div>
           </div>
 
-          {/* Social Profiles */}
-          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-            <header className="flex items-center justify-between">
-              <h2 className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Social Profiles</h2>
-            </header>
-            <div className="mt-4 space-y-4">
-              <div className="flex flex-wrap gap-2">
-                {profile.socials?.linkedin && (
-                  <a
-                    href={profile.socials.linkedin}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 text-slate-500 transition hover:border-primary hover:text-primary"
-                    aria-label="LinkedIn"
+          {/* Skills */}
+          {profile.skills?.length > 0 && (
+            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+              <header className="flex items-center justify-between">
+                <h2 className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Skills</h2>
+              </header>
+              <div className="mt-4 flex flex-wrap gap-2">
+                {profile.skills.map((skill, index) => (
+                  <span
+                    key={index}
+                    className="rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary"
                   >
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4">
-                      <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
-                    </svg>
-                  </a>
-                )}
-                {profile.socials?.github && (
-                  <a
-                    href={profile.socials.github}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 text-slate-500 transition hover:border-primary hover:text-primary"
-                    aria-label="GitHub"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4">
-                      <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
-                    </svg>
-                  </a>
-                )}
-                {profile.socials?.twitter && (
-                  <a
-                    href={profile.socials.twitter}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 text-slate-500 transition hover:border-primary hover:text-primary"
-                    aria-label="Twitter"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4">
-                      <path d="M23.953 4.57a10 10 0 01-2.825.775 4.958 4.958 0 002.163-2.723c-.951.555-2.005.959-3.127 1.184a4.92 4.92 0 00-8.384 4.482C7.69 8.095 4.067 6.13 1.64 3.162a4.822 4.822 0 00-.666 2.475c0 1.71.87 3.213 2.188 4.096a4.904 4.904 0 01-2.228-.616v.06a4.923 4.923 0 003.946 4.827 4.996 4.996 0 01-2.212.085 4.936 4.936 0 004.604 3.417 9.867 9.867 0 01-6.102 2.105c-.39 0-.779-.023-1.17-.067a13.995 13.995 0 007.557 2.209c9.053 0 13.998-7.496 13.998-13.985 0-.21 0-.42-.015-.63A9.935 9.935 0 0024 4.59z" />
-                    </svg>
-                  </a>
-                )}
+                    {skill}
+                  </span>
+                ))}
               </div>
-              {(!profile.socials?.linkedin && !profile.socials?.github && !profile.socials?.twitter) && (
-                <span className="text-xs text-slate-400">No social profiles available.</span>
-              )}
             </div>
-          </div>
+          )}
         </div>
 
         {/* Main Content */}
         <div className="space-y-8">
-          {/* About Section */}
+          {/* Personal Details Section */}
           <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
             <header className="flex items-center justify-between">
-              <h2 className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">About</h2>
+              <h2 className="text-lg font-semibold text-slate-900">Personal Details</h2>
+              <span className="text-xs font-medium text-slate-500">Basic Information</span>
             </header>
-            <div className="mt-4">
-              <p className="text-sm leading-6 text-slate-600">{profile.about || 'No information available.'}</p>
+            <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-4">
+                <div>
+                  <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Full Name</p>
+                  <p className="text-sm font-medium text-slate-900 mt-1">{profile.name || 'Not provided'}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Email Address</p>
+                  <p className="text-sm text-slate-900 mt-1">{profile.email || 'Not provided'}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Phone Number</p>
+                  <p className="text-sm text-slate-900 mt-1">{profile.phone || 'Not provided'}</p>
+                </div>
+              </div>
+              <div className="space-y-4">
+                <div>
+                  <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Department</p>
+                  <p className="text-sm text-slate-900 mt-1">{profile.department || 'Not provided'}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Status</p>
+                  <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold mt-1 ${
+                    profile.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                  }`}>
+                    {profile.status}
+                  </span>
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Timeline</p>
+                  <p className="text-sm text-slate-900 mt-1">{profile.timelineLabel || 'Not provided'}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* About Section */}
+          {profile.about && (
+            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+              <header className="flex items-center justify-between">
+                <h2 className="text-lg font-semibold text-slate-900">About</h2>
+                <span className="text-xs font-medium text-slate-500">Personal Information</span>
+              </header>
+              <div className="mt-6">
+                <p className="text-base text-slate-700 leading-relaxed">{profile.about}</p>
+              </div>
+            </div>
+          )}
+
+          {/* Contact Information */}
+          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+            <header className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-slate-900">Contact Information</h2>
+              <span className="text-xs font-medium text-slate-500">Reach Out</span>
+            </header>
+            <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-4">
+                <div>
+                  <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Email</p>
+                  <a href={`mailto:${profile.email}`} className="text-sm text-slate-900 hover:text-primary mt-1 inline-block">
+                    {profile.email || 'Not provided'}
+                  </a>
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Phone</p>
+                  <a href={`tel:${profile.phone}`} className="text-sm text-slate-900 hover:text-primary mt-1 inline-block">
+                    {profile.phone || 'Not provided'}
+                  </a>
+                </div>
+              </div>
+              <div className="space-y-4">
+                <div>
+                  <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Address</p>
+                  <p className="text-sm text-slate-900 mt-1">{profile.contact?.address || 'Not provided'}</p>
+                </div>
+              </div>
             </div>
           </div>
 
           {/* Experience Section */}
-          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-            <header className="flex items-center justify-between">
-              <h2 className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Experience</h2>
-            </header>
-            <div className="mt-4 space-y-4">
-              {profile.experiences?.length ? (
-                profile.experiences.map((exp) => (
-                  <div key={exp.id} className="border-l-2 border-slate-200 pl-4">
-                    <h3 className="text-sm font-semibold text-slate-900">{exp.title}</h3>
-                    <p className="text-sm text-slate-600">{exp.company}</p>
-                    <p className="text-xs text-slate-500">{exp.period}</p>
-                    <p className="mt-2 text-sm text-slate-600">{exp.description}</p>
+          {profile.experiences.length > 0 && (
+            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+              <header className="flex items-center justify-between">
+                <h2 className="text-lg font-semibold text-slate-900">Professional Experience</h2>
+                <span className="text-xs font-medium text-slate-500">{profile.experiences.length} positions</span>
+              </header>
+              <div className="mt-6 space-y-4">
+                {profile.experiences.map((exp, index) => (
+                  <div key={exp.id} className="pb-4 border-b border-slate-100 last:border-0">
+                    <div className="flex justify-between items-start gap-4">
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-base font-semibold text-slate-900">{exp.title || 'Position'}</h3>
+                        <p className="text-sm text-slate-500">{exp.company || 'Organization'}</p>
+                        <p className="text-xs text-slate-400">{exp.period || 'Duration'}</p>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-xs text-slate-500">{exp.description || 'Description not available'}</span>
+                      </div>
+                    </div>
                   </div>
-                ))
-              ) : (
-                <p className="text-sm text-slate-500">No experience information available.</p>
-              )}
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Education Section */}
-          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-            <header className="flex items-center justify-between">
-              <h2 className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Education</h2>
-            </header>
-            <div className="mt-4 space-y-4">
-              {profile.education?.length ? (
-                profile.education.map((edu) => (
-                  <div key={edu.id} className="border-l-2 border-slate-200 pl-4">
-                    <h3 className="text-sm font-semibold text-slate-900">{edu.degree}</h3>
-                    <p className="text-sm text-slate-600">{edu.institution}</p>
-                    <p className="text-xs text-slate-500">Class of {edu.year}</p>
-                    <p className="mt-2 text-sm text-slate-600">{edu.description}</p>
+          {profile.education.length > 0 && (
+            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+              <header className="flex items-center justify-between">
+                <h2 className="text-lg font-semibold text-slate-900">Education</h2>
+                <span className="text-xs font-medium text-slate-500">{profile.education.length} degrees</span>
+              </header>
+              <div className="mt-6 space-y-4">
+                {profile.education.map((edu, index) => (
+                  <div key={edu.id} className="pb-4 border-b border-slate-100 last:border-0">
+                    <div className="flex justify-between items-start gap-4">
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-base font-semibold text-slate-900">{edu.degree || 'Degree'}</h3>
+                        <p className="text-sm text-slate-500">{edu.institution || 'Institution'}</p>
+                        <p className="text-xs text-slate-400">{edu.year || 'Year'}</p>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-xs text-slate-500">{edu.description || 'Description not available'}</span>
+                      </div>
+                    </div>
                   </div>
-                ))
-              ) : (
-                <p className="text-sm text-slate-500">No education information available.</p>
-              )}
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Certifications Section */}
-          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-            <header className="flex items-center justify-between">
-              <h2 className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Certifications</h2>
-            </header>
-            <div className="mt-4 space-y-4">
-              {profile.certifications?.length ? (
-                profile.certifications.map((cert) => (
-                  <div key={cert.id} className="flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50 p-3">
-                    <div>
-                      <h3 className="text-sm font-semibold text-slate-900">{cert.name}</h3>
-                      <p className="text-sm text-slate-600">{cert.issuer}</p>
-                      <p className="text-xs text-slate-500">{cert.year ? `Issued ${cert.year}` : 'Issued date not specified'}</p>
+          {profile.certifications.length > 0 && (
+            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+              <header className="flex items-center justify-between">
+                <h2 className="text-lg font-semibold text-slate-900">Certifications</h2>
+                <span className="text-xs font-medium text-slate-500">{profile.certifications.length} certifications</span>
+              </header>
+              <div className="mt-6 space-y-3">
+                {profile.certifications.map((cert, index) => (
+                  <div key={cert.id} className="pb-3 border-b border-slate-100 last:border-0">
+                    <div className="flex justify-between items-center gap-4">
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-base font-semibold text-slate-900">{cert.name || 'Certificate'}</h3>
+                        <p className="text-sm text-slate-500">{cert.issuer || 'Issuer'}</p>
+                        <p className="text-xs text-slate-400">{cert.year || 'Year'}</p>
+                      </div>
+                      <div className="text-right">
+                        <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
+                          cert.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-slate-100 text-slate-700'
+                        }`}>
+                          {cert.status}
+                        </span>
+                      </div>
                     </div>
-                    {cert.status ? (
-                      <span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${
-                        cert.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-                      }`}>
-                        {cert.status}
-                      </span>
-                    ) : null}
                   </div>
-                ))
-              ) : (
-                <p className="text-sm text-slate-500">No certifications available.</p>
-              )}
+                ))}
+              </div>
             </div>
-          </div>
+          )}
+
+          {/* Skills Section */}
+          {profile.skills.length > 0 && (
+            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+              <header className="flex items-center justify-between">
+                <h2 className="text-lg font-semibold text-slate-900">Skills</h2>
+                <span className="text-xs font-medium text-slate-500">{profile.skills.length} skills</span>
+              </header>
+              <div className="mt-6 flex flex-wrap gap-2">
+                {profile.skills.map((skill, index) => (
+                  <span
+                    key={index}
+                    className="inline-flex items-center rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary"
+                  >
+                    {skill}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

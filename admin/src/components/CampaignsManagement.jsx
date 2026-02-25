@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import useApiList from '../hooks/useApiList'
+import { api } from '../utils/api'
 import getStatusBadgeClass from '../utils/status'
 
 const formatCurrency = (amount) => {
@@ -39,6 +40,22 @@ const CampaignsManagement = () => {
   const [searchTerm, setSearchTerm] = useState('')
   const [filterStatus, setFilterStatus] = useState('all')
   const { data: campaigns, isLoading, error } = useApiList('/campaigns')
+
+  const handleEdit = (id) => {
+    navigate(`/admin/campaigns/${id}/edit`)
+  }
+
+  const handleDelete = async (id) => {
+    if (window.confirm('Are you sure you want to delete this campaign? This action cannot be undone.')) {
+      try {
+        await api.delete(`/campaigns/${id}`)
+        window.location.reload() // Simple refresh to update the list
+      } catch (error) {
+        console.error('Failed to delete campaign:', error)
+        alert('Failed to delete campaign. Please try again.')
+      }
+    }
+  }
 
   const normalizedCampaigns = useMemo(() => {
     return campaigns.map((campaign) => {
@@ -175,12 +192,26 @@ const CampaignsManagement = () => {
                         <div>Deadline: {formatDate(campaign.deadline)}</div>
                       </div>
                       <div className="flex gap-2">
-                        <button className="text-slate-400 hover:text-slate-600 transition">
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleEdit(campaign.id)
+                          }}
+                          className="text-slate-400 hover:text-slate-600 transition"
+                          title="Edit Campaign"
+                        >
                           <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                           </svg>
                         </button>
-                        <button className="text-slate-400 hover:text-red-600 transition">
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleDelete(campaign.id)
+                          }}
+                          className="text-slate-400 hover:text-red-600 transition"
+                          title="Delete Campaign"
+                        >
                           <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 011-1h2a1 1 0 011 1v3M4 7h16" />
                           </svg>

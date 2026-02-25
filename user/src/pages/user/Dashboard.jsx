@@ -1,8 +1,9 @@
 import { useAuth } from '../../context/AuthContext'
 import ProfileProgress from '../../components/user/dashboard/ProfileProgress'
 import StatCard from '../../components/user/dashboard/StatCard'
-import ProfileApprovalPopup from '../../components/user/ProfileApprovalPopup'
 import ProfileApprovedPopup from '../../components/user/ProfileApprovedPopup'
+import ProfilePendingPopup from '../../components/user/ProfilePendingPopup'
+import ProfileRejectedPopup from '../../components/user/ProfileRejectedPopup'
 import useProfileCompletion from '../../hooks/useProfileCompletion'
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -12,9 +13,13 @@ import {
   normalizeProfileStatus,
   isProfileApproved,
 } from '../../utils/profileStatus'
+import StudentDashboard from './StudentDashboard'
+import AlumniDashboard from './AlumniDashboard'
+import FacultyDashboard from './FacultyDashboard'
 
-const REVIEW_POPUP_DISMISS_PREFIX = 'profile_review_popup_dismissed'
 const APPROVED_POPUP_DISMISS_PREFIX = 'profile_approved_popup_dismissed'
+const PENDING_POPUP_DISMISS_PREFIX = 'profile_pending_popup_dismissed'
+const REJECTED_POPUP_DISMISS_PREFIX = 'profile_rejected_popup_dismissed'
 
 const stats = [
   {
@@ -116,7 +121,8 @@ const activityAccent = {
 const Dashboard = () => {
   const { user, updateUser } = useAuth()
   const navigate = useNavigate()
-  const [showApprovalPopup, setShowApprovalPopup] = useState(false)
+  const [showPendingPopup, setShowPendingPopup] = useState(false)
+  const [showRejectedPopup, setShowRejectedPopup] = useState(false)
   const [showApprovedPopup, setShowApprovedPopup] = useState(false)
   const [previousApprovalStatus, setPreviousApprovalStatus] = useState(user?.profileApprovalStatus ?? null)
   const {
@@ -156,38 +162,48 @@ const Dashboard = () => {
   // Function to refresh user data from server
   const refreshUserData = useCallback(async () => {
     try {
-      const response = await get('/auth/profile/me')
-      const profile = response?.data
-      if (!profile) return
-
-      updateUser({
-        profileApprovalStatus: normalizeProfileStatus(profile.profileApprovalStatus),
-        isProfileApproved: isProfileApproved(profile.profileApprovalStatus),
-        profile
-      })
+      console.log('Dashboard: Refreshing user data...')
+      const response = await get('/auth/profile')
+      console.log('Dashboard: User data response:', response)
+      
+      if (response?.data) {
+        await updateUser(response.data)
+        console.log('Dashboard: User data updated successfully')
+      }
     } catch (error) {
       console.error('Dashboard: Failed to refresh user data:', error)
     }
   }, [updateUser])
 
-  // Check for profile approval status changes
+  // Check for profile approval status changes - Force show popup on login
   useEffect(() => {
     const currentStatus = user?.profileApprovalStatus
-    if (!currentStatus) return
+    if (!currentStatus) {
+      console.log('Dashboard: No profile approval status found')
+      return
+    }
 
     const normalizedStatus = normalizeProfileStatus(currentStatus)
     const previousStatus = normalizeProfileStatus(previousApprovalStatus ?? PROFILE_STATUS.IN_REVIEW)
 
-    const shouldShowReviewPopup =
-      (normalizedStatus === PROFILE_STATUS.IN_REVIEW || normalizedStatus === PROFILE_STATUS.REJECTED) &&
-      !isPopupDismissed(REVIEW_POPUP_DISMISS_PREFIX, normalizedStatus)
+    console.log('Dashboard: Profile status check - Current:', normalizedStatus, 'Previous:', previousStatus)
 
-    const shouldShowApprovedPopup =
-      normalizedStatus === PROFILE_STATUS.APPROVED &&
-      previousStatus !== PROFILE_STATUS.APPROVED &&
-      !isPopupDismissed(APPROVED_POPUP_DISMISS_PREFIX, PROFILE_STATUS.APPROVED)
+    // Always check popup dismissal state
+    const isPendingDismissed = isPopupDismissed(PENDING_POPUP_DISMISS_PREFIX, normalizedStatus)
+    const isRejectedDismissed = isPopupDismissed(REJECTED_POPUP_DISMISS_PREFIX, normalizedStatus)
+    const isApprovedDismissed = isPopupDismissed(APPROVED_POPUP_DISMISS_PREFIX, PROFILE_STATUS.APPROVED)
 
-    setShowApprovalPopup(shouldShowReviewPopup)
+    console.log('Dashboard: Popup dismissal states - Pending:', isPendingDismissed, 'Rejected:', isRejectedDismissed, 'Approved:', isApprovedDismissed)
+
+    // Show popups based on status and dismissal state
+    const shouldShowPendingPopup = normalizedStatus === PROFILE_STATUS.IN_REVIEW && !isPendingDismissed
+    const shouldShowRejectedPopup = normalizedStatus === PROFILE_STATUS.REJECTED && !isRejectedDismissed
+    const shouldShowApprovedPopup = normalizedStatus === PROFILE_STATUS.APPROVED && !isApprovedDismissed
+
+    console.log('Dashboard: Popup states - Pending:', shouldShowPendingPopup, 'Rejected:', shouldShowRejectedPopup, 'Approved:', shouldShowApprovedPopup)
+
+    setShowPendingPopup(shouldShowPendingPopup)
+    setShowRejectedPopup(shouldShowRejectedPopup)
     setShowApprovedPopup(shouldShowApprovedPopup)
 
     setPreviousApprovalStatus(normalizedStatus)
@@ -209,11 +225,18 @@ const Dashboard = () => {
     }
   }, [refreshUserData, user?.profileApprovalStatus])
 
-  const handleCloseApprovalPopup = () => {
-    console.log('Dashboard: Closing approval popup')
+  const handleClosePendingPopup = () => {
+    console.log('Dashboard: Closing pending popup')
     const normalizedStatus = normalizeProfileStatus(user?.profileApprovalStatus)
-    dismissPopup(REVIEW_POPUP_DISMISS_PREFIX, normalizedStatus)
-    setShowApprovalPopup(false)
+    dismissPopup(PENDING_POPUP_DISMISS_PREFIX, normalizedStatus)
+    setShowPendingPopup(false)
+  }
+
+  const handleCloseRejectedPopup = () => {
+    console.log('Dashboard: Closing rejected popup')
+    const normalizedStatus = normalizeProfileStatus(user?.profileApprovalStatus)
+    dismissPopup(REJECTED_POPUP_DISMISS_PREFIX, normalizedStatus)
+    setShowRejectedPopup(false)
   }
 
   const handleCloseApprovedPopup = () => {
@@ -223,53 +246,94 @@ const Dashboard = () => {
   }
 
   return (
-    <div className="space-y-8">
-      <header>
-        <h1 className="text-3xl font-bold text-slate-900">
-          Welcome back, {user?.name?.split(' ')[0] ?? 'Alex'}! <span role="img" aria-label="wave">👋</span>
-        </h1>
-        {profileError ? (
-          <p className="mt-2 text-sm text-rose-500">
-            We had trouble checking your profile progress. Please try refreshing.
-          </p>
-        ) : null}
-      </header>
+    <>
+      {/* Show role-specific dashboards */}
+      {user?.role === 'student' ? (
+        <StudentDashboard />
+      ) : user?.role === 'alumni' ? (
+        <AlumniDashboard />
+      ) : user?.role === 'faculty' ? (
+        <FacultyDashboard />
+      ) : (
+        <div className="space-y-8">
+          <header>
+            <div className="flex items-center justify-between">
+              <h1 className="text-3xl font-bold text-slate-900">
+                Welcome back, {user?.name?.split(' ')[0] ?? 'Alex'}! <span role="img" aria-label="wave">👋</span>
+              </h1>
+              <div className="flex items-center space-x-3">
+                <div className={`px-3 py-1 rounded-full text-sm font-medium ${
+                  user?.profileApprovalStatus === 'APPROVED' 
+                    ? 'bg-green-100 text-green-800' 
+                    : user?.profileApprovalStatus === 'IN_REVIEW' 
+                      ? 'bg-amber-100 text-amber-800' 
+                      : user?.profileApprovalStatus === 'REJECTED' 
+                        ? 'bg-red-100 text-red-800' 
+                        : 'bg-slate-100 text-slate-800'
+                }`}>
+                  Profile Status: {
+                    user?.profileApprovalStatus === 'APPROVED' 
+                      ? 'Approved' 
+                      : user?.profileApprovalStatus === 'IN_REVIEW' 
+                        ? 'Pending Review' 
+                        : user?.profileApprovalStatus === 'REJECTED' 
+                          ? 'Rejected' 
+                          : 'Unknown'
+                  }
+                </div>
+              </div>
+            </div>
+            {profileError ? (
+              <p className="mt-2 text-sm text-rose-500">
+                We had trouble checking your profile progress. Please try refreshing.
+              </p>
+            ) : null}
+          </header>
 
-      <section className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)]">
-        <ProfileProgress
-          percentage={profilePercentage}
-          loading={profileLoading}
-          onRefresh={refreshProfileCompletion}
-          lastUpdated={lastUpdated}
-          onOpenProfile={() => navigate('/dashboard/profile')}
-        />
-        {stats.map((stat) => (
-          <StatCard key={stat.title} {...stat} />
-        ))}
-      </section>
+          <section className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)]">
+            <ProfileProgress
+              percentage={profilePercentage}
+              loading={profileLoading}
+              onRefresh={refreshProfileCompletion}
+              lastUpdated={lastUpdated}
+              onOpenProfile={() => navigate('/dashboard/profile')}
+            />
+            {stats.map((stat) => (
+              <StatCard key={stat.title} {...stat} />
+            ))}
+          </section>
 
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        {insights.map((item) => (
-          <InsightCard key={item.label} item={item} />
-        ))}
-      </section>
+          <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            {insights.map((item) => (
+              <InsightCard key={item.label} item={item} />
+            ))}
+          </section>
 
-      <ActivityTimeline timeline={timeline} />
-      
-      {showApprovalPopup ? (
-        <ProfileApprovalPopup
-          user={user}
-          onClose={handleCloseApprovalPopup}
-        />
-      ) : null}
+          <ActivityTimeline timeline={timeline} />
+          
+          {showPendingPopup ? (
+            <ProfilePendingPopup
+              user={user}
+              onClose={handleClosePendingPopup}
+            />
+          ) : null}
 
-      {showApprovedPopup ? (
-        <ProfileApprovedPopup
-          user={user}
-          onClose={handleCloseApprovedPopup}
-        />
-      ) : null}
-    </div>
+          {showRejectedPopup ? (
+            <ProfileRejectedPopup
+              user={user}
+              onClose={handleCloseRejectedPopup}
+            />
+          ) : null}
+
+          {showApprovedPopup ? (
+            <ProfileApprovedPopup
+              user={user}
+              onClose={handleCloseApprovedPopup}
+            />
+          ) : null}
+        </div>
+      )}
+    </>
   )
 }
 

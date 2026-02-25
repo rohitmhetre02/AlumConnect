@@ -45,34 +45,30 @@ const ProfileApprovedPopup = ({ user, onClose }) => {
           </div>
 
           <div className="space-y-4 mb-6">
-            <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4">
-              <div className="flex items-start gap-3">
-                <CheckCircle className="h-5 w-5 text-emerald-600 flex-shrink-0 mt-0.5" />
-                <div>
-                  <h3 className="text-sm font-semibold text-emerald-800 mb-1">What's Next?</h3>
-                  <p className="text-sm text-emerald-700">
-                    You now have full access to all alumni portal features including:
-                  </p>
-                  <ul className="mt-2 space-y-2 text-sm text-emerald-700">
-                    <li className="flex items-center gap-2">
-                      <span className="text-emerald-600 mt-0.5">•</span>
-                      <span>Complete directory access and networking</span>
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <span className="text-emerald-600 mt-0.5">•</span>
-                      <span>Event participation and registration</span>
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <span className="text-emerald-600 mt-0.5">•</span>
-                      <span>Mentorship programs and opportunities</span>
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <span className="text-emerald-600 mt-0.5">•</span>
-                      <span>Donations and campaign support</span>
-                    </li>
-                  </ul>
-                </div>
-              </div>
+            <div className="space-y-3">
+              <h3 className="text-sm font-semibold text-slate-900">Current Access:</h3>
+              <ul className="space-y-2 text-xs text-slate-600">
+                <li className="flex items-start gap-2">
+                  <span className="text-emerald-600 mt-0.5 text-xs">•</span>
+                  <span>You have access to all pages and features</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-emerald-600 mt-0.5 text-xs">•</span>
+                  <span>Complete directory access and networking</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-emerald-600 mt-0.5 text-xs">•</span>
+                  <span>Event participation and registration</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-emerald-600 mt-0.5 text-xs">•</span>
+                  <span>Mentorship programs and opportunities</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-emerald-600 mt-0.5 text-xs">•</span>
+                  <span>Donations and campaign support</span>
+                </li>
+              </ul>
             </div>
 
             <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">

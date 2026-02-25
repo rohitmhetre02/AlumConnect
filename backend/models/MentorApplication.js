@@ -7,127 +7,120 @@ const mentorApplicationSchema = new mongoose.Schema(
       ref: 'Alumni',
       required: true,
     },
+    // Step 1: Basic Profile Details
     fullName: {
       type: String,
       trim: true,
+      required: true,
     },
     email: {
       type: String,
       trim: true,
+      required: true,
     },
-    contactNumber: {
-      type: String,
-      trim: true,
-    },
-    linkedin: {
+    phoneNumber: {
       type: String,
       trim: true,
     },
     graduationYear: {
       type: String,
       trim: true,
+      required: true,
+    },
+    degree: {
+      type: String,
+      trim: true,
+      required: true,
     },
     department: {
       type: String,
       trim: true,
+      required: true,
     },
-    location: {
+    currentLocation: {
+      type: String,
+      trim: true,
+      required: true,
+    },
+    profilePhoto: {
       type: String,
       trim: true,
     },
-    jobRole: {
+    
+    // Step 2: Professional & Mentorship Details
+    currentJobTitle: {
       type: String,
       trim: true,
+      required: true,
     },
-    companyName: {
+    company: {
       type: String,
       trim: true,
+      required: true,
     },
     industry: {
       type: String,
       trim: true,
+      required: true,
     },
-    experience: {
-      type: String,
-      trim: true,
-    },
+    mentorshipAreas: [
+      {
+        type: String,
+        trim: true,
+      },
+    ],
     expertise: [
       {
         type: String,
         trim: true,
       },
     ],
-    skills: {
+    
+    // Step 3: Availability & Consent
+    mentorshipMode: {
       type: String,
       trim: true,
+      required: true,
     },
-    bio: {
+    availableDays: {
       type: String,
       trim: true,
+      required: true,
     },
-    motivation: {
+    timeCommitment: {
       type: String,
       trim: true,
+      required: true,
     },
-    categories: [
-      {
-        type: String,
-        trim: true,
-      },
-    ],
-    availability: {
+    mentorshipPreference: {
       type: String,
       trim: true,
+      required: true,
     },
-    modes: [
-      {
-        type: String,
-        trim: true,
-      },
-    ],
-    preferredStudents: {
+    maxMentees: {
       type: String,
       trim: true,
+      required: true,
     },
-    maxStudents: {
-      type: String,
-      trim: true,
-    },
-    weeklyHours: {
-      type: String,
-      trim: true,
-    },
-    workExperience: [
-      {
-        company: { type: String, trim: true },
-        role: { type: String, trim: true },
-        startDate: { type: String, trim: true },
-        endDate: { type: String, trim: true },
-        isCurrentJob: { type: Boolean, default: false },
-        description: { type: String, trim: true },
-      },
-    ],
-    education: [
-      {
-        institution: { type: String, trim: true },
-        degree: { type: String, trim: true },
-        field: { type: String, trim: true },
-        department: { type: String, trim: true },
-        admissionYear: { type: String, trim: true },
-        passoutYear: { type: String, trim: true },
-        cgpa: { type: String, trim: true },
-        isCurrentlyPursuing: { type: Boolean, default: false },
-        description: { type: String, trim: true },
-      },
-    ],
-    termsAccepted: {
+    
+    // Consent checkboxes
+    consent1: {
       type: Boolean,
-      default: false,
+      required: true,
     },
+    consent2: {
+      type: Boolean,
+      required: true,
+    },
+    consent3: {
+      type: Boolean,
+      required: true,
+    },
+    
     status: {
       type: String,
       enum: ['pending', 'approved', 'rejected'],
-      default: 'pending',
+      default: 'approved',
     },
     rating: {
       type: Number,

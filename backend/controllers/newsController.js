@@ -31,6 +31,7 @@ const formatNews = (doc) => {
     excerpt: doc.excerpt,
     content: doc.content,
     coverImage: doc.coverImage,
+    imageUrl: doc.coverImage, // For backward compatibility
     readingTimeMinutes: doc.readingTimeMinutes,
     publishedAt: doc.publishedAt,
     createdAt: doc.createdAt,
@@ -38,6 +39,14 @@ const formatNews = (doc) => {
     createdBy: doc.createdBy,
     createdByRole: doc.createdByRole,
     createdByName: doc.createdByName,
+    status: doc.status,
+    department: doc.department,
+    approvalStatus: doc.approvalStatus,
+    approvalRemarks: doc.approvalRemarks,
+    approvedBy: doc.approvedBy,
+    approvedAt: doc.approvedAt,
+    featured: doc.featured,
+    views: doc.views,
   }
 }
 
@@ -77,8 +86,9 @@ const createNews = async (req, res) => {
     const user = req.user
     const role = user?.role?.toLowerCase()
 
-    if (!user || !['faculty', 'admin', 'coordinator'].includes(role)) {
-      return res.status(403).json({ success: false, message: 'Only faculty, admin, and department coordinators can post news.' })
+    // Only admin can post news
+    if (!user || role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Only admin can post news.' })
     }
 
     const { title, subtitle, category, excerpt, content, coverImage, readingTimeMinutes, publishedAt } = req.body ?? {}
@@ -101,44 +111,9 @@ const createNews = async (req, res) => {
       parsedPublishedAt = date
     }
 
-    const CreatorModel = getModelByRole(role)
-    if (!CreatorModel) {
-      // For admin and coordinator users, create a simple creator object
-      if (role === 'admin' || role === 'coordinator') {
-        const createdByName = user.email || role.charAt(0).toUpperCase() + role.slice(1)
-        
-        const payload = {
-          title: title.trim(),
-          subtitle: subtitle?.trim() ?? '',
-          category: category?.trim() ?? '',
-          excerpt: excerpt?.trim() ?? '',
-          content: content.trim(),
-          coverImage: coverImage?.trim() ?? '',
-          readingTimeMinutes: normalizedReadingTime ?? 4,
-          publishedAt: parsedPublishedAt ?? new Date(),
-          createdBy: user.id,
-          createdByRole: role,
-          createdByName,
-        }
-
-        const news = await News.create(payload)
-        return res.status(201).json({
-          success: true,
-          message: 'News article published successfully.',
-          data: formatNews(news),
-        })
-      }
-      return res.status(403).json({ success: false, message: 'Unsupported creator role.' })
-    }
-
-    const creator = await CreatorModel.findById(user.id).select('firstName lastName email').lean()
-
-    if (!creator) {
-      return res.status(404).json({ success: false, message: 'Creator record not found.' })
-    }
-
-    const createdByName = `${creator.firstName ?? ''} ${creator.lastName ?? ''}`.trim() || creator.email || ''
-
+    // Admin posts are directly published
+    const createdByName = user.email || 'Admin'
+    
     const payload = {
       title: title.trim(),
       subtitle: subtitle?.trim() ?? '',
@@ -151,10 +126,14 @@ const createNews = async (req, res) => {
       createdBy: user.id,
       createdByRole: role,
       createdByName,
+      // Directly publish admin posts
+      status: 'published',
+      approvalStatus: 'approved',
+      approvedAt: new Date(),
+      approvedBy: user.id,
     }
 
     const news = await News.create(payload)
-
     return res.status(201).json({
       success: true,
       message: 'News article published successfully.',
@@ -166,9 +145,259 @@ const createNews = async (req, res) => {
   }
 }
 
+const updateNews = async (req, res) => {
+  try {
+    const { id } = req.params
+    const user = req.user
+    const role = user?.role?.toLowerCase()
+
+    if (!user || !['faculty', 'admin', 'coordinator'].includes(role)) {
+      return res.status(403).json({ success: false, message: 'Only faculty, admin, and department coordinators can update news.' })
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ success: false, message: 'Invalid news id.' })
+    }
+
+    const existingNews = await News.findById(id)
+    if (!existingNews) {
+      return res.status(404).json({ success: false, message: 'News article not found.' })
+    }
+
+    const { title, subtitle, category, excerpt, content, coverImage, readingTimeMinutes, publishedAt, status, featured } = req.body ?? {}
+
+    // Update fields
+    if (title) existingNews.title = title.trim()
+    if (subtitle !== undefined) existingNews.subtitle = subtitle.trim()
+    if (category !== undefined) existingNews.category = category.trim()
+    if (excerpt !== undefined) existingNews.excerpt = excerpt.trim()
+    if (content) existingNews.content = content.trim()
+    if (coverImage !== undefined) existingNews.coverImage = coverImage.trim()
+    if (readingTimeMinutes !== undefined) {
+      const normalizedReadingTime = Number(readingTimeMinutes)
+      if (Number.isFinite(normalizedReadingTime) && normalizedReadingTime > 0) {
+        existingNews.readingTimeMinutes = normalizedReadingTime
+      }
+    }
+    if (publishedAt !== undefined) {
+      const date = new Date(publishedAt)
+      if (!Number.isNaN(date.getTime())) {
+        existingNews.publishedAt = date
+      }
+    }
+    if (status !== undefined) existingNews.status = status
+    if (featured !== undefined) existingNews.featured = featured
+
+    existingNews.updatedAt = new Date()
+    const updatedNews = await existingNews.save()
+
+    return res.status(200).json({
+      success: true,
+      message: 'News article updated successfully.',
+      data: formatNews(updatedNews),
+    })
+  } catch (error) {
+    console.error('updateNews error:', error)
+    return res.status(500).json({ success: false, message: 'Unable to update news article.' })
+  }
+}
+
+const deleteNews = async (req, res) => {
+  try {
+    const { id } = req.params
+    const user = req.user
+    const role = user?.role?.toLowerCase()
+
+    if (!user || !['faculty', 'admin', 'coordinator'].includes(role)) {
+      return res.status(403).json({ success: false, message: 'Only faculty, admin, and department coordinators can delete news.' })
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ success: false, message: 'Invalid news id.' })
+    }
+
+    const deletedNews = await News.findByIdAndDelete(id)
+    if (!deletedNews) {
+      return res.status(404).json({ success: false, message: 'News article not found.' })
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'News article deleted successfully.',
+    })
+  } catch (error) {
+    console.error('deleteNews error:', error)
+    return res.status(500).json({ success: false, message: 'Unable to delete news article.' })
+  }
+}
+
+const getPendingNewsForCoordinator = async (req, res) => {
+  try {
+    const userId = req.user?.id
+    const userRole = req.user?.role?.toLowerCase()
+    const userDepartment = req.user?.department
+
+    if (!userId || !userDepartment) {
+      return res.status(401).json({ success: false, message: 'Authentication required.' })
+    }
+
+    if (!['coordinator', 'admin'].includes(userRole)) {
+      return res.status(403).json({ success: false, message: 'Only coordinators and admins can review news.' })
+    }
+
+    const query = { 
+      status: 'pending_review',
+      department: userDepartment 
+    }
+    
+    const items = await News.find(query)
+      .sort({ createdAt: -1 })
+      .lean()
+
+    return res.status(200).json({ success: true, data: items.map(formatNews).filter(Boolean) })
+  } catch (error) {
+    console.error('getPendingNewsForCoordinator error:', error)
+    return res.status(500).json({ success: false, message: 'Unable to fetch pending news.' })
+  }
+}
+
+const approveNews = async (req, res) => {
+  try {
+    const userId = req.user?.id
+    const userRole = req.user?.role?.toLowerCase()
+    const { id } = req.params
+    const { remarks } = req.body
+
+    if (!userId) {
+      return res.status(401).json({ success: false, message: 'Authentication required.' })
+    }
+
+    if (!['coordinator', 'admin'].includes(userRole)) {
+      return res.status(403).json({ success: false, message: 'Only coordinators and admins can approve news.' })
+    }
+
+    const newsDoc = await News.findById(id)
+    if (!newsDoc) {
+      return res.status(404).json({ success: false, message: 'News article not found.' })
+    }
+
+    const updatePayload = {
+      status: 'published',
+      approvalStatus: 'approved',
+      approvalRemarks: remarks || '',
+      approvedBy: userId,
+      approvedAt: new Date(),
+      publishedAt: new Date()
+    }
+
+    const updatedNews = await News.findByIdAndUpdate(id, updatePayload, { new: true })
+    
+    return res.status(200).json({ 
+      success: true, 
+      message: 'News article approved successfully.', 
+      data: formatNews(updatedNews) 
+    })
+  } catch (error) {
+    console.error('approveNews error:', error)
+    return res.status(500).json({ success: false, message: 'Unable to approve news article.' })
+  }
+}
+
+const rejectNews = async (req, res) => {
+  try {
+    const userId = req.user?.id
+    const userRole = req.user?.role?.toLowerCase()
+    const { id } = req.params
+    const { remarks } = req.body
+
+    if (!userId) {
+      return res.status(401).json({ success: false, message: 'Authentication required.' })
+    }
+
+    if (!['coordinator', 'admin'].includes(userRole)) {
+      return res.status(403).json({ success: false, message: 'Only coordinators and admins can reject news.' })
+    }
+
+    if (!remarks || remarks.trim().length === 0) {
+      return res.status(400).json({ success: false, message: 'Remarks are required for rejection.' })
+    }
+
+    const newsDoc = await News.findById(id)
+    if (!newsDoc) {
+      return res.status(404).json({ success: false, message: 'News article not found.' })
+    }
+
+    const updatePayload = {
+      status: 'draft',
+      approvalStatus: 'rejected',
+      approvalRemarks: remarks,
+      approvedBy: userId,
+      approvedAt: new Date()
+    }
+
+    const updatedNews = await News.findByIdAndUpdate(id, updatePayload, { new: true })
+    
+    return res.status(200).json({ 
+      success: true, 
+      message: 'News article rejected successfully.', 
+      data: formatNews(updatedNews) 
+    })
+  } catch (error) {
+    console.error('rejectNews error:', error)
+    return res.status(500).json({ success: false, message: 'Unable to reject news article.' })
+  }
+}
+
+const forwardToAdmin = async (req, res) => {
+  try {
+    const userId = req.user?.id
+    const userRole = req.user?.role?.toLowerCase()
+    const { id } = req.params
+    const { remarks } = req.body
+
+    if (!userId) {
+      return res.status(401).json({ success: false, message: 'Authentication required.' })
+    }
+
+    if (userRole !== 'coordinator') {
+      return res.status(403).json({ success: false, message: 'Only coordinators can forward to admin.' })
+    }
+
+    const newsDoc = await News.findById(id)
+    if (!newsDoc) {
+      return res.status(404).json({ success: false, message: 'News article not found.' })
+    }
+
+    const updatePayload = {
+      status: 'pending_review',
+      approvalStatus: 'pending',
+      approvalRemarks: remarks || '',
+      approvedBy: userId,
+      approvedAt: new Date()
+    }
+
+    const updatedNews = await News.findByIdAndUpdate(id, updatePayload, { new: true })
+    
+    return res.status(200).json({ 
+      success: true, 
+      message: 'News article forwarded to admin successfully.', 
+      data: formatNews(updatedNews) 
+    })
+  } catch (error) {
+    console.error('forwardToAdmin error:', error)
+    return res.status(500).json({ success: false, message: 'Unable to forward news article.' })
+  }
+}
+
 module.exports = {
   listNews,
   listMyNews,
   getNewsById,
   createNews,
+  updateNews,
+  deleteNews,
+  getPendingNewsForCoordinator,
+  approveNews,
+  rejectNews,
+  forwardToAdmin,
 }

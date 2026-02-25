@@ -5,7 +5,7 @@ const Admin = require('../models/Admin')
 const Coordinator = require('../models/Coordinator')
 const Opportunity = require('../models/Opportunity')
 const Event = require('../models/Event')
-const Donation = require('../models/Donation')
+const Campaign = require('../models/Campaign')
 const News = require('../models/News')
 
 const ROLE_MODEL_MAP = {
@@ -16,7 +16,7 @@ const ROLE_MODEL_MAP = {
   faculty: Faculty,
   opportunity: Opportunity,
   event: Event,
-  donation: Donation,
+  campaign: Campaign,
   news: News,
 }
 

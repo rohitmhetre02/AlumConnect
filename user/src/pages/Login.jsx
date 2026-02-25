@@ -114,7 +114,9 @@ const Login = () => {
           cleanParams()
 
           try {
-            await login({ token, role, email, name })
+            const loginResponse = await login({ token, role, email, name })
+            
+            // Show success message for all OAuth logins
             addToast({ type: 'success', message: 'Logged in successfully via social account.' })
           } catch (error) {
             console.error('OAuth login completion failed:', error)
@@ -209,7 +211,15 @@ const Login = () => {
         throw primaryError
       }
 
-      addToast({ type: 'success', message: 'Welcome back!' })
+      // Check if user registration is pending approval
+      if (response.user?.profileApprovalStatus === 'IN_REVIEW' || 
+          response.user?.profileApprovalStatus === 'pending' ||
+          response.user?.profileApprovalStatus === 'in_review') {
+        addToast({ type: 'success', message: 'Login successful!' })
+      } else {
+        addToast({ type: 'success', message: 'Welcome back!' })
+      }
+      
       login({ ...response.user, token: response.token })
     } catch (error) {
       const message = error?.message ?? 'Unable to login. Please try again.'

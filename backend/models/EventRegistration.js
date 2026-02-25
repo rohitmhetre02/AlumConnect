@@ -7,6 +7,10 @@ const eventRegistrationSchema = new mongoose.Schema(
       ref: 'Event',
       required: true,
     },
+    userId: {
+      type: String,
+      trim: true,
+    },
     name: {
       type: String,
       required: true,

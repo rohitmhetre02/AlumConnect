@@ -1,39 +1,231 @@
-import { useMemo, useState } from 'react'
-import useApiList from '../hooks/useApiList'
-import getStatusBadgeClass from '../utils/status'
-
-const formatDate = (date) => {
-  if (!date) return '—'
-  const parsed = typeof date === 'string' ? new Date(date) : date
-  if (Number.isNaN(parsed.getTime())) return '—'
-  return parsed.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
-}
+import { useState, useEffect } from 'react'
+import FolderIcon from '@heroicons/react/24/outline/FolderIcon'
+import PhotoIcon from '@heroicons/react/24/outline/PhotoIcon'
+import ArrowLeftIcon from '@heroicons/react/24/outline/ArrowLeftIcon'
+import CloudArrowUpIcon from '@heroicons/react/24/outline/CloudArrowUpIcon'
+import TrashIcon from '@heroicons/react/24/outline/TrashIcon'
+import XMarkIcon from '@heroicons/react/24/outline/XMarkIcon'
+import ChevronRightIcon from '@heroicons/react/24/outline/ChevronRightIcon'
+import BuildingOfficeIcon from '@heroicons/react/24/outline/BuildingOfficeIcon'
+import CalendarIcon from '@heroicons/react/24/outline/CalendarIcon'
+import AcademicCapIcon from '@heroicons/react/24/outline/AcademicCapIcon'
+import UserGroupIcon from '@heroicons/react/24/outline/UserGroupIcon'
+import BriefcaseIcon from '@heroicons/react/24/outline/BriefcaseIcon'
 
 const Gallery = () => {
-  const [searchTerm, setSearchTerm] = useState('')
-  const [categoryFilter, setCategoryFilter] = useState('All')
-  const { data: galleryItems, isLoading, error } = useApiList('/gallery')
+  const [view, setView] = useState('departments') // departments, folders, images
+  const [selectedDepartment, setSelectedDepartment] = useState('')
+  const [selectedFolder, setSelectedFolder] = useState('')
+  const [departments, setDepartments] = useState([])
+  const [folders, setFolders] = useState([])
+  const [images, setImages] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [uploadModalOpen, setUploadModalOpen] = useState(false)
+  const [selectedImages, setSelectedImages] = useState([])
+  const [uploading, setUploading] = useState(false)
+  const [previewImage, setPreviewImage] = useState(null)
+  const [error, setError] = useState('')
 
-  const categoryOptions = useMemo(() => {
-    const values = new Set(['All'])
-    galleryItems.forEach((item) => {
-      if (item.category) values.add(item.category)
-    })
-    return Array.from(values).sort()
-  }, [galleryItems])
+  // Department icons mapping
+  const getDepartmentIcon = (dept) => {
+    const iconMap = {
+      'Civil Engineering': BuildingOfficeIcon,
+      'Computer Engineering': AcademicCapIcon,
+      'Information Technology': AcademicCapIcon,
+      'Electronics & Telecommunication Engineering': AcademicCapIcon,
+      'Mechanical Engineering': BriefcaseIcon,
+      'Artificial Intelligence & Data Science': AcademicCapIcon,
+      'Electronics Engineering (VLSI Design & Technology)': AcademicCapIcon,
+      'Electronics & Communication (Advanced Communication Technology)': AcademicCapIcon
+    }
+    return iconMap[dept] || BuildingOfficeIcon
+  }
 
-  const filteredItems = useMemo(() => {
-    const query = searchTerm.trim().toLowerCase()
-    return galleryItems.filter((item) => {
-      const matchesSearch =
-        !query ||
-        item.title.toLowerCase().includes(query) ||
-        item.description.toLowerCase().includes(query) ||
-        item.uploadedBy.toLowerCase().includes(query)
-      const matchesCategory = categoryFilter === 'All' || item.category === categoryFilter
-      return matchesSearch && matchesCategory
-    })
-  }, [galleryItems, searchTerm, categoryFilter])
+  // Folder icons mapping
+  const getFolderIcon = (folder) => {
+    const iconMap = {
+      'Events': CalendarIcon,
+      'Campus': BuildingOfficeIcon,
+      'Traditional Day': UserGroupIcon,
+      'Alumni Meet': UserGroupIcon,
+      'Industrial Visit': BriefcaseIcon
+    }
+    return iconMap[folder] || FolderIcon
+  }
+
+  // Load departments
+  const loadDepartments = async () => {
+    try {
+      setLoading(true)
+      setError('')
+      const response = await fetch('http://localhost:5000/api/gallery')
+      const data = await response.json()
+      
+      if (data.success) {
+        setDepartments(data.departments)
+      } else {
+        setError(data.error || 'Failed to load departments')
+      }
+    } catch (error) {
+      setError('Failed to connect to server')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Load folders for a department
+  const loadFolders = async (department) => {
+    try {
+      setLoading(true)
+      setError('')
+      const response = await fetch(`http://localhost:5000/api/gallery/${encodeURIComponent(department)}/folders`)
+      const data = await response.json()
+      
+      if (data.success) {
+        setFolders(data.folders)
+        setSelectedDepartment(department)
+        setView('folders')
+      } else {
+        setError(data.error || 'Failed to load folders')
+      }
+    } catch (error) {
+      setError('Failed to connect to server')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Load images for a folder
+  const loadImages = async (department, folder) => {
+    try {
+      setLoading(true)
+      setError('')
+      const response = await fetch(`http://localhost:5000/api/gallery/${encodeURIComponent(department)}/${encodeURIComponent(folder)}/images`)
+      const data = await response.json()
+      
+      if (data.success) {
+        setImages(data.images)
+        setSelectedDepartment(department)
+        setSelectedFolder(folder)
+        setView('images')
+      } else {
+        setError(data.error || 'Failed to load images')
+      }
+    } catch (error) {
+      setError('Failed to connect to server')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Handle image upload
+  const handleUpload = async () => {
+    if (selectedImages.length === 0) {
+      setError('Please select at least one image')
+      return
+    }
+
+    const department = document.getElementById('upload-department').value
+    const folder = document.getElementById('upload-folder').value
+
+    if (!department || !folder) {
+      setError('Please select department and folder')
+      return
+    }
+
+    setUploading(true)
+    try {
+      const formData = new FormData()
+      formData.append('department', department)
+      formData.append('folder', folder)
+      
+      selectedImages.forEach(image => {
+        formData.append('images', image)
+      })
+
+      // Get token from admin-specific storage
+      const token = localStorage.getItem('adminToken') || 
+                   sessionStorage.getItem('adminToken') || 
+                   document.cookie.split(';').find(c => c.trim().startsWith('adminToken='))?.split('=')[1]
+
+      if (!token) {
+        setError('Authentication required. Please login again.')
+        setUploading(false)
+        return
+      }
+
+      const response = await fetch('http://localhost:5000/api/gallery/test-upload', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        body: formData
+      })
+
+      const data = await response.json()
+      
+      if (data.success) {
+        setUploadModalOpen(false)
+        setSelectedImages([])
+        setError('')
+        
+        // Refresh current view
+        if (view === 'departments') {
+          loadDepartments()
+        } else if (view === 'folders') {
+          loadFolders(selectedDepartment)
+        } else if (view === 'images') {
+          loadImages(selectedDepartment, selectedFolder)
+        }
+      } else {
+        setError(data.error || 'Upload failed')
+      }
+    } catch (error) {
+      setError('Upload failed: ' + error.message)
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  // Handle image deletion
+  const handleDeleteImage = async (imageId) => {
+    if (!confirm('Are you sure you want to delete this image?')) return
+
+    try {
+      // Get token from admin-specific storage
+      const token = localStorage.getItem('adminToken') || 
+                   sessionStorage.getItem('adminToken') || 
+                   document.cookie.split(';').find(c => c.trim().startsWith('adminToken='))?.split('=')[1]
+
+      if (!token) {
+        setError('Authentication required. Please login again.')
+        return
+      }
+
+      const response = await fetch(`http://localhost:5000/api/gallery/${imageId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
+
+      const data = await response.json()
+      
+      if (data.success) {
+        loadImages(selectedDepartment, selectedFolder)
+        setError('')
+      } else {
+        setError(data.error || 'Failed to delete image')
+      }
+    } catch (error) {
+      setError('Failed to delete image: ' + error.message)
+    }
+  }
+
+  // Initialize
+  useEffect(() => {
+    loadDepartments()
+  }, [])
 
   return (
     <div className="space-y-6">
@@ -43,113 +235,279 @@ const Gallery = () => {
       </header>
 
       <section className="rounded-3xl border border-slate-100 bg-white p-6 shadow-soft">
-        <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex flex-1 flex-col gap-4 sm:flex-row sm:items-center sm:gap-3">
-            <div className="relative flex-1 max-w-sm">
-              <input
-                type="text"
-                placeholder="Search by title or description..."
-                value={searchTerm}
-                onChange={(event) => setSearchTerm(event.target.value)}
-                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 pl-11 text-sm text-slate-700 placeholder:text-slate-400 shadow-sm transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40"
-              />
-              <svg className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
+        {/* Navigation Header */}
+        <div className="mb-6 flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            {view !== 'departments' && (
+              <button
+                onClick={() => {
+                  if (view === 'images') {
+                    loadFolders(selectedDepartment)
+                  } else {
+                    loadDepartments()
+                  }
+                }}
+                className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
+              >
+                <ArrowLeftIcon className="h-5 w-5" />
+              </button>
+            )}
+            <div>
+              <h2 className="text-xl font-semibold text-gray-900">
+                {view === 'departments' && 'Departments'}
+                {view === 'folders' && selectedDepartment}
+                {view === 'images' && `${selectedDepartment} / ${selectedFolder}`}
+              </h2>
+              <p className="text-gray-600 text-sm">
+                {view === 'departments' && 'Browse department galleries'}
+                {view === 'folders' && 'Select a folder to view images'}
+                {view === 'images' && `Showing ${images.length} images`}
+              </p>
             </div>
-
-            <select
-              value={categoryFilter}
-              onChange={(event) => setCategoryFilter(event.target.value)}
-              className="rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40"
-            >
-              {categoryOptions.map((category) => (
-                <option key={category} value={category}>
-                  {category}
-                </option>
-              ))}
-            </select>
           </div>
-
-          <button className="rounded-2xl bg-primary px-4 py-2.5 text-sm font-semibold text-white shadow-[0_14px_30px_rgba(37,99,235,0.25)] transition hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-primary/50">
-            Upload Media
+          
+          <button
+            onClick={() => setUploadModalOpen(true)}
+            className="flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            <CloudArrowUpIcon className="h-5 w-5" />
+            <span>Upload Media</span>
           </button>
         </div>
 
-        <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-          {isLoading ? (
-            <div className="col-span-full text-center py-12 text-sm text-slate-500">Loading gallery…</div>
-          ) : filteredItems.length === 0 ? (
-            <div className="col-span-full text-center py-12 text-sm text-slate-500">
-              No gallery items match the current filters.
-            </div>
-          ) : (
-            filteredItems.map((item) => (
-              <article
-                key={item.id}
-                className="group flex h-full flex-col overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-soft transition hover:-translate-y-1 hover:border-primary/20 hover:shadow-lg"
-              >
-                <div className="relative h-48 overflow-hidden">
-                  <img
-                    src={item.image}
-                    alt={item.title}
-                    className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
-                    loading="lazy"
-                  />
-                  <span className="absolute left-4 top-4 rounded-full bg-black/60 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-white">
-                    {item.category}
-                  </span>
-                </div>
-
-                <div className="flex flex-1 flex-col gap-3 p-6">
-                  <div>
-                    <h3 className="text-base font-semibold text-slate-900">{item.title}</h3>
-                    <p className="mt-1 text-sm text-slate-600 line-clamp-2">{item.description}</p>
-                  </div>
-
-                  <div className="mt-auto space-y-1 text-xs text-slate-500">
-                    <div className="flex items-center gap-2">
-                      <svg className="h-4 w-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2a3 3 0 00-5.356-1.857M7 20H2v-2a3 3 0 015.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
-                      </svg>
-                      <span>Uploaded by {item.uploadedBy}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <svg className="h-4 w-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.488 9.857A8 8 0 1111.5 3" />
-                      </svg>
-                      <span>{formatDate(item.uploadedAt)}</span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between pt-4">
-                    <button className="rounded-full border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-600 transition hover:border-primary hover:text-primary">
-                      Preview
-                    </button>
-                    <div className="flex gap-2">
-                      <button className="rounded-full border border-slate-200 p-2 text-slate-400 transition hover:border-primary hover:text-primary" aria-label="Edit gallery item">
-                        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                        </svg>
-                      </button>
-                      <button className="rounded-full border border-slate-200 p-2 text-slate-400 transition hover:border-red-200 hover:text-red-600" aria-label="Delete gallery item">
-                        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 011-1h2a1 1 0 011 1v3M4 7h16" />
-                        </svg>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </article>
-            ))
-          )}
-        </div>
-
+        {/* Error Display */}
         {error && (
-          <div className="mt-6 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-600">{error}</div>
+          <div className="mb-6 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-600">
+            {error}
+          </div>
+        )}
+
+        {/* Loading State */}
+        {loading && (
+          <div className="flex justify-center items-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          </div>
+        )}
+
+        {/* Departments View */}
+        {view === 'departments' && !loading && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {departments.map((dept) => {
+              const Icon = getDepartmentIcon(dept.department)
+              return (
+                <div
+                  key={dept.department}
+                  onClick={() => loadFolders(dept.department)}
+                  className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow cursor-pointer p-6 border border-slate-100"
+                >
+                  <div className="flex items-center justify-between mb-4">
+                    <Icon className="h-8 w-8 text-blue-600" />
+                    <ChevronRightIcon className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <h3 className="font-semibold text-gray-900 mb-2">{dept.department}</h3>
+                  <p className="text-sm text-gray-600">{dept.imageCount} images</p>
+                </div>
+              )
+            })}
+          </div>
+        )}
+
+        {/* Folders View */}
+        {view === 'folders' && !loading && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {folders.map((folder) => {
+              const Icon = getFolderIcon(folder.folder)
+              return (
+                <div
+                  key={folder.folder}
+                  onClick={() => loadImages(selectedDepartment, folder.folder)}
+                  className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow cursor-pointer p-6 border border-slate-100"
+                >
+                  <div className="flex items-center justify-between mb-4">
+                    <Icon className="h-8 w-8 text-green-600" />
+                    <ChevronRightIcon className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <h3 className="font-semibold text-gray-900 mb-2">{folder.folder}</h3>
+                  <p className="text-sm text-gray-600">{folder.imageCount} images</p>
+                </div>
+              )
+            })}
+          </div>
+        )}
+
+        {/* Images View */}
+        {view === 'images' && !loading && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+            {images.map((image) => (
+              <div key={image._id} className="relative group">
+                <div
+                  onClick={() => setPreviewImage(image)}
+                  className="aspect-square rounded-lg overflow-hidden bg-gray-100 cursor-pointer hover:opacity-95 transition-opacity"
+                >
+                  <img
+                    src={image.imageUrl}
+                    alt={image.imageName}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+                
+                <button
+                  onClick={() => handleDeleteImage(image._id)}
+                  className="absolute top-2 right-2 p-2 bg-red-600 text-white rounded-lg opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-700"
+                >
+                  <TrashIcon className="h-4 w-4" />
+                </button>
+                
+                <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/60 to-transparent">
+                  <p className="text-white text-xs truncate">{image.imageName}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Empty State */}
+        {!loading && ((view === 'departments' && departments.length === 0) ||
+                     (view === 'folders' && folders.length === 0) ||
+                     (view === 'images' && images.length === 0)) && (
+          <div className="text-center py-12">
+            <PhotoIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+            <p className="text-gray-600">No images found</p>
+          </div>
         )}
       </section>
+
+      {/* Upload Modal */}
+      {uploadModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-semibold">Upload Images</h2>
+                <button
+                  onClick={() => setUploadModalOpen(false)}
+                  className="p-2 hover:bg-gray-100 rounded-lg"
+                >
+                  <XMarkIcon className="h-5 w-5" />
+                </button>
+              </div>
+            </div>
+
+            <div className="p-6 space-y-4">
+              {/* Department Selection */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Department
+                </label>
+                <select
+                  id="upload-department"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="">Select Department</option>
+                  {[
+                    'Civil Engineering',
+                    'Computer Engineering',
+                    'Information Technology',
+                    'Electronics & Telecommunication Engineering',
+                    'Mechanical Engineering',
+                    'Artificial Intelligence & Data Science',
+                    'Electronics Engineering (VLSI Design & Technology)',
+                    'Electronics & Communication (Advanced Communication Technology)'
+                  ].map((dept) => (
+                    <option key={dept} value={dept}>{dept}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Folder Selection */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Folder
+                </label>
+                <select
+                  id="upload-folder"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="">Select Folder</option>
+                  <option value="Events">Events</option>
+                  <option value="Campus">Campus</option>
+                  <option value="Traditional Day">Traditional Day</option>
+                  <option value="Alumni Meet">Alumni Meet</option>
+                  <option value="Industrial Visit">Industrial Visit</option>
+                </select>
+              </div>
+
+              {/* File Upload */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Images (Max 10 files, 10MB each)
+                </label>
+                <input
+                  type="file"
+                  multiple
+                  accept="image/*"
+                  onChange={(e) => setSelectedImages(Array.from(e.target.files))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+
+              {/* Selected Files Preview */}
+              {selectedImages.length > 0 && (
+                <div>
+                  <p className="text-sm font-medium text-gray-700 mb-2">
+                    Selected Files ({selectedImages.length})
+                  </p>
+                  <div className="space-y-2 max-h-32 overflow-y-auto">
+                    {selectedImages.map((file, index) => (
+                      <div key={index} className="text-sm text-gray-600">
+                        {file.name} ({(file.size / 1024 / 1024).toFixed(2)} MB)
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="p-6 border-t flex justify-end space-x-3">
+              <button
+                onClick={() => setUploadModalOpen(false)}
+                className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleUpload}
+                disabled={uploading}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+              >
+                {uploading ? 'Uploading...' : 'Upload'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Image Preview Modal */}
+      {previewImage && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center p-4 z-50"
+          onClick={() => setPreviewImage(null)}
+        >
+          <div className="relative max-w-4xl max-h-[90vh]">
+            <img
+              src={previewImage.imageUrl}
+              alt={previewImage.imageName}
+              className="max-w-full max-h-full object-contain"
+            />
+            <button
+              onClick={() => setPreviewImage(null)}
+              className="absolute top-4 right-4 p-2 bg-white rounded-full hover:bg-gray-100"
+            >
+              <XMarkIcon className="h-6 w-6" />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

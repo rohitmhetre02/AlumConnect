@@ -19,6 +19,24 @@ const formatRegistration = (registrationDoc) => {
   }
 }
 
+const formatEventSummary = (eventDoc) => {
+  if (!eventDoc) return null
+
+  return {
+    id: eventDoc._id?.toString?.() ?? eventDoc.id,
+    title: eventDoc.title,
+    description: eventDoc.description,
+    location: eventDoc.location,
+    coverImage: eventDoc.coverImage,
+    startAt: eventDoc.startAt,
+    endAt: eventDoc.endAt,
+    registrationLink: eventDoc.registrationLink,
+    registrationCount: Array.isArray(eventDoc.registrations) ? eventDoc.registrations.length : 0,
+    organization: eventDoc.organization,
+    createdByName: eventDoc.createdByName,
+  }
+}
+
 const registerForEvent = async (req, res) => {
   try {
     const { eventId } = req.params
@@ -95,6 +113,7 @@ const registerForEvent = async (req, res) => {
     // Create registration
     const registrationData = {
       eventId,
+      userId: req.user?.id || req.user?._id || null,
       name: name.trim(),
       email: email.trim().toLowerCase(),
       role,
@@ -208,8 +227,105 @@ const getRegistrationStats = async (req, res) => {
   }
 }
 
+const getMyRegistrations = async (req, res) => {
+  try {
+    const user = req.user
+
+    if (!user) {
+      return res.status(401).json({ success: false, message: 'Authentication required.' })
+    }
+
+    const userId = user.id ? String(user.id) : null
+    const userEmail = user.email ? user.email.toLowerCase() : null
+
+    if (!userId && !userEmail) {
+      return res.status(400).json({ success: false, message: 'Unable to determine user identity for registrations.' })
+    }
+
+    const filters = []
+    if (userId) filters.push({ userId })
+    if (userEmail) filters.push({ email: userEmail })
+    const query = filters.length === 1 ? filters[0] : { $or: filters }
+
+    const [standaloneRegistrations, embeddedEvents] = await Promise.all([
+      filters.length
+        ? EventRegistration.find(query)
+            .sort({ registeredAt: -1 })
+            .populate('eventId')
+            .lean()
+        : [],
+      userId
+        ? Event.find({ 'registrations.userId': userId })
+            .sort({ startAt: -1 })
+            .lean()
+        : [],
+    ])
+
+    const entriesByEventId = new Map()
+    const upsertEntry = (eventSummary, { registrationId, registeredAt, registrationType }) => {
+      if (!eventSummary?.id) return
+
+      const current = entriesByEventId.get(eventSummary.id)
+      const currentTime = current?.registeredAt ? new Date(current.registeredAt).getTime() : -Infinity
+      const nextTime = registeredAt ? new Date(registeredAt).getTime() : -Infinity
+
+      if (!current || nextTime > currentTime) {
+        entriesByEventId.set(eventSummary.id, {
+          registrationId,
+          registeredAt,
+          registrationType: registrationType ?? '',
+          event: {
+            ...eventSummary,
+            isRegistered: true,
+          },
+        })
+      }
+    }
+
+    standaloneRegistrations.forEach((registrationDoc) => {
+      const eventSummary = formatEventSummary(registrationDoc.eventId)
+      if (!eventSummary) return
+
+      upsertEntry(eventSummary, {
+        registrationId: registrationDoc._id.toString(),
+        registeredAt: registrationDoc.registeredAt,
+        registrationType: registrationDoc.registrationType,
+      })
+    })
+
+    embeddedEvents.forEach((eventDoc) => {
+      const eventSummary = formatEventSummary(eventDoc)
+      if (!eventSummary) return
+
+      const matches = Array.isArray(eventDoc.registrations)
+        ? eventDoc.registrations.filter((registration) => String(registration.userId) === userId)
+        : []
+
+      matches.forEach((registration, index) => {
+        upsertEntry(eventSummary, {
+          registrationId: `${eventDoc._id?.toString?.() ?? eventSummary.id}::${registration.userId ?? index}`,
+          registeredAt: registration.registeredAt,
+          registrationType: registration.registrationType || 'internal',
+        })
+      })
+    })
+
+    const payload = Array.from(entriesByEventId.values()).sort((a, b) => {
+      const aTime = a.registeredAt ? new Date(a.registeredAt).getTime() : 0
+      const bTime = b.registeredAt ? new Date(b.registeredAt).getTime() : 0
+      return bTime - aTime
+    })
+
+    return res.status(200).json({ success: true, data: payload })
+  } catch (error) {
+    console.error('getMyRegistrations error:', error)
+    return res.status(500).json({ success: false, message: 'Unable to load your registrations.' })
+  }
+}
+
 module.exports = {
   registerForEvent,
   getEventRegistrations,
   getRegistrationStats,
+  getMyRegistrations,
 }

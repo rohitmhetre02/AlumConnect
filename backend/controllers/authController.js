@@ -3,6 +3,8 @@ const jwt = require('jsonwebtoken')
 
 const { getModelByRole } = require('../utils/roleModels')
 const { PROFILE_STATUS, normalizeProfileStatus } = require('../utils/profileStatus')
+const { normalizeDepartment } = require('../utils/departments')
+const { REGISTRATION_STATUS, normalizeRegistrationStatus } = require('../utils/registrationStatus')
 
 const SEVEN_DAYS_IN_SECONDS = 7 * 24 * 60 * 60
 
@@ -17,9 +19,18 @@ const getJwtSecret = () => {
   return secret
 }
 
+const normalizeId = (value) => {
+  if (!value) return ''
+  if (typeof value === 'string') return value
+  if (typeof value.toHexString === 'function') return value.toHexString()
+  if (typeof value.toString === 'function') return value.toString()
+  if (value.$oid) return value.$oid
+  return String(value)
+}
+
 const createToken = (userId, role) => {
   const secret = getJwtSecret()
-  return jwt.sign({ id: userId, role }, secret, { expiresIn: SEVEN_DAYS_IN_SECONDS })
+  return jwt.sign({ id: normalizeId(userId), role }, secret, { expiresIn: SEVEN_DAYS_IN_SECONDS })
 }
 
 const buildUserDisplayName = (user) => {
@@ -37,9 +48,10 @@ const buildUserDisplayName = (user) => {
 const sanitizeUser = (user, role) => {
   const profileApprovalStatus = normalizeProfileStatus(user?.profileApprovalStatus)
   const isProfileApproved = profileApprovalStatus === PROFILE_STATUS.APPROVED
+  const registrationStatus = normalizeRegistrationStatus(user?.registrationStatus)
 
   return {
-    id: user._id,
+    id: normalizeId(user._id),
     role,
     email: user.email,
     firstName: user.firstName ?? '',
@@ -48,6 +60,7 @@ const sanitizeUser = (user, role) => {
     avatar: user.avatar ?? '',
     isProfileApproved,
     profileApprovalStatus,
+    registrationStatus,
   }
 }
 
@@ -123,9 +136,16 @@ const signup = async (req, res) => {
       firstName: req.body.firstName?.trim() ?? '',
       lastName: req.body.lastName?.trim() ?? '',
       password: hashedPassword,
-      department: req.body.department?.trim() ?? '',
+      department: normalizeDepartment(req.body.department),
       isProfileApproved: false,
       profileApprovalStatus: PROFILE_STATUS.IN_REVIEW,
+      registrationStatus:
+        normalizedRole === 'student' || normalizedRole === 'alumni'
+          ? REGISTRATION_STATUS.PENDING
+          : normalizedRole === 'faculty' || normalizedRole === 'coordinator'
+            ? REGISTRATION_STATUS.PENDING
+            : REGISTRATION_STATUS.APPROVED,
+      registrationDecisionByRole: '',
     }
 
     if (normalizedRole === 'student') {
@@ -190,6 +210,11 @@ const createUsers = async (payloads = [], role) => {
       password: hashedPassword,
       isProfileApproved: false,
       profileApprovalStatus: PROFILE_STATUS.IN_REVIEW,
+      registrationStatus:
+        normalizedRole === 'student' || normalizedRole === 'alumni'
+          ? REGISTRATION_STATUS.PENDING
+          : REGISTRATION_STATUS.APPROVED,
+      registrationDecisionByRole: '',
     })
 
     createdUsers.push({
@@ -236,6 +261,7 @@ const login = async (req, res) => {
 
     let matchedUser = null
     let matchedRole = null
+    let matchedRegistrationStatus = REGISTRATION_STATUS.APPROVED
 
     for (const { role: candidateRole, Model } of rolesToEvaluate) {
       const user = await Model.findOne({ email: normalizedEmail })
@@ -259,6 +285,7 @@ const login = async (req, res) => {
       if (isMatch) {
         matchedUser = user
         matchedRole = candidateRole
+        matchedRegistrationStatus = normalizeRegistrationStatus(user?.registrationStatus)
         break
       }
     }
@@ -267,6 +294,9 @@ const login = async (req, res) => {
       return res.status(401).json({ message: 'Invalid credentials.' })
     }
 
+    // Allow login for all users regardless of registration status
+    // Profile approval status will be checked on frontend for popup display
+    
     const token = createToken(matchedUser._id, matchedRole)
 
     return res.status(200).json({

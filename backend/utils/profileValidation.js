@@ -1,4 +1,5 @@
 const PHONE_REGEX = /^[0-9]{10,15}$/
+const { normalizeDepartment } = require('./departments')
 
 const sanitizeString = (value) => (typeof value === 'string' ? value.trim() : '')
 
@@ -45,7 +46,7 @@ const sanitizeEducation = (value) => {
       degree: sanitizeString(item.degree ?? ''),
       otherDegree: sanitizeString(item.otherDegree ?? ''),
       field: sanitizeString(item.field ?? ''),
-      department: sanitizeString(item.department ?? ''),
+      department: normalizeDepartment(item.department),
       admissionYear: toYear(item.admissionYear),
       passoutYear: toYear(item.passoutYear),
       expectedPassoutYear: toYear(item.expectedPassoutYear),
@@ -187,7 +188,7 @@ const buildProfilePayload = (body = {}, role) => {
 
   if (body.firstName !== undefined) payload.firstName = sanitizeString(body.firstName)
   if (body.lastName !== undefined) payload.lastName = sanitizeString(body.lastName)
-  if (body.department !== undefined) payload.department = sanitizeString(body.department)
+  if (body.department !== undefined) payload.department = normalizeDepartment(body.department)
   if (body.title !== undefined) payload.title = sanitizeString(body.title)
   if (body.location !== undefined) payload.location = sanitizeString(body.location)
   if (body.phone !== undefined) payload.phone = sanitizeString(body.phone)

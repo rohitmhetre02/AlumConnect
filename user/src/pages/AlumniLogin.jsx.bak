@@ -1,0 +1,270 @@
+import { useEffect, useMemo, useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import AuthTemplate from '../components/auth/AuthTemplate'
+import { get, post, API_BASE_URL } from '../utils/api'
+import useToast from '../hooks/useToast'
+import { useAuth } from '../context/AuthContext'
+
+const providers = [
+  {
+    id: 'google',
+    label: 'Continue with Google',
+    accent: 'bg-[#fef3c7] text-[#ea4335]',
+    icon: (
+      <svg viewBox="0 0 24 24" className="h-5 w-5" aria-hidden="true">
+        <path
+          fill="#EA4335"
+          d="M12.24 10.285v3.514h4.95c-.197 1.125-1.337 3.297-4.95 3.297-2.978 0-5.403-2.46-5.403-5.503s2.425-5.503 5.403-5.503c1.695 0 2.835.72 3.486 1.339l2.373-2.286C16.735 3.812 14.732 3 12.24 3 7.38 3 3.5 6.938 3.5 11.594S7.38 20.188 12.24 20.188c5.857 0 9.71-4.108 9.71-9.9 0-.662-.072-1.165-.158-1.663H12.24Z"
+        />
+      </svg>
+    ),
+  },
+  {
+    id: 'linkedin',
+    label: 'Continue with LinkedIn',
+    accent: 'bg-[#e8f1fb] text-[#0A66C2]',
+    icon: (
+      <svg viewBox="0 0 24 24" className="h-5 w-5" aria-hidden="true">
+        <path
+          fill="#0A66C2"
+          d="M4.98 3.5c0 1.381-1.11 2.5-2.48 2.5A2.49 2.49 0 0 1 0 3.5C0 2.12 1.11 1 2.5 1s2.48 1.12 2.48 2.5ZM.22 22h4.56V7.5H.22V22Zm7.68 0h4.38v-7.5c0-1.99.81-3.28 2.61-3.28 1.56 0 2.31 1.06 2.31 3.28V22h4.38v-8.63C21.58 8.88 19.42 7 16.47 7c-2.22 0-3.68.97-4.3 2.11h-.06V7.5H7.9c.06 1.04 0 14.5 0 14.5Z"
+        />
+      </svg>
+    ),
+  },
+]
+
+const PROVIDER_LABELS = {
+  google: 'Google',
+  linkedin: 'LinkedIn',
+}
+
+const AlumniLogin = () => {
+  const [form, setForm] = useState({ email: '', password: '' })
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [oauthProviders, setOauthProviders] = useState(null)
+  const [isFetchingProviders, setIsFetchingProviders] = useState(false)
+  const [isRedirectingOAuth, setIsRedirectingOAuth] = useState(false)
+  const [activeProvider, setActiveProvider] = useState(null)
+  const addToast = useToast()
+  const { login } = useAuth()
+  const navigate = useNavigate()
+
+  const handleChange = (event) => {
+    const { name, value } = event.target
+    setForm((prev) => ({ ...prev, [name]: value }))
+  }
+
+  const isValid = useMemo(() => form.email.trim() && form.password.trim(), [form])
+
+  useEffect(() => {
+    const fetchProviders = async () => {
+      try {
+        setIsFetchingProviders(true)
+        const response = await get('/auth/oauth/providers', { includeAuth: false })
+        setOauthProviders(response)
+      } catch (error) {
+        console.error('Failed to load OAuth providers:', error)
+        addToast({ type: 'error', message: 'Unable to load social login options right now.' })
+      } finally {
+        setIsFetchingProviders(false)
+      }
+    }
+
+    fetchProviders()
+  }, [addToast])
+
+  const handleSocialLogin = (providerId) => {
+    const providerInfo = oauthProviders?.[providerId]
+
+    if (!providerInfo?.enabled || !providerInfo?.authPath) {
+      addToast({ type: 'error', message: `${PROVIDER_LABELS[providerId] || 'Social'} login is not available right now.` })
+      return
+    }
+
+    try {
+      setIsRedirectingOAuth(true)
+      setActiveProvider(providerId)
+      const redirectUrl = new URL(providerInfo.authPath, API_BASE_URL)
+      window.location.href = redirectUrl.toString()
+    } catch (error) {
+      console.error('Failed to initiate social login:', error)
+      setIsRedirectingOAuth(false)
+      setActiveProvider(null)
+      addToast({ type: 'error', message: 'Unable to redirect to social login.' })
+    }
+  }
+
+  const handleSubmit = async (event) => {
+    event.preventDefault()
+    if (!isValid || isSubmitting) return
+
+    setIsSubmitting(true)
+
+    try {
+      const response = await post('/auth/login', {
+        email: form.email.trim(),
+        password: form.password,
+        role: 'alumni'
+      })
+
+      addToast({ type: 'success', message: 'Welcome back, Alumni!' })
+      login({ ...response.user, token: response.token })
+      navigate('/dashboard')
+    } catch (error) {
+      const message = error?.message ?? 'Unable to login. Please try again.'
+      addToast({ type: 'error', message })
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const isSocialLoading = isRedirectingOAuth || isFetchingProviders
+
+  return (
+    <AuthTemplate
+      header={
+        <div className="space-y-3">
+          <span className="inline-flex items-center gap-2 rounded-full bg-[#E8F1FB] px-4 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-[#0A66C2]">
+            Alumni Portal
+          </span>
+          <h1 className="text-3xl font-semibold text-slate-900 md:text-[34px]">Alumni Login</h1>
+          <p className="text-sm text-slate-500 md:text-base">Share expertise and mentor current students.</p>
+        </div>
+      }
+      footer={
+        <p>
+          Don't have an alumni account?{' '}
+          <Link to="/signup/alumni" className="font-semibold text-[#2563EB] hover:text-[#1d4ed8]">
+            Sign Up
+          </Link>
+        </p>
+      }
+      align="center"
+    >
+      <div className="space-y-4" />
+      <div className="space-y-3">
+        {providers.map((provider) => {
+          const providerInfo = oauthProviders?.[provider.id]
+          const isConfigured = Boolean(providerInfo?.enabled && providerInfo?.authPath)
+          const isActive = activeProvider === provider.id && isRedirectingOAuth
+          const isDisabled = isSocialLoading || !isConfigured
+
+          const buttonLabel = isActive
+            ? `Continuing with ${PROVIDER_LABELS[provider.id]}`
+            : provider.label
+
+          return (
+            <button
+              key={provider.id}
+              type="button"
+              onClick={() => handleSocialLogin(provider.id)}
+              disabled={isDisabled}
+              className={`flex w-full items-center justify-between rounded-2xl border border-slate-200 px-6 py-4 text-base font-medium transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2563EB] ${
+                isDisabled
+                  ? 'cursor-not-allowed bg-white text-slate-400 opacity-70'
+                  : 'bg-white text-slate-700 shadow-sm hover:-translate-y-0.5 hover:shadow-[0_16px_40px_rgba(15,23,42,0.12)]'
+              }`}
+            >
+              <span className="flex items-center gap-3">
+                <span
+                  className={`grid h-10 w-10 place-items-center rounded-full font-semibold ${
+                    isDisabled ? `${provider.accent} opacity-70` : provider.accent
+                  }`}
+                >
+                  {provider.icon}
+                </span>
+                {buttonLabel}
+              </span>
+              {isActive ? (
+                <span className="h-5 w-5 animate-spin rounded-full border-2 border-current border-r-transparent" aria-hidden="true" />
+              ) : (
+                <svg
+                  className="h-5 w-5 text-slate-400"
+                  viewBox="0 0 20 20"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  aria-hidden="true"
+                >
+                  <path d="M7.5 4.5 12.5 10 7.5 15.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              )}
+            </button>
+          )
+        })}
+        {oauthProviders && Object.values(oauthProviders).every((entry) => entry?.enabled === false) ? (
+          <p className="text-center text-sm text-slate-500">Social login is currently unavailable.</p>
+        ) : null}
+        {!oauthProviders && isFetchingProviders ? (
+          <p className="text-center text-sm text-slate-400">Loading social login options…</p>
+        ) : null}
+      </div>
+
+      <div className="relative py-6">
+        <span className="absolute inset-x-0 top-1/2 h-px -translate-y-1/2 bg-slate-200" aria-hidden="true" />
+        <span className="relative mx-auto block w-max bg-white px-4 text-sm font-medium text-slate-400">or continue with email</span>
+      </div>
+
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="space-y-2">
+          <label htmlFor="email" className="text-sm font-semibold text-slate-700">
+            Email
+          </label>
+          <input
+            id="email"
+            name="email"
+            type="email"
+            value={form.email}
+            onChange={handleChange}
+            placeholder="you@domain.com"
+            className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-sm text-slate-900 shadow-[0_12px_30px_rgba(15,23,42,0.05)] outline-none transition focus:border-[#2563EB] focus:shadow-[0_18px_40px_rgba(37,99,235,0.15)]"
+            required
+          />
+        </div>
+        <div className="space-y-2">
+          <label htmlFor="password" className="text-sm font-semibold text-slate-700">
+            Password
+          </label>
+          <input
+            id="password"
+            name="password"
+            type="password"
+            value={form.password}
+            onChange={handleChange}
+            placeholder="Enter your password"
+            className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-sm text-slate-900 shadow-[0_12px_30px_rgba(15,23,42,0.05)] outline-none transition focus:border-[#2563EB] focus:shadow-[0_18px_40px_rgba(37,99,235,0.15)]"
+            required
+          />
+          <div className="text-right text-sm">
+            <Link to="/forgot-password" className="font-semibold text-[#2563EB] underline underline-offset-4 hover:text-[#1d4ed8]">
+              Forgot password?
+            </Link>
+          </div>
+        </div>
+        <button
+          type="submit"
+          disabled={!isValid || isSubmitting}
+          className={`inline-flex w-full items-center justify-center gap-2 rounded-full px-6 py-3 text-sm font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#93C5FD] ${
+            isValid && !isSubmitting
+              ? 'bg-[#2563EB] text-white shadow-[0_16px_40px_rgba(37,99,235,0.35)] hover:bg-[#1d4ed8]'
+              : 'cursor-not-allowed bg-slate-200 text-slate-500'
+          }`}
+        >
+          {isSubmitting ? 'Signing in…' : 'Login as Alumni'}
+          <svg viewBox="0 0 20 20" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
+            <path d="M7.5 4.5 12.5 10 7.5 15.5" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </button>
+      </form>
+
+      <div className="mt-6 text-center">
+        <Link to="/login" className="text-sm text-slate-500 hover:text-slate-700">
+          ← Back to all login options
+        </Link>
+      </div>
+    </AuthTemplate>
+  )
+}
+
+export default AlumniLogin

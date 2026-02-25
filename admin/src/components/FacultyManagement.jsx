@@ -5,6 +5,10 @@ import getStatusBadgeClass from '../utils/status'
 import AdminProfileView from './AdminProfileView'
 import useModal from '../hooks/useModal'
 import UserProvisionModal from './UserProvisionModal'
+import ActionMenu from './ActionMenu'
+import StatusChangeModal from './StatusChangeModal'
+import ConfirmDeleteModal from './ConfirmDeleteModal'
+import { del, put } from '../utils/api'
 
 const FacultyManagement = () => {
   const [searchTerm, setSearchTerm] = useState('')
@@ -17,6 +21,8 @@ const FacultyManagement = () => {
   const memberId = memberIdParam || null
   const facultyList = Array.isArray(faculty) ? faculty : []
   const [pendingSelection, setPendingSelection] = useState(null)
+  const [statusModalMember, setStatusModalMember] = useState(null)
+  const [deleteModalMember, setDeleteModalMember] = useState(null)
 
   const normalizedFaculty = useMemo(() => {
     return facultyList.map((member, index) => {
@@ -126,6 +132,41 @@ const FacultyManagement = () => {
 
       return candidateIds.includes(targetId)
     })
+  }
+
+  const handleStatusChange = (member) => {
+    setStatusModalMember(member)
+  }
+
+  const handleDelete = (member) => {
+    setDeleteModalMember(member)
+  }
+
+  const confirmStatusChange = async (member, newStatus) => {
+    try {
+      const response = await put(`/directory/faculty/${member.id}/status`, { status: newStatus })
+      setStatusModalMember(null)
+      
+      // Show success message
+      alert(`Status updated to ${newStatus} successfully!`)
+      
+      // Refetch data to get updated status
+      refetch()
+    } catch (error) {
+      console.error('Failed to update status:', error)
+      alert('Failed to update status. Please try again.')
+    }
+  }
+
+  const confirmDelete = async (member) => {
+    try {
+      await del(`/directory/faculty/${member.id}`)
+      setDeleteModalMember(null)
+      refetch()
+    } catch (error) {
+      console.error('Failed to delete member:', error)
+      alert('Failed to delete member. Please try again.')
+    }
   }
 
   const handleBackToManagement = () => {
@@ -257,13 +298,14 @@ const FacultyManagement = () => {
                 <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Contact</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Joined</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Status</th>
+                <th className="px-4 py-3 text-center text-xs font-medium text-slate-500 uppercase tracking-wider">View</th>
                 <th className="px-4 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {isLoading ? (
                 <tr>
-                  <td colSpan={7} className="px-4 py-10 text-center text-sm text-slate-500">
+                  <td colSpan={8} className="px-4 py-10 text-center text-sm text-slate-500">
                     Loading faculty members…
                   </td>
                 </tr>
@@ -295,18 +337,26 @@ const FacultyManagement = () => {
                         {member.status}
                       </span>
                     </td>
+                    <td className="px-4 py-4 text-center">
+                      <button
+                        onClick={() => handleFacultyClick(member)}
+                        className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 transition-colors group"
+                        title="View Profile"
+                      >
+                        <svg className="w-4 h-4 text-slate-600 group-hover:text-slate-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
+                      </button>
+                    </td>
                     <td className="px-4 py-4 text-right">
                       <div className="flex items-center justify-end gap-2">
-                        <button className="rounded-full border border-slate-200 p-2 text-slate-400 transition hover:border-primary hover:text-primary">
-                          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                          </svg>
-                        </button>
-                        <button className="rounded-full border border-slate-200 p-2 text-slate-400 transition hover:border-red-200 hover:text-red-600">
-                          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 011-1h2a1 1 0 011 1v3M4 7h16" />
-                          </svg>
-                        </button>
+                        <ActionMenu
+                          member={member}
+                          onProfileView={handleFacultyClick}
+                          onStatusChange={handleStatusChange}
+                          onDelete={handleDelete}
+                        />
                       </div>
                     </td>
                   </tr>
@@ -337,6 +387,18 @@ const FacultyManagement = () => {
         onClose={provisionModal.closeModal}
         role="faculty"
         onSuccess={refetch}
+      />
+      <StatusChangeModal
+        member={statusModalMember}
+        isOpen={!!statusModalMember}
+        onClose={() => setStatusModalMember(null)}
+        onConfirm={confirmStatusChange}
+      />
+      <ConfirmDeleteModal
+        member={deleteModalMember}
+        isOpen={!!deleteModalMember}
+        onClose={() => setDeleteModalMember(null)}
+        onConfirm={confirmDelete}
       />
     </div>
   )

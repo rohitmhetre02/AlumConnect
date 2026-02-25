@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useMemo, useState, useCallback } from 'react'
+import { createContext, useContext, useEffect, useMemo, useState, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { loadUserFromStorage } from '../utils/auth'
 import { get, setAuthToken } from '../utils/api'
@@ -7,6 +7,11 @@ import {
   normalizeProfileStatus,
   isProfileApproved,
 } from '../utils/profileStatus'
+import {
+  REGISTRATION_STATUS,
+  normalizeRegistrationStatus,
+  isRegistrationApproved,
+} from '../utils/registrationStatus'
 
 const AuthContext = createContext(null)
 
@@ -22,8 +27,13 @@ export const buildDisplayName = (profile = {}, fallbackEmail = '') => {
   return ''
 }
 
-const enhanceUserWithProfile = async (userData) => {
+const enhanceUserWithProfile = async (userData, forceRefresh = false) => {
   if (!userData?.token || !userData?.role) return userData
+
+  // Skip if profile already exists and not forcing refresh
+  if (!forceRefresh && userData.profile) {
+    return userData
+  }
 
   try {
     const response = await get('/auth/profile/me')
@@ -35,7 +45,10 @@ const enhanceUserWithProfile = async (userData) => {
 
     const displayName = buildDisplayName(profile, profile.email ?? userData.email)
 
-    const normalizedStatus = normalizeProfileStatus(profile.profileApprovalStatus)
+    const normalizedProfileStatus = normalizeProfileStatus(profile.profileApprovalStatus)
+    const normalizedRegistrationStatus = normalizeRegistrationStatus(
+      profile.registrationStatus ?? userData.registrationStatus,
+    )
 
     return {
       ...userData,
@@ -45,8 +58,10 @@ const enhanceUserWithProfile = async (userData) => {
       name: displayName || userData.name,
       avatar: profile.avatar ?? userData.avatar,
       role: profile.role ?? userData.role,
-      isProfileApproved: isProfileApproved(normalizedStatus),
-      profileApprovalStatus: normalizedStatus,
+      isProfileApproved: isProfileApproved(normalizedProfileStatus),
+      profileApprovalStatus: normalizedProfileStatus,
+      registrationStatus: normalizedRegistrationStatus,
+      isRegistrationApproved: isRegistrationApproved(normalizedRegistrationStatus),
       profile,
     }
   } catch (error) {
@@ -67,6 +82,7 @@ const persistUser = (userData) => {
 export const AuthProvider = ({ children }) => {
   const navigate = useNavigate()
   const [user, setUser] = useState(() => loadUserFromStorage())
+  const profileRequestRef = useRef(null)
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -78,13 +94,21 @@ export const AuthProvider = ({ children }) => {
     if (!user?.token) return
     if (user.profile || (user.firstName?.trim() && user.lastName?.trim()) || user.name) return
 
+    // Prevent multiple profile requests
+    if (profileRequestRef.current) return
+
     let isMounted = true
+    profileRequestRef.current = true
 
     const hydrateUser = async () => {
-      const enriched = await enhanceUserWithProfile(user)
-      if (isMounted) {
-        setUser(enriched)
-        persistUser(enriched)
+      try {
+        const enriched = await enhanceUserWithProfile(user)
+        if (isMounted) {
+          setUser(enriched)
+          persistUser(enriched)
+        }
+      } finally {
+        profileRequestRef.current = null
       }
     }
 
@@ -92,6 +116,7 @@ export const AuthProvider = ({ children }) => {
 
     return () => {
       isMounted = false
+      profileRequestRef.current = null
     }
   }, [user])
 
@@ -128,11 +153,19 @@ export const AuthProvider = ({ children }) => {
       const profileApprovalStatus = updates.profileApprovalStatus
         ? normalizeProfileStatus(updates.profileApprovalStatus)
         : normalizeProfileStatus(prev.profileApprovalStatus ?? prev.profile?.profileApprovalStatus)
+
+      const registrationStatus = updates.registrationStatus
+        ? normalizeRegistrationStatus(updates.registrationStatus)
+        : normalizeRegistrationStatus(
+            prev.registrationStatus ?? prev.profile?.registrationStatus ?? REGISTRATION_STATUS.APPROVED,
+          )
       const mergedUser = {
         ...prev,
         ...updates,
         profileApprovalStatus,
         isProfileApproved: isProfileApproved(profileApprovalStatus),
+        registrationStatus,
+        isRegistrationApproved: isRegistrationApproved(registrationStatus),
         profile: Object.keys(mergedProfile).length ? mergedProfile : prev.profile,
       }
       persistUser(mergedUser)
@@ -165,6 +198,8 @@ export const AuthProvider = ({ children }) => {
       updateUser,
       profileStatus: normalizeProfileStatus(user?.profileApprovalStatus),
       isProfileApproved: isProfileApproved(user?.profileApprovalStatus),
+      registrationStatus: normalizeRegistrationStatus(user?.registrationStatus),
+      isRegistrationApproved: isRegistrationApproved(user?.registrationStatus),
     }),
     [user, login, logout, updateUser]
   )

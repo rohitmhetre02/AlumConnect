@@ -1,29 +1,37 @@
 const mongoose = require('mongoose')
 
 const gallerySchema = new mongoose.Schema({
-  title: {
+  department: {
     type: String,
     required: true,
-    trim: true,
+    enum: [
+      'Civil Engineering',
+      'Computer Engineering',
+      'Information Technology',
+      'Electronics & Telecommunication Engineering',
+      'Mechanical Engineering',
+      'Artificial Intelligence & Data Science',
+      'Electronics Engineering (VLSI Design & Technology)',
+      'Electronics & Communication (Advanced Communication Technology)'
+    ]
   },
-  description: {
+  folder: {
     type: String,
     required: true,
-    trim: true,
+    enum: ['Events', 'Campus', 'Traditional Day', 'Alumni Meet', 'Industrial Visit']
   },
-  image: {
+  imageName: {
     type: String,
-    required: true,
+    required: true
   },
-  category: {
+  imageUrl: {
     type: String,
-    required: true,
-    trim: true,
+    required: true
   },
   uploadedBy: {
     type: mongoose.Schema.Types.ObjectId,
-    refPath: 'uploadedByRole',
-    required: true,
+    ref: 'User',
+    required: true
   },
   uploadedByRole: {
     type: String,

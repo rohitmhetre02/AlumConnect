@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom'
 
 import ProgressBar from '../../components/user/donations/ProgressBar'
 import useToast from '../../hooks/useToast'
-import useCampaigns from '../../hooks/useCampaigns'
+import useCampaign, { useCampaigns } from '../../hooks/useCampaigns'
 import { useAuth } from '../../context/AuthContext'
 
 const FALLBACK_IMAGE =
@@ -57,12 +57,7 @@ const CampaignDetail = () => {
   const [anonymous, setAnonymous] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const { data, loading, error, donateToCampaign } = useCampaigns(campaignId)
-
-  console.log('CampaignDetail - campaignId:', campaignId)
-  console.log('CampaignDetail - data:', data)
-  console.log('CampaignDetail - loading:', loading)
-  console.log('CampaignDetail - error:', error)
+  const { data, loading, error, donateToCampaign } = useCampaign(campaignId)
 
   const progress = useMemo(() => {
     if (!data || !data.goalAmount) return 0
@@ -72,7 +67,6 @@ const CampaignDetail = () => {
   const heroImage = data?.coverImage || FALLBACK_IMAGE
 
   const handleDonateClick = () => {
-    console.log('Donate button clicked!')
     setShowDonationModal(true)
     // Pre-fill user info if logged in
     if (user) {
@@ -83,7 +77,6 @@ const CampaignDetail = () => {
 
   const handleDonate = async (e) => {
     e.preventDefault()
-    console.log('Handle donate called!', { isSubmitting, donationAmount, customAmount, donorName, donorEmail })
     if (isSubmitting) return
 
     const finalAmount = customAmount || donationAmount
@@ -108,14 +101,6 @@ const CampaignDetail = () => {
 
     setIsSubmitting(true)
     try {
-      console.log('Calling donateToCampaign with:', {
-        donorName: donorName.trim(),
-        donorEmail: donorEmail.trim(),
-        amount: numericAmount,
-        message: donorMessage.trim(),
-        anonymous,
-      })
-      
       await donateToCampaign({
         donorName: donorName.trim(),
         donorEmail: donorEmail.trim(),
@@ -139,7 +124,6 @@ const CampaignDetail = () => {
         tone: 'success',
       })
     } catch (error) {
-      console.error('Donation error:', error)
       addToast?.({
         title: 'Donation Failed',
         description: 'Unable to process your donation. Please try again.',

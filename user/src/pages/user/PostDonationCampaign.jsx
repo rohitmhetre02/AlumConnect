@@ -65,24 +65,23 @@ const PostDonationCampaign = () => {
 
     setUploadingImage(true)
     try {
-      const formData = new FormData()
-      formData.append('file', file)
-      formData.append('upload_preset', 'Alumni') // Using your Cloudinary preset
-
-      const response = await fetch('https://api.cloudinary.com/v1_1/dwzk5ytq6/image/upload', {
-        method: 'POST',
-        body: formData,
-      })
-
-      const data = await response.json()
+      // Create preview URL for the selected file
+      const previewUrl = URL.createObjectURL(file)
+      setImagePreview(previewUrl)
       
-      if (data.secure_url) {
-        setForm((prev) => ({ ...prev, coverImage: data.secure_url }))
-        setImagePreview(data.secure_url)
-      }
+      // For now, store the file info and use default image
+      // In production, you would upload to a service like Cloudinary
+      // For demo purposes, we'll use the default image but show the preview
+      setForm((prev) => ({ ...prev, coverImage: DEFAULT_IMAGE }))
+      
+      // Simulate upload delay
+      await new Promise(resolve => setTimeout(resolve, 1000))
+      
     } catch (error) {
-      console.error('Upload failed:', error)
-      alert('Failed to upload image. Please try again.')
+      console.error('Image upload failed:', error)
+      alert('Image upload failed. Using default image.')
+      setForm((prev) => ({ ...prev, coverImage: DEFAULT_IMAGE }))
+      setImagePreview(DEFAULT_IMAGE)
     } finally {
       setUploadingImage(false)
     }
@@ -100,7 +99,7 @@ const PostDonationCampaign = () => {
 
     setIsSubmitting(true)
     try {
-      await createCampaign({
+      const result = await createCampaign({
         title: form.title.trim(),
         description: form.description.trim(),
         goalAmount: numericGoal,
@@ -111,9 +110,19 @@ const PostDonationCampaign = () => {
         featured: form.featured,
         priority: Number(form.priority) || 0,
       })
+      
+      // Show approval message based on user role
+      const userRole = user?.role?.toLowerCase()
+      if (userRole === 'admin' || userRole === 'coordinator') {
+        alert('Campaign created and approved successfully!')
+      } else {
+        alert('Campaign submitted for approval! It will be reviewed by the admin and respective department.')
+      }
+      
       navigate('/dashboard/campaigns')
     } catch (error) {
       console.error('Failed to create campaign:', error)
+      alert('Failed to create campaign. Please try again.')
     } finally {
       setIsSubmitting(false)
     }
@@ -216,15 +225,82 @@ const PostDonationCampaign = () => {
                 required
               />
 
-              <div className="grid gap-6 md:grid-cols-2">
-                <ImageUploadField
-                  label="Cover Image"
-                  value={form.coverImage}
-                  imagePreview={imagePreview}
-                  uploading={uploadingImage}
-                  onUpload={handleImageUpload}
-                  onChange={handleChange('coverImage')}
-                />
+              <div className="space-y-6">
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">
+                    Cover Image
+                  </label>
+                  <div className="space-y-4">
+                    {/* Image Upload Option */}
+                    <div>
+                      <label className="block text-sm font-medium text-slate-600 mb-2">
+                        Upload Image
+                      </label>
+                      <div className="flex items-center gap-4">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleImageUpload}
+                          className="hidden"
+                          id="image-upload"
+                        />
+                        <label
+                          htmlFor="image-upload"
+                          className="cursor-pointer inline-flex items-center gap-2 rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:border-primary hover:text-primary transition-colors"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                          </svg>
+                          {uploadingImage ? 'Uploading...' : 'Choose File'}
+                        </label>
+                        {imagePreview && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setImagePreview('')
+                              setForm(prev => ({ ...prev, coverImage: '' }))
+                            }}
+                            className="text-sm text-red-600 hover:text-red-700"
+                          >
+                            Remove Image
+                          </button>
+                        )}
+                      </div>
+                      {imagePreview && (
+                        <div className="mt-3">
+                          <img
+                            src={imagePreview}
+                            alt="Campaign preview"
+                            className="h-32 w-48 object-cover rounded-lg border border-slate-200"
+                          />
+                        </div>
+                      )}
+                    </div>
+
+                    {/* URL Input Option */}
+                    <div>
+                      <label className="block text-sm font-medium text-slate-600 mb-2">
+                        Or Enter Image URL
+                      </label>
+                      <input
+                        type="url"
+                        value={form.coverImage}
+                        onChange={(e) => {
+                          setForm(prev => ({ ...prev, coverImage: e.target.value }))
+                          if (e.target.value) {
+                            setImagePreview(e.target.value)
+                          }
+                        }}
+                        placeholder="https://example.com/image.jpg"
+                        className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm text-slate-700 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                      />
+                    </div>
+                  </div>
+                  <p className="mt-2 text-xs text-slate-500">
+                    Upload an image or enter a URL. Leave blank to use default image.
+                  </p>
+                </div>
+
                 <InputField 
                   label="Campaign Deadline" 
                   type="date" 

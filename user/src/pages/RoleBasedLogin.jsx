@@ -1,0 +1,129 @@
+import { useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import AuthTemplate from '../components/auth/AuthTemplate'
+
+const roleOptions = [
+  {
+    id: 'student',
+    title: 'Student Login',
+    description: 'Access mentorships, events, and opportunities.',
+    icon: (
+      <svg viewBox="0 0 24 24" className="h-12 w-12" aria-hidden="true">
+        <path fill="#FDBA21" d="M12 2 3 6l9 4 9-4-9-4Zm7 6.18-7 3.11-7-3.11V10l7 3.11L19 10V8.18ZM17 12.63l-5 2.22-5-2.22v3.26L12 18l5-2.11v-3.26Z" />
+      </svg>
+    ),
+    path: '/login/student'
+  },
+  {
+    id: 'alumni',
+    title: 'Alumni Login',
+    description: 'Share expertise and mentor current students.',
+    icon: (
+      <svg viewBox="0 0 24 24" className="h-12 w-12" aria-hidden="true">
+        <path fill="#2563EB" d="M12 4a4 4 0 1 1-4 4 4 4 0 0 1 4-4Zm6.5 14.5c0-2.41-3.58-4.5-6.5-4.5s-6.5 2.09-6.5 4.5V20h13Z" />
+      </svg>
+    ),
+    path: '/login/alumni'
+  },
+  {
+    id: 'faculty',
+    title: 'Faculty Login',
+    description: 'Support curriculum and mentor students.',
+    icon: (
+      <svg viewBox="0 0 24 24" className="h-12 w-12" aria-hidden="true">
+        <path fill="#0E9384" d="M12 2a5 5 0 1 0 5 5 5 5 0 0 0-5-5Zm8 18.5c0-3.08-4.03-5.5-8-5.5s-8 2.42-8 5.5V22h16Z" />
+      </svg>
+    ),
+    path: '/login/faculty'
+  },
+  {
+    id: 'admin',
+    title: 'Admin Login',
+    description: 'Manage users, events, and platform settings.',
+    icon: (
+      <svg viewBox="0 0 24 24" className="h-12 w-12" aria-hidden="true">
+        <path fill="#DC2626" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-10S17.52 2 12 2zm-2 15l-2-2 2 2v-2l4 2v-2l-2-2 2 2v-2l-4 2v-2l2-2-2 2v2z" />
+      </svg>
+    ),
+    path: '/admin/login'
+  },
+  {
+    id: 'coordinator',
+    title: 'Coordinator Login',
+    description: 'Manage department activities and approvals.',
+    icon: (
+      <svg viewBox="0 0 24 24" className="h-12 w-12" aria-hidden="true">
+        <path fill="#7C3AED" d="M9 11H7v2h2v-2zm4 0h-2v2h2v-2zm4-4h-2v6h2V7zm0-6h-2v2h2V1zM7 13H5v2h2v-2zm0-6H5v2h2V7zm12 6h-2v2h2v-2zm0-6h-2v2h2V7z" />
+      </svg>
+    ),
+    path: '/admin/login'
+  }
+]
+
+const RoleBasedLogin = () => {
+  const navigate = useNavigate()
+
+  return (
+    <AuthTemplate
+      align="center"
+      header={
+        <div className="space-y-4 text-center">
+          <h1 className="text-3xl font-semibold text-slate-900 md:text-[34px]">
+            Welcome to AlumConnect
+          </h1>
+          <p className="text-sm text-slate-500 md:text-base">
+            Choose your role to access the appropriate portal
+          </p>
+        </div>
+      }
+      footer={
+        <p className="text-center">
+          Don't have an account?{' '}
+          <Link to="/signup" className="font-semibold text-[#2563EB] hover:text-[#1d4ed8]">
+            Sign Up
+          </Link>
+        </p>
+      }
+    >
+      <div className="w-full max-w-4xl">
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {roleOptions.map((role) => (
+            <button
+              key={role.id}
+              onClick={() => navigate(role.path)}
+              className="group relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-6 text-left transition-all hover:-translate-y-1 hover:shadow-lg hover:border-[#2563EB]"
+            >
+              <div className="flex items-start gap-4">
+                <div className="flex-shrink-0">
+                  {role.icon}
+                </div>
+                <div className="flex-1 space-y-2">
+                  <h3 className="text-lg font-semibold text-slate-900 group-hover:text-[#2563EB]">
+                    {role.title}
+                  </h3>
+                  <p className="text-sm text-slate-600">
+                    {role.description}
+                  </p>
+                </div>
+              </div>
+              <div className="absolute bottom-4 right-4">
+                <svg
+                  className="h-5 w-5 text-slate-400 transition-colors group-hover:text-[#2563EB]"
+                  viewBox="0 0 20 20"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  aria-hidden="true"
+                >
+                  <path d="M7.5 4.5 12.5 10 7.5 15.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
+    </AuthTemplate>
+  )
+}
+
+export default RoleBasedLogin

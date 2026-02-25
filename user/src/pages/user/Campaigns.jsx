@@ -59,9 +59,12 @@ const Campaigns = () => {
   const addToast = useToast()
   const navigate = useNavigate()
   const normalizedRole = role?.toLowerCase() ?? null
-  const canCreateCampaign = normalizedRole === 'alumni' || normalizedRole === 'faculty'
+  const canCreateCampaign = useMemo(() => {
+    return ['alumni', 'faculty', 'admin', 'coordinator'].includes(normalizedRole)
+  }, [normalizedRole])
 
   const { items, loading, error, refresh } = useCampaigns()
+
 
   const campaigns = useMemo(() => {
     return [...items].sort((a, b) => {
@@ -108,6 +111,14 @@ const Campaigns = () => {
         </button>
       )}
 
+      {/* Campaign Approval Process Info */}
+      <div className="rounded-3xl border border-blue-200 bg-blue-50 px-6 py-4">
+        <h3 className="text-sm font-semibold text-blue-900">Campaign Approval Process</h3>
+        <p className="mt-1 text-sm text-blue-700">
+          Your campaign will be submitted for approval to the admin and respective department. Once approved, it will be visible to all users.
+        </p>
+      </div>
+
       {error && (
         <div className="flex items-center justify-between gap-4 rounded-3xl border border-rose-200 bg-rose-50 px-6 py-4 text-sm text-rose-600">
           <p>{error.message ?? 'Unable to load campaigns right now.'}</p>
@@ -122,7 +133,7 @@ const Campaigns = () => {
       )}
 
       <section>
-        <h2 className="text-lg font-semibold text-slate-900">Active Campaigns</h2>
+        <h2 className="text-lg font-semibold text-slate-900">Campaigns</h2>
         <div className="mt-4 grid gap-6 lg:grid-cols-3">
           {loading
             ? Array.from({ length: 3 }).map((_, index) => <CampaignSkeleton key={index} />)
@@ -146,6 +157,8 @@ const CampaignCard = ({ campaign }) => {
   const image = campaign.coverImage || DEFAULT_IMAGE
   const progress = calculateProgress(campaign.raisedAmount, campaign.goalAmount)
   const remaining = daysRemaining(campaign.deadline)
+  const isPending = campaign.approvalStatus === 'PENDING'
+  const isOwner = campaign.createdBy === campaign.currentUserId // We'll need to pass this
 
   return (
     <Link to={`/dashboard/campaigns/${campaign.id}`} className="relative block h-full w-full overflow-hidden">
@@ -156,16 +169,21 @@ const CampaignCard = ({ campaign }) => {
             Featured
           </span>
         )}
+        {isPending && (
+          <span className="absolute right-4 top-4 rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold uppercase tracking-widest text-amber-700">
+            Pending Approval
+          </span>
+        )}
         <div className="flex-1 flex flex-col p-6">
           <div className="space-y-4">
             <div>
               <h3 className="text-xl font-bold text-slate-900 line-clamp-2">{campaign.title}</h3>
-              <p className="text-sm text-slate-500 line-clamp-2">{campaign.company}</p>
+              <p className="text-sm text-slate-500 line-clamp-2">{getCategoryLabel(campaign.category)}</p>
             </div>
             <p className="text-sm text-slate-600 line-clamp-3">{campaign.description}</p>
             <div className="mt-auto flex items-center justify-between text-sm text-slate-500">
               <span>{formatCurrency(campaign.goalAmount)}</span>
-              <span>{campaign.type}</span>
+              <span>{getCategoryLabel(campaign.category)}</span>
             </div>
             <div className="space-y-2 text-sm text-slate-500">
               <p>{formatCurrency(campaign.raisedAmount)} raised of {formatCurrency(campaign.goalAmount)}</p>
@@ -177,14 +195,6 @@ const CampaignCard = ({ campaign }) => {
                 <span>{progress}% funded</span>
               </div>
             </div>
-          </div>
-          <div className="mt-auto">
-            <Link
-              to={`/dashboard/campaigns/${campaign.id}`}
-              className="mt-auto inline-flex items-center justify-center rounded-full bg-primary px-4 py-2 text-sm font-semibold text-white transition hover:bg-primary-dark"
-            >
-              Donate Now
-            </Link>
           </div>
         </div>
       </article>

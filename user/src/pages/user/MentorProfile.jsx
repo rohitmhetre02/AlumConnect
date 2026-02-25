@@ -608,15 +608,17 @@ const RequestMentorshipModal = ({ mentorName, services, onClose, onSubmit, submi
             )}
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid gap-4 sm:grid-cols-1">
             <label className="space-y-2 text-xs font-semibold uppercase tracking-widest text-slate-400">
               <span className="block text-slate-400">Preferred Date</span>
               <input
-                type="datetime-local"
+                type="date"
                 className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-700 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                value={preferredDateTime}
-                onChange={(event) => setPreferredDateTime(event.target.value)}
+                value={preferredDateTime ? preferredDateTime.split('T')[0] : ''}
+                onChange={(event) => setPreferredDateTime(event.target.value ? event.target.value + 'T10:00:00' : '')}
+                min={new Date().toISOString().split('T')[0]}
               />
+              <p className="text-xs text-slate-500">Mentor will confirm the exact time</p>
             </label>
 
             <label className="space-y-2 text-xs font-semibold uppercase tracking-widest text-slate-400">

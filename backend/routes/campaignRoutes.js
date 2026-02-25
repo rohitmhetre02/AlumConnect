@@ -4,6 +4,8 @@ const authMiddleware = require('../middleware/authMiddleware')
 const {
   listCampaigns,
   getCampaignById,
+  listMyCampaigns,
+  listUserCampaigns,
   createCampaign,
   updateCampaign,
   deleteCampaign,
@@ -15,13 +17,17 @@ const router = express.Router()
 
 // Public routes
 router.get('/', listCampaigns)
+router.get('/user', authMiddleware, listUserCampaigns)
 router.get('/stats', getCampaignStats)
-router.get('/:id', getCampaignById)
 
 // Protected routes
+router.get('/mine', authMiddleware, listMyCampaigns)
 router.post('/', authMiddleware, createCampaign)
 router.put('/:id', authMiddleware, updateCampaign)
 router.delete('/:id', authMiddleware, deleteCampaign)
+
+// Public route with parameter (must come after /mine)
+router.get('/:id', getCampaignById)
 
 // Donation route (public but validated)
 router.post('/:id/donate', donateToCampaign)

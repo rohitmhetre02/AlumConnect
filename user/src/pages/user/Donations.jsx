@@ -28,6 +28,13 @@ const daysRemaining = (deadline) => {
   return diff < 0 ? 0 : diff
 }
 
+const formatDate = (value) => {
+  if (!value) return null
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return null
+  return new Intl.DateTimeFormat('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }).format(date)
+}
+
 const Donations = () => {
   const { role } = useAuth()
   const addToast = useToast()
@@ -37,9 +44,38 @@ const Donations = () => {
 
   const { items, loading, error, refresh } = useDonations()
 
-  const campaigns = useMemo(() => {
-    return [...items].sort((a, b) => new Date(a.deadline || 0) - new Date(b.deadline || 0))
+  const { activeCampaigns, completedCampaigns, supportedCampaigns } = useMemo(() => {
+    const sorted = [...items].sort((a, b) => new Date(a.deadline || 0) - new Date(b.deadline || 0))
+    const now = Date.now()
+    const active = []
+    const completed = []
+    const supported = []
+
+    sorted.forEach((campaign) => {
+      const deadline = campaign.deadline ? new Date(campaign.deadline).getTime() : null
+      if (deadline === null || Number.isNaN(deadline) || deadline >= now) {
+        active.push(campaign)
+      } else {
+        completed.push(campaign)
+      }
+    })
+
+    sorted.forEach((campaign) => {
+      if (Array.isArray(campaign.contributions) && campaign.contributions.length > 0) {
+        supported.push(campaign)
+      }
+    })
+
+    completed.sort((a, b) => new Date(b.deadline || 0) - new Date(a.deadline || 0))
+
+    return {
+      activeCampaigns: active,
+      completedCampaigns: completed,
+      supportedCampaigns: supported,
+    }
   }, [items])
+
+  const highlightCampaign = activeCampaigns[0] ?? completedCampaigns[0]
 
   const handleCreateCampaign = () => {
     navigate('/dashboard/donations/create')
@@ -52,9 +88,9 @@ const Donations = () => {
         <p className="mt-3 max-w-2xl text-sm text-white/80">
           Your contributions help us provide scholarships, improve facilities, and foster innovation for future generations.
         </p>
-        {campaigns.length > 0 && (
+        {highlightCampaign && (
           <Link
-            to={`/dashboard/donations/${campaigns[0].id}`}
+            to={`/dashboard/donations/${highlightCampaign.id}`}
             className="mt-6 inline-flex rounded-full bg-white/10 px-6 py-3 text-sm font-semibold text-white transition hover:bg-white/20"
           >
             Donate Now
@@ -88,38 +124,78 @@ const Donations = () => {
       <section>
         <h2 className="text-lg font-semibold text-slate-900">Active Campaigns</h2>
         <div className="mt-4 grid gap-6 lg:grid-cols-3">
-          {loading
-            ? Array.from({ length: 3 }).map((_, index) => <DonationSkeleton key={index} />)
-            : campaigns.length > 0
-            ? campaigns.map((campaign) => <DonationCard key={campaign.id} campaign={campaign} />)
-            : (
-              <div className="col-span-full rounded-3xl border border-dashed border-slate-200 bg-white p-12 text-center">
-                <h3 className="text-lg font-semibold text-slate-900">No campaigns yet</h3>
-                <p className="mt-2 text-sm text-slate-500">
-                  When alumni and faculty launch fundraising efforts, they will appear here. {canCreateCampaign ? 'Start the first campaign!' : ''}
-                </p>
-              </div>
-              )}
+          {loading ? (
+            Array.from({ length: 3 }).map((_, index) => <DonationSkeleton key={index} />)
+          ) : activeCampaigns.length > 0 ? (
+            activeCampaigns.map((campaign) => <DonationCard key={campaign.id} campaign={campaign} variant="active" />)
+          ) : (
+            <div className="col-span-full rounded-3xl border border-dashed border-slate-200 bg-white p-12 text-center">
+              <h3 className="text-lg font-semibold text-slate-900">No active campaigns</h3>
+              <p className="mt-2 text-sm text-slate-500">
+                When fundraising efforts launch, they will appear here. {canCreateCampaign ? 'Start the first campaign!' : ''}
+              </p>
+            </div>
+          )}
         </div>
       </section>
+
+      {supportedCampaigns.length > 0 && (
+        <section className="pt-4">
+          <h2 className="text-lg font-semibold text-slate-900">Campaigns You’ve Supported</h2>
+          <p className="mt-2 text-sm text-slate-500">Revisit the causes you contributed to and track their progress.</p>
+          <div className="mt-6 grid gap-6 lg:grid-cols-3">
+            {supportedCampaigns.map((campaign) => (
+              <DonationCard key={`supported-${campaign.id}`} campaign={campaign} variant="supported" />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {completedCampaigns.length > 0 && (
+        <section className="pt-4">
+          <h2 className="text-lg font-semibold text-slate-900">Recently Concluded</h2>
+          <p className="mt-2 text-sm text-slate-500">Take a look at the impact previous campaigns have made.</p>
+          <div className="mt-6 grid gap-6 lg:grid-cols-3">
+            {completedCampaigns.map((campaign) => (
+              <DonationCard key={`completed-${campaign.id}`} campaign={campaign} variant="completed" />
+            ))}
+          </div>
+        </section>
+      )}
     </div>
   )
 }
 
-const DonationCard = ({ campaign }) => {
+const DonationCard = ({ campaign, variant }) => {
   const image = campaign.coverImage || DEFAULT_IMAGE
   const progress = calculateProgress(campaign.raisedAmount, campaign.goalAmount)
   const remaining = daysRemaining(campaign.deadline)
+  const endedOn = formatDate(campaign.deadline)
+  const fullyFunded = Number(campaign.raisedAmount ?? 0) >= Number(campaign.goalAmount ?? Infinity)
+  const showCompletedBadge = variant === 'completed' || (variant === 'active' && fullyFunded)
+  const supportedLabel = variant === 'supported'
 
   return (
     <article className="flex h-full flex-col overflow-hidden rounded-3xl bg-white shadow-sm">
       <Link to={`/dashboard/donations/${campaign.id}`} className="relative block h-48 w-full overflow-hidden">
         <img src={image} alt={campaign.title} className="h-full w-full object-cover transition duration-500 hover:scale-105" />
-        {typeof remaining === 'number' && (
+        {showCompletedBadge ? (
+          <span className="absolute left-4 top-4 rounded-full bg-emerald-600 px-3 py-1 text-xs font-semibold uppercase tracking-widest text-white">
+            {variant === 'completed' ? `Ended ${endedOn ?? ''}`.trim() || 'Completed' : 'Fully funded'}
+          </span>
+        ) : supportedLabel ? (
+          <span className="absolute left-4 top-4 rounded-full bg-primary px-3 py-1 text-xs font-semibold uppercase tracking-widest text-white">
+            You contributed
+          </span>
+        ) : typeof remaining === 'number' ? (
           <span className="absolute left-4 top-4 rounded-full bg-slate-900/80 px-3 py-1 text-xs font-semibold uppercase tracking-widest text-white">
             {remaining === 0 ? 'Ends today' : `${remaining} days left`}
           </span>
-        )}
+        ) : endedOn ? (
+          <span className="absolute left-4 top-4 rounded-full bg-slate-900/70 px-3 py-1 text-xs font-semibold uppercase tracking-widest text-white">
+            {`Ends ${endedOn}`}
+          </span>
+        ) : null}
       </Link>
       <div className="flex flex-1 flex-col gap-4 p-6">
         <div>
@@ -135,7 +211,7 @@ const DonationCard = ({ campaign }) => {
           to={`/dashboard/donations/${campaign.id}`}
           className="mt-auto inline-flex items-center justify-center rounded-full bg-primary px-4 py-2 text-sm font-semibold text-white transition hover:bg-primary-dark"
         >
-          Support
+          {variant === 'completed' ? 'View impact' : supportedLabel ? 'See updates' : 'Support'}
         </Link>
       </div>
     </article>

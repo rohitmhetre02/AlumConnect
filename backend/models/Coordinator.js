@@ -1,4 +1,5 @@
 const mongoose = require('mongoose')
+const { REGISTRATION_STATUS, normalizeRegistrationStatus } = require('../utils/registrationStatus')
 
 const coordinatorSchema = new mongoose.Schema(
   {
@@ -48,6 +49,51 @@ const coordinatorSchema = new mongoose.Schema(
       type: String,
       enum: ['active', 'inactive'],
       default: 'active',
+    },
+    registrationStatus: {
+      type: String,
+      enum: Object.values(REGISTRATION_STATUS),
+      default: REGISTRATION_STATUS.PENDING,
+      uppercase: true,
+      set: normalizeRegistrationStatus,
+    },
+    registrationReviewedAt: {
+      type: Date,
+    },
+    registrationReviewedBy: {
+      type: String,
+    },
+    registrationDecisionByRole: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+    registrationRejectionReason: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+    // Profile approval fields
+    profileApprovalStatus: {
+      type: String,
+      enum: ['IN_REVIEW', 'APPROVED', 'REJECTED'],
+      default: 'IN_REVIEW',
+      uppercase: true,
+    },
+    isProfileApproved: {
+      type: Boolean,
+      default: false,
+    },
+    profileReviewedAt: {
+      type: Date,
+    },
+    profileReviewedBy: {
+      type: String,
+    },
+    profileRejectionReason: {
+      type: String,
+      trim: true,
+      default: '',
     },
   },
   { timestamps: true }

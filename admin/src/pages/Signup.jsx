@@ -3,6 +3,18 @@ import { Link, useNavigate } from 'react-router-dom'
 import AuthTemplate from '../components/auth/AuthTemplate'
 import { post, setAuthToken } from '../utils/api'
 
+const departmentOptions = [
+  'Civil Engineering',
+  'Computer Engineering',
+  'Information Technology',
+  'Electronics & Telecommunication Engineering',
+  'Mechanical Engineering',
+  'Artificial Intelligence & Data Science',
+  'Electronics Engineering (VLSI Design And Technology)',
+  'Electronics & Communication (Advanced Communication Technology)',
+  'School of Architecture',
+]
+
 const Signup = () => {
   const navigate = useNavigate()
   const [formData, setFormData] = useState({
@@ -11,7 +23,7 @@ const Signup = () => {
     email: '',
     password: '',
     confirmPassword: '',
-    department: ''
+    department: '',
   })
   const [error, setError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -34,8 +46,11 @@ const Signup = () => {
       return
     }
 
-    if (role === 'coordinator' && !formData.department.trim()) {
-      setError('Department is required for coordinator signup')
+    const trimmedDepartment = formData.department.trim()
+    const requiresDepartment = role === 'coordinator'
+
+    if (requiresDepartment && !trimmedDepartment) {
+      setError('Please select a department for this role.')
       return
     }
 
@@ -48,11 +63,11 @@ const Signup = () => {
         firstName: formData.firstName.trim(),
         lastName: formData.lastName.trim(),
         email: formData.email.trim(),
-        password: formData.password
+        password: formData.password,
       }
 
-      if (role === 'coordinator') {
-        payload.department = formData.department.trim()
+      if (requiresDepartment) {
+        payload.department = trimmedDepartment
       }
 
       const response = await post('/auth/signup', payload, { includeAuth: false })
@@ -64,6 +79,8 @@ const Signup = () => {
 
       setAuthToken(token)
       localStorage.setItem('adminUser', JSON.stringify(user))
+      
+      // Role-based navigation
       navigate('/admin/dashboard')
     } catch (err) {
       const message = err?.message || 'Unable to create account. Please try again.'
@@ -112,7 +129,13 @@ const Signup = () => {
               id="role"
               name="role"
               value={role}
-              onChange={(event) => setRole(event.target.value)}
+              onChange={(event) => {
+                setRole(event.target.value)
+                setFormData((prev) => ({
+                  ...prev,
+                  department: event.target.value === 'coordinator' ? prev.department : '',
+                }))
+              }}
               className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40"
             >
               <option value="admin">Administrator</option>
@@ -173,16 +196,23 @@ const Signup = () => {
               <label htmlFor="department" className="block text-sm font-medium text-slate-700 mb-2">
                 Department
               </label>
-              <input
+              <select
                 id="department"
                 name="department"
-                type="text"
                 required
                 value={formData.department}
                 onChange={handleInputChange}
                 className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-500 shadow-sm transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40"
-                placeholder="Enter your department"
-              />
+              >
+                <option value="" disabled>
+                  Select department
+                </option>
+                {departmentOptions.map((department) => (
+                  <option key={department} value={department}>
+                    {department}
+                  </option>
+                ))}
+              </select>
             </div>
           )}
 

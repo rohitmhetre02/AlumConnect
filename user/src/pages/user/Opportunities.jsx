@@ -131,6 +131,7 @@ const normalizeOpportunity = (source = {}) => {
     isRemote: false,
     postedAt: null,
     postedBy: '',
+    postedById: '',
   }
 
   const id = source.id ?? source._id ?? ''
@@ -151,14 +152,16 @@ const normalizeOpportunity = (source = {}) => {
     isRemote: Boolean(source.isRemote),
     postedAt: source.postedAt ?? source.createdAt ?? null,
     postedBy: source.postedBy ?? source.createdByName ?? '',
+    postedById: source.postedById ?? source.createdBy ?? source.userId ?? '',
   }
 }
 
 const Opportunities = ({ filter }) => {
-  const { role } = useAuth()
+  const { user, role } = useAuth()
   const navigate = useNavigate()
   const normalizedRole = role?.toLowerCase() ?? null
   const canPostOpportunity = normalizedRole === 'alumni' || normalizedRole === 'faculty'
+  const currentUserId = user?.id || user?._id || user?.profile?._id || user?.profile?.id
   const { items, loading, error, refresh } = useOpportunities()
   const {
     referrals,
@@ -204,13 +207,21 @@ const Opportunities = ({ filter }) => {
   }, [referralMap])
 
   const jobs = useMemo(
-    () => normalizedOpportunities.filter((item) => item.type === 'full-time' || item.type === 'part-time' || item.type === 'contract'),
-    [normalizedOpportunities],
+    () => normalizedOpportunities.filter((item) => {
+      const isJobType = item.type === 'full-time' || item.type === 'part-time' || item.type === 'contract'
+      const isNotOwnOpportunity = item.postedById !== currentUserId
+      return isJobType && isNotOwnOpportunity
+    }),
+    [normalizedOpportunities, currentUserId],
   )
 
   const internships = useMemo(
-    () => normalizedOpportunities.filter((item) => item.type === 'internship' || item.type === 'intern' || item.type === 'internship'),
-    [normalizedOpportunities],
+    () => normalizedOpportunities.filter((item) => {
+      const isInternshipType = item.type === 'internship' || item.type === 'intern' || item.type === 'internship'
+      const isNotOwnOpportunity = item.postedById !== currentUserId
+      return isInternshipType && isNotOwnOpportunity
+    }),
+    [normalizedOpportunities, currentUserId],
   )
 
   const applications = useMemo(() => {
@@ -260,12 +271,24 @@ const Opportunities = ({ filter }) => {
   }, [normalizedOpportunities, applications])
 
   const stats = useMemo(() => {
+    const jobsCount = normalizedOpportunities.filter((item) => {
+      const isJobType = item.type === 'full-time' || item.type === 'part-time' || item.type === 'contract'
+      const isNotOwnOpportunity = item.postedById !== currentUserId
+      return isJobType && isNotOwnOpportunity
+    }).length
+    
+    const internshipsCount = normalizedOpportunities.filter((item) => {
+      const isInternshipType = item.type === 'internship' || item.type === 'intern' || item.type === 'internship'
+      const isNotOwnOpportunity = item.postedById !== currentUserId
+      return isInternshipType && isNotOwnOpportunity
+    }).length
+    
     return {
-      jobs: normalizedOpportunities.filter((item) => isJobType(item.type)).length,
-      internships: normalizedOpportunities.filter((item) => isInternshipType(item.type)).length,
+      jobs: jobsCount,
+      internships: internshipsCount,
       applications: applications.length,
     }
-  }, [normalizedOpportunities, applications])
+  }, [normalizedOpportunities, applications, currentUserId])
 
   const activeCollection = useMemo(() => {
     switch (activeTab) {

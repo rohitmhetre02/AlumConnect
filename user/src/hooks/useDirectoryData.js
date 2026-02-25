@@ -7,6 +7,7 @@ const ROLE_ENDPOINT_MAP = {
   students: '/directory/students',
   alumni: '/directory/alumni',
   faculty: '/directory/faculty',
+  coordinators: '/directory/coordinators',
 }
 
 export const useDirectoryData = (role) => {
@@ -29,9 +30,13 @@ export const useDirectoryData = (role) => {
       setLoading(true)
       setError(null)
       try {
+        console.log(`Fetching members for role: ${role}, endpoint: ${endpoint}`)
         const response = await get(endpoint)
+        console.log(`Directory response for ${role}:`, response)
+        const members = Array.isArray(response?.data) ? response.data : []
+        console.log(`Parsed ${members.length} members for ${role}:`, members)
         if (!isMounted) return
-        setMembers(Array.isArray(response?.data) ? response.data : [])
+        setMembers(members)
       } catch (fetchError) {
         if (!isMounted) return
         setError(fetchError)

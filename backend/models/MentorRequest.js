@@ -107,7 +107,7 @@ const mentorRequestSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ['pending', 'accepted', 'confirmed', 'rejected'],
+      enum: ['pending', 'review', 'accepted', 'confirmed', 'rejected'],
       default: 'pending',
       lowercase: true,
       trim: true,

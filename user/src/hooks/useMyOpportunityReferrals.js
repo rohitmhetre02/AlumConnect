@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
-import { get } from '../utils/api'
+import { get, put } from '../utils/api'
 import useToast from './useToast'
 import { useAuth } from '../context/AuthContext'
 
@@ -56,6 +56,29 @@ const useMyOpportunityReferrals = () => {
     fetchReferrals()
   }, [fetchReferrals])
 
+  const updateOpportunity = useCallback(
+    async (id, opportunityData) => {
+      try {
+        const response = await put(`/opportunities/${id}`, opportunityData)
+        const formatted = response?.data
+
+        if (formatted) {
+          setReferrals((prev) => {
+            const exists = prev.some((item) => item.opportunity?._id === formatted.id)
+            if (!exists) return prev
+            return prev.map((item) => (item.opportunity?._id === formatted.id ? { ...item, opportunity: formatted } : item))
+          })
+        }
+
+        return formatted
+      } catch (updateError) {
+        console.error('useMyOpportunityReferrals: Unable to update opportunity:', updateError)
+        throw updateError
+      }
+    },
+    []
+  )
+
   const map = useMemo(() => {
     const next = {}
     referrals.forEach((entry) => {
@@ -74,6 +97,7 @@ const useMyOpportunityReferrals = () => {
     refresh: fetchReferrals,
     referralMap: map,
     setReferrals,
+    updateOpportunity,
   }
 }
 

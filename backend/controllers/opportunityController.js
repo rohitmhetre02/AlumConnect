@@ -3,6 +3,8 @@ const Opportunity = require('../models/Opportunity')
 const OpportunityReferral = require('../models/OpportunityReferral')
 const { getModelByRole } = require('../utils/roleModels')
 const { uploadToCloudinary, deleteFromCloudinary } = require('../utils/cloudinaryUpload')
+const { CONTENT_APPROVAL_STATUS } = require('../utils/contentApprovalStatus')
+const { normalizeDepartment } = require('../utils/departments')
 
 const normalizeSkills = (skills) => {
   if (!skills) return []
@@ -32,6 +34,42 @@ const ensureAuthenticatedUser = (req) => {
   }
 
   return { userId, role }
+}
+
+const formatOpportunity = (doc) => {
+  if (!doc) return null
+
+  const source = typeof doc.toObject === 'function' ? doc.toObject() : doc
+  const id = source._id?.toString?.() ?? source.id ?? null
+
+  if (!id) return null
+
+  return {
+    id,
+    title: source.title ?? '',
+    company: source.company ?? '',
+    type: source.type ?? '',
+    location: source.location ?? '',
+    description: source.description ?? '',
+    skills: Array.isArray(source.skills) ? source.skills : [],
+    contactEmail: source.contactEmail ?? '',
+    deadline: source.deadline ?? null,
+    isRemote: Boolean(source.isRemote),
+    postedAt: source.createdAt ?? null,
+    createdBy: source.createdBy ?? null,
+    createdByName: source.createdByName ?? '',
+    createdByRole: source.createdByRole ?? '',
+    status: source.status ?? 'active',
+    department: source.department ?? '',
+    approvalStatus: source.approvalStatus ?? CONTENT_APPROVAL_STATUS.PENDING,
+    approvalDepartment: source.approvalDepartment ?? '',
+    approvalDecisions: Array.isArray(source.approvalDecisions) ? source.approvalDecisions : [],
+    approvedAt: source.approvedAt ?? null,
+    rejectedAt: source.rejectedAt ?? null,
+    applicants: source.applicants ?? 0,
+    isPushed: source.isPushed ?? false,
+    pushedAt: source.pushedAt ?? null,
+  }
 }
 
 const mapReferral = (doc, options = {}) => {
@@ -74,30 +112,55 @@ const mapReferral = (doc, options = {}) => {
 
 const listOpportunities = async (_req, res) => {
   try {
-    const items = await Opportunity.find({ status: 'active' }).sort({ createdAt: -1 }).lean()
+    const items = await Opportunity.find({
+      status: 'active',
+      approvalStatus: CONTENT_APPROVAL_STATUS.APPROVED,
+    })
+      .sort({ createdAt: -1 })
+      .lean()
 
-    const data = items.map((item) => ({
-      id: item._id.toString(),
-      title: item.title,
-      company: item.company,
-      type: item.type,
-      location: item.location,
-      description: item.description,
-      skills: Array.isArray(item.skills) ? item.skills : [],
-      contactEmail: item.contactEmail,
-      deadline: item.deadline,
-      isRemote: item.isRemote,
-      postedAt: item.createdAt,
-      postedBy: item.createdByName,
-      createdBy: item.createdBy,
-      createdByName: item.createdByName,
-      createdByRole: item.createdByRole,
-    }))
+    const data = items.map(formatOpportunity).filter(Boolean)
 
     return res.status(200).json({ success: true, data })
   } catch (error) {
     console.error('listOpportunities error:', error)
     return res.status(500).json({ success: false, message: 'Unable to fetch opportunities.' })
+  }
+}
+
+const listAllOpportunitiesForAdmin = async (req, res) => {
+  try {
+    const items = await Opportunity.find({})
+      .sort({ createdAt: -1 })
+      .lean()
+
+    const data = items.map(formatOpportunity).filter(Boolean)
+
+    return res.status(200).json({ success: true, data })
+  } catch (error) {
+    console.error('listAllOpportunitiesForAdmin error:', error)
+    return res.status(500).json({ success: false, message: 'Unable to fetch opportunities.' })
+  }
+}
+
+const listMyOpportunities = async (req, res) => {
+  try {
+    const { error, userId } = ensureAuthenticatedUser(req)
+
+    if (error) {
+      return res.status(error.status).json({ success: false, message: error.message })
+    }
+
+    const filter = mongoose.Types.ObjectId.isValid(userId)
+      ? { createdBy: new mongoose.Types.ObjectId(userId) }
+      : { createdBy: userId }
+
+    const items = await Opportunity.find(filter).sort({ createdAt: -1 }).lean()
+
+    return res.status(200).json({ success: true, data: items.map(formatOpportunity).filter(Boolean) })
+  } catch (error) {
+    console.error('listMyOpportunities error:', error)
+    return res.status(500).json({ success: false, message: 'Unable to fetch your opportunities.' })
   }
 }
 
@@ -115,25 +178,24 @@ const getOpportunityById = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Opportunity not found.' })
     }
 
+    const userRole = req.user?.role?.toLowerCase?.()
+    const userId = req.user?.id
+    const isOwner = userId && item.createdBy?.toString?.() === userId
+    const isAdmin = userRole === 'admin'
+    const isCoordinator = userRole === 'coordinator'
+
+    if (
+      item.approvalStatus !== CONTENT_APPROVAL_STATUS.APPROVED &&
+      !isAdmin &&
+      !isCoordinator &&
+      !isOwner
+    ) {
+      return res.status(403).json({ success: false, message: 'This opportunity is pending review.' })
+    }
+
     return res.status(200).json({
       success: true,
-      data: {
-        id: item._id.toString(),
-        title: item.title,
-        company: item.company,
-        type: item.type,
-        location: item.location,
-        description: item.description,
-        skills: Array.isArray(item.skills) ? item.skills : [],
-        contactEmail: item.contactEmail,
-        deadline: item.deadline,
-        isRemote: item.isRemote,
-        postedAt: item.createdAt,
-        postedBy: item.createdByName,
-        createdBy: item.createdBy,
-        createdByName: item.createdByName,
-        createdByRole: item.createdByRole,
-      },
+      data: formatOpportunity(item),
     })
   } catch (error) {
     console.error('getOpportunityById error:', error)
@@ -165,59 +227,32 @@ const createOpportunity = async (req, res) => {
     const creatorRole = user.role?.toLowerCase()
     const CreatorModel = getModelByRole(creatorRole)
 
-    if (!CreatorModel) {
-      // For admin and coordinator users, create a simple creator object
-      if (creatorRole === 'admin' || creatorRole === 'coordinator') {
-        const createdByName = user.email || creatorRole.charAt(0).toUpperCase() + creatorRole.slice(1)
-        
-        const payload = {
-          title: title.trim(),
-          company: company.trim(),
-          type: normalizedType,
-          location: isRemote ? 'Remote' : location.trim(),
-          description: description.trim(),
-          contactEmail: String(contactEmail).toLowerCase().trim(),
-          skills: normalizedSkills,
-          deadline: new Date(deadline),
-          isRemote: Boolean(isRemote),
-          createdBy: user.id,
-          createdByRole: creatorRole,
-          createdByName,
-        }
-
-        const created = await Opportunity.create(payload)
-        return res.status(201).json({
-          success: true,
-          message: 'Opportunity posted successfully.',
-          data: {
-            id: created._id.toString(),
-            title: created.title,
-            company: created.company,
-            type: created.type,
-            location: created.location,
-            description: created.description,
-            skills: created.skills,
-            contactEmail: created.contactEmail,
-            deadline: created.deadline,
-            isRemote: created.isRemote,
-            postedAt: created.createdAt,
-            postedBy: created.createdByName,
-            createdBy: created.createdBy,
-            createdByName: created.createdByName,
-            createdByRole: created.createdByRole,
-          },
-        })
-      }
-      return res.status(403).json({ success: false, message: 'Unsupported creator role.' })
+    let creator = null
+    if (CreatorModel) {
+      creator = await CreatorModel.findById(user.id).select('firstName lastName email department').lean()
     }
 
-    const creator = await CreatorModel.findById(user.id).select('firstName lastName email').lean()
-
-    if (!creator) {
+    if (!creator && !['admin', 'coordinator'].includes(creatorRole)) {
       return res.status(404).json({ success: false, message: 'Creator record not found.' })
     }
 
-    const createdByName = `${creator.firstName ?? ''} ${creator.lastName ?? ''}`.trim() || creator.email || ''
+    const createdByName = `${creator?.firstName ?? ''} ${creator?.lastName ?? ''}`.trim() || creator?.email || user.email || ''
+    const derivedDepartment = normalizeDepartment(creator?.department || req.body?.department || '')
+    const isReviewer = ['admin', 'coordinator'].includes(creatorRole)
+    const decisionTimestamp = new Date()
+    const approvalStatus = isReviewer ? CONTENT_APPROVAL_STATUS.APPROVED : CONTENT_APPROVAL_STATUS.PENDING
+    const approvalDecisions = isReviewer
+      ? [
+          {
+            status: approvalStatus,
+            decidedByRole: creatorRole,
+            decidedByName: createdByName,
+            decidedById: user.id,
+            decidedAt: decisionTimestamp,
+            reason: '',
+          },
+        ]
+      : []
 
     const payload = {
       title: title.trim(),
@@ -232,35 +267,26 @@ const createOpportunity = async (req, res) => {
       createdBy: user.id,
       createdByRole: creatorRole,
       createdByName,
+      department: derivedDepartment,
+      approvalStatus,
+      approvalDepartment: derivedDepartment,
+      approvalDecisions,
+      approvedAt: isReviewer ? decisionTimestamp : null,
+      rejectedAt: null,
     }
 
     const created = await Opportunity.create(payload)
 
-    // Update user's posted opportunities array
-    await CreatorModel.findByIdAndUpdate(user.id, {
-      $push: { postedOpportunities: created._id }
-    })
+    if (CreatorModel && ['alumni', 'faculty'].includes(creatorRole)) {
+      await CreatorModel.findByIdAndUpdate(user.id, {
+        $push: { postedOpportunities: created._id },
+      })
+    }
 
     return res.status(201).json({
       success: true,
       message: 'Opportunity posted successfully.',
-      data: {
-        id: created._id.toString(),
-        title: created.title,
-        company: created.company,
-        type: created.type,
-        location: created.location,
-        description: created.description,
-        skills: created.skills,
-        contactEmail: created.contactEmail,
-        deadline: created.deadline,
-        isRemote: created.isRemote,
-        postedAt: created.createdAt,
-        postedBy: created.createdByName,
-        createdBy: created.createdBy,
-        createdByName: created.createdByName,
-        createdByRole: created.createdByRole,
-      },
+      data: formatOpportunity(created),
     })
   } catch (error) {
     console.error('createOpportunity error:', error)
@@ -350,11 +376,7 @@ const getMyOpportunityReferral = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Invalid opportunity id.' })
     }
 
-    console.log('Fetching referral for:', { opportunityId, userId })
-    
     const referral = await OpportunityReferral.findOne({ opportunity: opportunityId, student: userId })
-    
-    console.log('Found referral:', referral)
 
     if (!referral) {
       return res.status(404).json({ success: false, message: 'No referral request submitted yet.' })
@@ -362,7 +384,6 @@ const getMyOpportunityReferral = async (req, res) => {
 
     return res.status(200).json({ success: true, data: mapReferral(referral) })
   } catch (error) {
-    console.error('getMyOpportunityReferral error:', error)
     return res.status(500).json({ success: false, message: 'Unable to load referral request.' })
   }
 }
@@ -445,39 +466,212 @@ const updateReferralStatus = async (req, res) => {
 const sendReferralAcceptedEmail = async (referral) => {
   try {
     // This would integrate with your email service
-    console.log('Sending referral accepted email for:', {
-      referralId: referral._id,
-      studentEmail: referral.student?.email,
-      opportunity: referral.opportunity?.title,
-      status: 'accepted'
-    })
     // TODO: Implement actual email sending logic
   } catch (error) {
-    console.error('Failed to send referral accepted email:', error)
+    // Continue silently
   }
 }
 
 const sendReferralUpdateEmail = async (referral, status) => {
   try {
     // This would integrate with your email service
-    console.log('Sending referral update email for:', {
-      referralId: referral._id,
-      studentEmail: referral.student?.email,
-      opportunity: referral.opportunity?.title,
-      status
-    })
     // TODO: Implement actual email sending logic
   } catch (error) {
-    console.error('Failed to send referral update email:', error)
+    // Continue silently
+  }
+}
+
+const updateOpportunity = async (req, res) => {
+  try {
+    const { error, userId } = ensureAuthenticatedUser(req)
+    const { id } = req.params
+
+    if (error) {
+      return res.status(error.status).json({ success: false, message: error.message })
+    }
+
+    if (!id) {
+      return res.status(400).json({ success: false, message: 'Opportunity ID is required.' })
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ success: false, message: 'Invalid opportunity id.' })
+    }
+
+    const opportunity = await Opportunity.findById(id)
+    if (!opportunity) {
+      return res.status(404).json({ success: false, message: 'Opportunity not found.' })
+    }
+
+    // Check if user owns this opportunity or is admin/coordinator
+    const userRole = req.user?.role?.toLowerCase()
+    if (opportunity.createdBy?.toString() !== userId && !['admin', 'coordinator'].includes(userRole)) {
+      return res.status(403).json({ success: false, message: 'You can only edit your own opportunities.' })
+    }
+
+    const { title, company, type, location, description, skills, contactEmail, deadline, isRemote, status, isPushed } = req.body ?? {}
+
+    // For admin actions, status and push status can be updated without all required fields
+    if ((status || isPushed !== undefined) && ['admin', 'coordinator'].includes(userRole)) {
+      const updatePayload = {}
+      if (status) updatePayload.status = status
+      if (isPushed !== undefined) {
+        updatePayload.isPushed = isPushed
+        updatePayload.pushedAt = isPushed ? new Date() : null
+      }
+      
+      const updatedOpportunity = await Opportunity.findByIdAndUpdate(id, updatePayload, { new: true })
+      return res.status(200).json({
+        success: true,
+        message: isPushed ? 'Opportunity pushed successfully.' : 'Opportunity status updated successfully.',
+        data: formatOpportunity(updatedOpportunity)
+      })
+    }
+
+    // Validate required fields for full updates
+    if (!title || !company || !type || !description || !contactEmail || !deadline) {
+      return res.status(400).json({ success: false, message: 'title, company, type, description, contactEmail, and deadline are required.' })
+    }
+
+    const normalizedType = String(type).toLowerCase()
+    if (!['full-time', 'internship', 'part-time', 'contract'].includes(normalizedType)) {
+      return res.status(400).json({ success: false, message: 'type must be full-time, internship, part-time, or contract.' })
+    }
+
+    const normalizedSkills = normalizeSkills(skills)
+
+    const updatePayload = {
+      title: title.trim(),
+      company: company.trim(),
+      type: normalizedType,
+      location: isRemote ? 'Remote' : location.trim(),
+      description: description.trim(),
+      contactEmail: String(contactEmail).toLowerCase().trim(),
+      skills: normalizedSkills,
+      deadline: new Date(deadline),
+      isRemote: Boolean(isRemote),
+    }
+
+    const actorRole = req.user?.role?.toLowerCase()
+    if (!['admin', 'coordinator'].includes(actorRole)) {
+      updatePayload.approvalStatus = CONTENT_APPROVAL_STATUS.PENDING
+      updatePayload.approvedAt = null
+      updatePayload.rejectedAt = null
+      updatePayload.approvalDecisions = []
+    }
+
+    const updatedOpportunity = await Opportunity.findByIdAndUpdate(id, updatePayload, { new: true })
+    
+    return res.status(200).json({ 
+      success: true, 
+      message: 'Opportunity updated successfully.', 
+      data: formatOpportunity(updatedOpportunity) 
+    })
+  } catch (error) {
+    console.error('updateOpportunity error:', error)
+    return res.status(500).json({ success: false, message: 'Unable to update opportunity.' })
+  }
+}
+
+const getOpportunityApplicants = async (req, res) => {
+  try {
+    const { id } = req.params
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ success: false, message: 'Invalid opportunity id.' })
+    }
+
+    // Check if opportunity exists
+    const opportunity = await Opportunity.findById(id)
+    if (!opportunity) {
+      return res.status(404).json({ success: false, message: 'Opportunity not found.' })
+    }
+
+    // Get all referrals for this opportunity with student details
+    const referrals = await OpportunityReferral.find({ opportunity: id })
+      .populate({
+        path: 'student',
+        select: 'firstName lastName email department role profilePicture'
+      })
+      .sort({ createdAt: -1 })
+
+    const data = referrals.map((referral) => ({
+      id: referral._id,
+      student: {
+        id: referral.student._id,
+        name: `${referral.student.firstName} ${referral.student.lastName}`,
+        email: referral.student.email,
+        department: referral.student.department || 'Not specified',
+        role: referral.student.role || 'student',
+        profilePicture: referral.student.profilePicture || ''
+      },
+      proposal: referral.proposal,
+      resumeUrl: referral.resumeUrl,
+      resumeFileName: referral.resumeFileName,
+      status: referral.status,
+      submittedAt: referral.createdAt,
+      reviewedAt: referral.reviewedAt,
+      reviewerNote: referral.reviewerNote || ''
+    }))
+
+    return res.status(200).json({ success: true, data })
+  } catch (error) {
+    console.error('getOpportunityApplicants error:', error)
+    return res.status(500).json({ success: false, message: 'Unable to fetch applicants.' })
+  }
+}
+
+const deleteOpportunity = async (req, res) => {
+  try {
+    const { error, userId } = ensureAuthenticatedUser(req)
+    const { id } = req.params
+    const userRole = req.user?.role?.toLowerCase()
+
+    if (error) {
+      return res.status(error.status).json({ success: false, message: error.message })
+    }
+
+    if (!id) {
+      return res.status(400).json({ success: false, message: 'Opportunity ID is required.' })
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ success: false, message: 'Invalid opportunity id.' })
+    }
+
+    const opportunity = await Opportunity.findById(id)
+    if (!opportunity) {
+      return res.status(404).json({ success: false, message: 'Opportunity not found.' })
+    }
+
+    // Check if user owns this opportunity or is admin/coordinator
+    if (opportunity.createdBy?.toString() !== userId && !['admin', 'coordinator'].includes(userRole)) {
+      return res.status(403).json({ success: false, message: 'You can only delete your own opportunities.' })
+    }
+
+    await Opportunity.findByIdAndDelete(id)
+    
+    return res.status(200).json({
+      success: true,
+      message: 'Opportunity deleted successfully.'
+    })
+  } catch (error) {
+    console.error('deleteOpportunity error:', error)
+    return res.status(500).json({ success: false, message: 'Unable to delete opportunity.' })
   }
 }
 
 module.exports = {
   listOpportunities,
+  listAllOpportunitiesForAdmin,
+  listMyOpportunities,
   getOpportunityById,
   createOpportunity,
+  updateOpportunity,
+  deleteOpportunity,
   submitOpportunityReferral,
   getMyOpportunityReferral,
   listMyOpportunityReferrals,
   updateReferralStatus,
+  getOpportunityApplicants,
 }

@@ -456,7 +456,6 @@ const confirmRequest = async (req, res) => {
 }
 
 const updateMeetingLink = async (req, res) => {
-  console.log('updateMeetingLink called with requestId:', req.params?.requestId)
   try {
     const { error, userId } = ensureMentor(req)
     if (error) {
@@ -493,12 +492,102 @@ const updateMeetingLink = async (req, res) => {
   }
 }
 
+const getPendingRequests = async (req, res) => {
+  try {
+    const userId = req.user?.id
+    const role = (req.user?.role || '').toLowerCase()
+
+    if (!userId) {
+      return res.status(401).json({ message: 'Authentication required.' })
+    }
+
+    if (role !== 'alumni') {
+      return res.status(403).json({ message: 'Only alumni can view pending mentorship requests.' })
+    }
+
+    const pendingRequests = await MentorRequest.find({ 
+      mentor: userId, 
+      status: 'pending' 
+    })
+    .populate('mentee', 'name email profile')
+    .populate('service', 'title duration mode')
+    .sort({ createdAt: -1 })
+
+    const formattedRequests = pendingRequests.map(request => ({
+      id: request._id,
+      student: {
+        id: request.mentee?._id,
+        name: request.menteeName,
+        email: request.menteeEmail,
+        avatar: request.menteeAvatar,
+        profile: request.mentee?.profile
+      },
+      service: {
+        id: request.service?._id,
+        name: request.serviceName,
+        duration: request.serviceDuration,
+        mode: request.serviceMode,
+        price: request.servicePrice
+      },
+      preferredDateTime: request.preferredDateTime,
+      preferredMode: request.preferredMode,
+      notes: request.notes,
+      status: request.status,
+      createdAt: request.createdAt
+    }))
+
+    return res.status(200).json({
+      success: true,
+      data: formattedRequests,
+      count: formattedRequests.length
+    })
+  } catch (error) {
+    console.error('getPendingRequests error:', error)
+    return res.status(500).json({ message: 'Unable to fetch pending requests.' })
+  }
+}
+
+const reviewRequest = async (req, res) => {
+  try {
+    const { error, userId } = ensureMentor(req)
+    if (error) {
+      return res.status(error.status).json({ message: error.message })
+    }
+
+    const requestId = req.params?.requestId
+    if (!requestId) {
+      return res.status(400).json({ message: 'Request identifier is required.' })
+    }
+
+    const request = await MentorRequest.findOne({ _id: requestId, mentor: userId })
+    if (!request) {
+      return res.status(404).json({ message: 'Request not found.' })
+    }
+
+    if (request.status !== 'pending') {
+      return res.status(400).json({ message: 'Only pending requests can be marked for review.' })
+    }
+
+    request.status = 'review'
+    request.updatedAt = new Date()
+    await request.save()
+
+    const result = await MentorRequest.findById(request._id).select('-mentor')
+    return res.status(200).json(result)
+  } catch (error) {
+    console.error('reviewRequest error:', error)
+    return res.status(500).json({ message: 'Unable to mark request for review.' })
+  }
+}
+
 module.exports = {
   listMyRequests,
   getRequestDetails,
   acceptRequest,
   rejectRequest,
+  reviewRequest,
   confirmRequest,
   createMentorRequest,
   updateMeetingLink,
+  getPendingRequests,
 }

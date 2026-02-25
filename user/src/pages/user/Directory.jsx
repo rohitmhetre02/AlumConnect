@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
+import { useAuth } from '../../context/AuthContext'
 import UserDirectoryFilter from '../../components/user/directory/UserDirectoryFilter'
 import UserDirectoryCard from '../../components/user/directory/UserDirectoryCard'
 import { useDirectoryData } from '../../hooks/useDirectoryData'
@@ -132,12 +133,17 @@ const resolveRoleFromPath = (pathname = '') => {
 const Directory = () => {
   const location = useLocation()
   const navigate = useNavigate()
+  const { user } = useAuth()
   const [search, setSearch] = useState('')
   const [role, setRole] = useState(() => resolveRoleFromPath(location.pathname))
   const baseFilters = useMemo(() => createDefaultFilters(role), [role])
   const [filters, setFilters] = useState(baseFilters)
 
   const { loading, members = [], error } = useDirectoryData(role)
+
+  // Get current user info for filtering
+  const currentUserId = user?.id || user?._id
+  const currentUserRole = user?.role?.toLowerCase()
 
   useEffect(() => {
     const nextRole = resolveRoleFromPath(location.pathname)
@@ -200,6 +206,12 @@ const Directory = () => {
 
     return members.filter((profile) => {
       if (profile.role !== role) return false
+      
+      // Exclude current user from their own role directory
+      if (currentUserId && currentUserRole === role && profile.id === currentUserId) {
+        return false
+      }
+      
       const searchableValues = [profile.name, profile.program, profile.title, profile.location]
         .filter(Boolean)
         .map((value) => value.toLowerCase())
@@ -259,7 +271,7 @@ const Directory = () => {
 
       return true
     })
-  }, [members, role, search, filters])
+  }, [members, role, search, filters, currentUserId, currentUserRole])
 
   const handleSearchChange = (value) => {
     setSearch(value)
@@ -315,7 +327,12 @@ const Directory = () => {
         </div>
       ) : (
         <div className="flex h-48 items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-white">
-          <p className="text-sm text-slate-500">No members match the selected filters.</p>
+          <p className="text-sm text-slate-500">
+            {currentUserId && currentUserRole === role 
+              ? `No other ${role.slice(0, -1)}s found matching the selected filters.` 
+              : 'No members match the selected filters.'
+            }
+          </p>
         </div>
       )}
     </div>

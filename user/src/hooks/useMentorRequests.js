@@ -231,6 +231,32 @@ export const useMentorRequests = () => {
     [toast, mentorEndpoint],
   )
 
+  const reviewRequest = useCallback(
+    async (requestId) => {
+      try {
+        const response = await post(`${mentorEndpoint}/${requestId}/review`, {})
+        const request = normalizeRequest(response?.data ?? response)
+        if (request) {
+          setItems((prev) => sortRequests(prev.map((item) => (item.id === request.id ? request : item))))
+        }
+        toast?.({
+          title: 'Request marked for review',
+          description: 'The mentorship request has been moved to review status.',
+          tone: 'success',
+        })
+        return request
+      } catch (err) {
+        toast?.({
+          title: 'Unable to mark for review',
+          description: err?.message ?? 'Please try again later.',
+          tone: 'error',
+        })
+        throw err
+      }
+    },
+    [toast, mentorEndpoint],
+  )
+
   const currentUserId = (user?._id || user?.id || user?.profile?._id || user?.profile?.id || '').toString()
 
   return useMemo(
@@ -242,6 +268,7 @@ export const useMentorRequests = () => {
       getRequestDetails,
       acceptRequest,
       rejectRequest,
+      reviewRequest,
       confirmRequest,
       updateMeetingLink,
       selfId: currentUserId,
@@ -255,6 +282,7 @@ export const useMentorRequests = () => {
       getRequestDetails,
       acceptRequest,
       rejectRequest,
+      reviewRequest,
       confirmRequest,
       currentUserId,
       normalizedRole,

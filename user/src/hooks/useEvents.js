@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
-import { get, post } from '../utils/api'
+import { get, post, put } from '../utils/api'
 
 const ALLOWED_EVENT_MODES = Object.freeze(['online', 'in-person', 'hybrid'])
 export const EVENT_MODES = ALLOWED_EVENT_MODES
@@ -52,6 +52,29 @@ export const useEvents = () => {
   useEffect(() => {
     fetchEvents()
   }, [fetchEvents])
+
+  const updateEvent = useCallback(
+    async (id, eventData) => {
+      try {
+        const response = await put(`/events/${id}`, eventData)
+        const formatted = formatEvent(response?.data)
+
+        if (formatted) {
+          setItems((prev) => {
+            const exists = prev.some((event) => event.id === formatted.id)
+            if (!exists) return prev
+            return prev.map((event) => (event.id === formatted.id ? formatted : event))
+          })
+        }
+
+        return formatted
+      } catch (updateError) {
+        console.error('useEvents: Unable to update event:', updateError)
+        throw updateError
+      }
+    },
+    []
+  )
 
   const createEvent = useCallback(
     async ({ title, description, location, coverImage, startAt, endAt, mode, registrationLink, organization, department, branch }) => {
@@ -120,6 +143,7 @@ export const useEvents = () => {
       error, 
       refresh: fetchEvents, 
       createEvent,
+      updateEvent,
       registerForEvent,
       getEventById: async (id) => {
         try {
@@ -131,7 +155,40 @@ export const useEvents = () => {
         }
       }
     }),
-    [items, loading, error, fetchEvents, createEvent, registerForEvent]
+    [items, loading, error, fetchEvents, createEvent, updateEvent, registerForEvent]
+  )
+}
+
+export const useMyEvents = () => {
+  const [items, setItems] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+
+  const fetchEvents = useCallback(async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const response = await get('/events/mine')
+      const data = Array.isArray(response?.data) ? response.data : []
+      const formatted = data.map(formatEvent).filter(Boolean)
+      setItems(formatted)
+      return formatted
+    } catch (fetchError) {
+      setError(fetchError)
+      console.error('Unable to load your events:', fetchError)
+      throw fetchError
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    fetchEvents()
+  }, [fetchEvents])
+
+  return useMemo(
+    () => ({ items, loading, error, refresh: fetchEvents }),
+    [items, loading, error, fetchEvents],
   )
 }
 

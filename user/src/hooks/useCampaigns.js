@@ -21,12 +21,21 @@ export const useCampaigns = () => {
     setLoading(true)
     setError(null)
     try {
-      const response = await get('/campaigns', { includeAuth: false })
+      // Try to fetch user campaigns (includes approved + user's own)
+      const response = await get('/campaigns/user', { includeAuth: true })
       const data = Array.isArray(response?.data) ? response.data : []
-      setItems(data.map(formatCampaign).filter(Boolean))
+      const formattedData = data.map(formatCampaign).filter(Boolean)
+      setItems(formattedData)
     } catch (fetchError) {
-      setError(fetchError)
-      console.error('Unable to load campaigns:', fetchError)
+      // If user campaigns fails, fall back to public campaigns
+      try {
+        const response = await get('/campaigns', { includeAuth: false })
+        const data = Array.isArray(response?.data) ? response.data : []
+        const formattedData = data.map(formatCampaign).filter(Boolean)
+        setItems(formattedData)
+      } catch (fallbackError) {
+        setError(fallbackError)
+      }
     } finally {
       setLoading(false)
     }
@@ -39,10 +48,6 @@ export const useCampaigns = () => {
   const createCampaign = useCallback(
     async ({ title, description, goalAmount, coverImage, deadline, category, tags, featured, priority }) => {
       try {
-        console.log('Creating campaign with data:', {
-          title, description, goalAmount, coverImage, deadline, category, tags, featured, priority
-        })
-        
         const response = await post('/campaigns', {
           title,
           description,
@@ -55,16 +60,12 @@ export const useCampaigns = () => {
           priority,
         })
 
-        console.log('Campaign creation response:', response)
         const formatted = formatCampaign(response?.data)
-
         if (formatted) {
           setItems((prev) => [formatted, ...prev])
         }
-
         return formatted
       } catch (createError) {
-        console.error('Unable to publish campaign:', createError)
         throw createError
       }
     },
@@ -127,11 +128,11 @@ export const useCampaign = (id) => {
       try {
         const response = await get(`/campaigns/${id}`, { includeAuth: false })
         if (!isMounted) return
-        setData(formatCampaign(response?.data ?? null))
+        const formatted = formatCampaign(response?.data ?? null)
+        setData(formatted)
       } catch (fetchError) {
         if (!isMounted) return
         setError(fetchError)
-        console.error('Unable to load campaign:', fetchError)
       } finally {
         if (isMounted) {
           setLoading(false)

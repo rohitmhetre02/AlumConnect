@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
 import { api } from '../utils/api'
 
 function InputField({ label, type = 'text', value, onChange, placeholder, required, min }) {
@@ -84,11 +84,53 @@ const DEFAULT_FORM_STATE = {
 
 const AdminPostArticle = () => {
   const navigate = useNavigate()
+  const { articleId } = useParams()
+  const isEditing = !!articleId
   
   const [form, setForm] = useState(DEFAULT_FORM_STATE)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [uploadingImage, setUploadingImage] = useState(false)
   const [imagePreview, setImagePreview] = useState('')
+  const [imageError, setImageError] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
+
+  // Load article data for editing
+  useEffect(() => {
+    if (isEditing) {
+      loadArticle()
+    }
+  }, [articleId])
+
+  const loadArticle = async () => {
+    setIsLoading(true)
+    try {
+      const response = await api.get(`/news/${articleId}`)
+      const article = response.data
+      
+      // Filter out blob URLs as they're temporary and won't work
+      const coverImage = article.coverImage || article.imageUrl || ''
+      const validImage = coverImage && !coverImage.startsWith('blob:') ? coverImage : ''
+      
+      setForm({
+        title: article.title || '',
+        subtitle: article.subtitle || '',
+        category: article.category || '',
+        excerpt: article.excerpt || '',
+        content: article.content || '',
+        coverImage: validImage,
+        readingTimeMinutes: article.readingTimeMinutes || '',
+      })
+      
+      setImagePreview(validImage)
+      setImageError(false)
+    } catch (error) {
+      console.error('Failed to load article:', error)
+      alert('Failed to load article. Please try again.')
+      navigate('/admin/news')
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
   const handleChange = (field) => (event) => {
     const value = event.target.value
@@ -152,20 +194,26 @@ const AdminPostArticle = () => {
         excerpt: form.excerpt.trim(),
         content: form.content.trim(),
         coverImage: form.coverImage.trim() || undefined,
+        imageUrl: form.coverImage.trim() || undefined,
         readingTimeMinutes: readingTime,
         postedBy: 'Admin',
       }
       
-      console.log('Submitting article data:', articleData)
+      let result
+      if (isEditing) {
+        result = await api.put(`/news/${articleId}`, articleData)
+        console.log('Article updated successfully:', result)
+        alert('Article has been successfully updated.')
+      } else {
+        result = await api.post('/news', articleData)
+        console.log('Article created successfully:', result)
+        alert('Article has been successfully published.')
+      }
       
-      const result = await api.post('/news', articleData)
-      
-      console.log('Article created successfully:', result)
-      alert('Article has been successfully published.')
       navigate('/admin/news')
-    } catch (createError) {
-      console.error('Failed to create article:', createError)
-      alert(`Failed to create article: ${createError.message || 'Unknown error'}`)
+    } catch (error) {
+      console.error(`Failed to ${isEditing ? 'update' : 'create'} article:`, error)
+      alert(`Failed to ${isEditing ? 'update' : 'create'} article: ${error.message || 'Unknown error'}`)
     } finally {
       setIsSubmitting(false)
     }
@@ -191,13 +239,24 @@ const AdminPostArticle = () => {
 
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-slate-900 mb-2">Create New Article</h1>
-          <p className="text-slate-600">Publish news and announcements for the alumni community</p>
+          <h1 className="text-3xl font-bold text-slate-900 mb-2">
+            {isEditing ? 'Edit Article' : 'Create New Article'}
+          </h1>
+          <p className="text-slate-600">
+            {isEditing ? 'Update article details and content' : 'Publish news and announcements for the alumni community'}
+          </p>
         </div>
 
-        {/* Form */}
-        <div className="rounded-3xl bg-white shadow-xl p-8">
-          <form onSubmit={handleSubmit} className="space-y-6">
+        {isLoading ? (
+          <div className="rounded-3xl bg-white shadow-xl p-8">
+            <div className="flex items-center justify-center py-12">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600"></div>
+              <span className="ml-3 text-slate-600">Loading article...</span>
+            </div>
+          </div>
+        ) : (
+          <div className="rounded-3xl bg-white shadow-xl p-8">
+            <form onSubmit={handleSubmit} className="space-y-6">
             {/* Basic Information */}
             <div>
               <h2 className="text-lg font-semibold text-slate-900 mb-4">Article Details</h2>
@@ -265,16 +324,26 @@ const AdminPostArticle = () => {
                 {/* Image Preview */}
                 {(imagePreview || form.coverImage) && (
                   <div className="relative h-48 w-full rounded-2xl overflow-hidden bg-slate-100">
-                    <img 
-                      src={imagePreview || form.coverImage} 
-                      alt="Article cover preview" 
-                      className="h-full w-full object-cover"
-                    />
+                    {!imageError ? (
+                      <img 
+                        src={imagePreview || form.coverImage} 
+                        alt="Article cover preview" 
+                        className="h-full w-full object-cover"
+                        onError={() => setImageError(true)}
+                      />
+                    ) : (
+                      <div className="flex items-center justify-center h-full">
+                        <svg className="w-12 h-12 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                      </div>
+                    )}
                     <button
                       type="button"
                       onClick={() => {
                         setForm(prev => ({ ...prev, coverImage: '' }))
                         setImagePreview('')
+                        setImageError(false)
                       }}
                       className="absolute top-2 right-2 rounded-full bg-white/90 p-1.5 text-slate-600 hover:bg-white hover:text-red-500 transition"
                     >
@@ -372,11 +441,12 @@ const AdminPostArticle = () => {
                 className="rounded-full bg-primary px-6 py-3 text-sm font-semibold text-white transition hover:bg-primary-dark disabled:cursor-not-allowed disabled:bg-primary/50"
                 disabled={isSubmitting}
               >
-                {isSubmitting ? 'Publishing...' : 'Publish Article'}
+                {isSubmitting ? (isEditing ? 'Updating...' : 'Publishing...') : (isEditing ? 'Update Article' : 'Publish Article')}
               </button>
             </div>
           </form>
         </div>
+        )}
       </div>
     </div>
   )

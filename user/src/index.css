@@ -51,3 +51,60 @@ body {
     transform: translateX(100%);
   }
 }
+
+
+/* Scrollbar utilities - Hidden scrollbar */
+.scrollbar-hide {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+}
+
+.scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: #1e293b #f1f5f9;
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+  width: 10px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 4px;
+  border: 1px solid #e2e8f0;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: #1e293b;
+  border-radius: 4px;
+  border: 2px solid #f1f5f9;
+  transition: background-color 0.2s ease;
+  min-height: 20px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: #0f172a;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb:active {
+  background: #020617;
+}
+
+.scrollbar-thumb-slate-300::-webkit-scrollbar-thumb {
+  background: #1e293b;
+  border: 2px solid #f1f5f9;
+  min-height: 20px;
+}
+
+.scrollbar-track-slate-100::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+}
+
+.hover\:scrollbar-thumb-slate-400:hover::-webkit-scrollbar-thumb {
+  background: #0f172a;
+}

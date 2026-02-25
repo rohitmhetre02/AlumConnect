@@ -22,31 +22,42 @@ import NewsDetail from './pages/user/NewsDetail'
 import NewsCreate from './pages/user/NewsCreate'
 import EventDetail from './pages/user/EventDetail'
 import UserEvents from './pages/user/Events'
+import RegisteredEvents from './pages/user/RegisteredEvents'
 import Donations from './pages/user/Donations'
 import DonationDetail from './pages/user/DonationDetail'
 import MyActivity from './pages/user/MyActivity'
 import MyApplications from './pages/user/MyApplications'
+import ContentPosted from './pages/user/ContentPosted'
 import MyPosts from './pages/user/MyPosts'
+import EventRegistrations from './pages/user/EventRegistrations'
 import MyRequests from './pages/user/MyRequests'
 import PostDonationCampaign from './pages/user/PostDonationCampaign'
 import Campaigns from './pages/user/Campaigns'
-import CampaignDetail from './pages/user/CampaignDetail'
+import CampaignDetail from './pages/user/CampaignDetailNew'
 import Settings from './pages/user/Settings'
 import UserGallery from './pages/user/Gallery'
 import StudentsDirectory from './pages/StudentsDirectory'
 import AlumniDirectory from './pages/AlumniDirectory'
 import FacultyDirectory from './pages/FacultyDirectory'
+import CoordinatorsDirectory from './pages/CoordinatorsDirectory'
 import Opportunities from './pages/user/Opportunities'
 import PostOpportunity from './pages/user/PostOpportunity'
 import OpportunityDetail from './pages/user/OpportunityDetail'
+import OpportunityApplications from './pages/user/OpportunityApplications'
 import PostEvent from './pages/user/PostEvent'
-import Insights from './pages/user/Insights'
-import InsightsDetail from './pages/user/InsightsDetail'
+import EditEvent from './pages/user/EditEvent'
+import EditDonation from './pages/user/EditDonation'
+import EditOpportunity from './pages/user/EditOpportunity'
+import UserInsights from './pages/user/UserInsights'
 import MentorProfile from './pages/user/MentorProfile'
 import ProfileReviewBanner from './components/user/ProfileReviewBanner'
 import AccessRestrictedPage from './components/user/AccessRestrictedPage'
 import { normalizeProfileStatus, PROFILE_STATUS } from './utils/profileStatus'
-import AIMentorMatch from './pages/user/AIMentorMatch'
+import AIMentorMatch from './pages/user/AIMentorMatchClean'
+import CoordinatorRegistrationApprovals from './pages/user/CoordinatorRegistrationApprovals'
+import AdminRegistrationApprovals from './pages/user/AdminRegistrationApprovals'
+import { normalizeRegistrationStatus, REGISTRATION_STATUS } from './utils/registrationStatus'
+import BecomeMentor from './pages/user/BecomeMentor'
 
 const PrivateRoute = ({ children }) => {
   const { user } = useAuth()
@@ -70,16 +81,20 @@ const RedirectIfAuthenticated = ({ children }) => {
   return children
 }
 
-// Route guard for when profile is pending approval
+// Route guard for when registration or profile is pending approval
 const ProfilePendingGuard = ({ children }) => {
   const { user } = useAuth()
-  const location = useLocation()
-  const status = normalizeProfileStatus(user?.profileApprovalStatus)
+  const registrationStatus = normalizeRegistrationStatus(user?.registrationStatus)
+  const profileStatus = normalizeProfileStatus(user?.profileApprovalStatus)
 
-  if (
+  const isNonAdmin = user?.role?.toLowerCase() !== 'admin'
+  const isRegistrationBlocked =
+    isNonAdmin && registrationStatus !== REGISTRATION_STATUS.APPROVED
+  const isProfileBlocked =
     ['student', 'alumni', 'faculty'].includes(user?.role) &&
-    (status === PROFILE_STATUS.IN_REVIEW || status === PROFILE_STATUS.REJECTED)
-  ) {
+    (profileStatus === PROFILE_STATUS.IN_REVIEW || profileStatus === PROFILE_STATUS.REJECTED)
+
+  if (isRegistrationBlocked || isProfileBlocked) {
     return <AccessRestrictedPage user={user} />
   }
 
@@ -89,14 +104,29 @@ const ProfilePendingGuard = ({ children }) => {
 const ProfilePendingGuardWithFallback = ({ children }) => {
   const { user } = useAuth()
   const location = useLocation()
+  const registrationStatus = normalizeRegistrationStatus(user?.registrationStatus)
+  const profileStatus = normalizeProfileStatus(user?.profileApprovalStatus)
 
-  const status = normalizeProfileStatus(user?.profileApprovalStatus)
-
-  if (
+  const isNonAdmin = user?.role?.toLowerCase() !== 'admin'
+  const isRegistrationBlocked =
+    isNonAdmin && registrationStatus !== 'APPROVED'
+  const isProfileBlocked =
     ['student', 'alumni', 'faculty'].includes(user?.role) &&
-    (status === PROFILE_STATUS.IN_REVIEW || status === PROFILE_STATUS.REJECTED)
-  ) {
+    (profileStatus === PROFILE_STATUS.IN_REVIEW || profileStatus === PROFILE_STATUS.REJECTED)
+
+  if (isRegistrationBlocked || isProfileBlocked) {
     return <Navigate to="/dashboard" replace state={{ from: location }} />
+  }
+
+  return children
+}
+
+const RoleRoute = ({ allowedRoles, children }) => {
+  const { user } = useAuth()
+  const normalizedRole = user?.role?.toLowerCase() ?? ''
+
+  if (!allowedRoles.includes(normalizedRole)) {
+    return <Navigate to="/dashboard" replace />
   }
 
   return children
@@ -123,6 +153,8 @@ function App() {
             <Route path="events" element={<Events />} />
             <Route path="mentorship" element={<Mentorship />} />
             <Route path="gallery" element={<Gallery />} />
+            <Route path="gallery/:department" element={<Gallery />} />
+            <Route path="gallery/:department/:folder" element={<Gallery />} />
             <Route
               path="login"
               element={
@@ -181,6 +213,11 @@ function App() {
                 <FacultyDirectory />
               </ProfilePendingGuardWithFallback>
             } />
+            <Route path="directory/coordinators" element={
+              <ProfilePendingGuardWithFallback>
+                <CoordinatorsDirectory />
+              </ProfilePendingGuardWithFallback>
+            } />
             <Route path="directory/profile/:profileId" element={
               <ProfilePendingGuardWithFallback>
                 <DirectoryProfile />
@@ -189,6 +226,11 @@ function App() {
             <Route path="mentorship" element={
               <ProfilePendingGuardWithFallback>
                 <UserMentorship />
+              </ProfilePendingGuardWithFallback>
+            } />
+            <Route path="mentorship/become" element={
+              <ProfilePendingGuardWithFallback>
+                <BecomeMentor />
               </ProfilePendingGuardWithFallback>
             } />
             <Route path="mentorship/ai-match" element={
@@ -216,20 +258,27 @@ function App() {
                 <PostEvent />
               </ProfilePendingGuardWithFallback>
             } />
+            <Route path="events/:eventId/edit" element={
+              <ProfilePendingGuardWithFallback>
+                <EditEvent />
+              </ProfilePendingGuardWithFallback>
+            } />
             <Route path="events/:eventId" element={
               <ProfilePendingGuardWithFallback>
                 <EventDetail />
               </ProfilePendingGuardWithFallback>
             } />
             <Route path="donations" element={
-              <ProfilePendingGuardWithFallback>
-                <Donations />
-              </ProfilePendingGuardWithFallback>
+              <Navigate to="/campaigns" replace />
             } />
             <Route path="donations/create" element={
-              <ProfilePendingGuardWithFallback>
-                <PostDonationCampaign />
-              </ProfilePendingGuardWithFallback>
+              <Navigate to="/campaigns/create" replace />
+            } />
+            <Route path="donations/:campaignId/edit" element={
+              <Navigate to="/campaigns/:campaignId/edit" replace />
+            } />
+            <Route path="donations/:campaignId" element={
+              <Navigate to="/campaigns/:campaignId" replace />
             } />
             <Route path="campaigns" element={
               <ProfilePendingGuardWithFallback>
@@ -256,6 +305,20 @@ function App() {
                 <PostOpportunity />
               </ProfilePendingGuardWithFallback>
             } />
+            <Route path="registrations/coordinator" element={
+              <RoleRoute allowedRoles={['coordinator']}>
+                <ProfilePendingGuard>
+                  <CoordinatorRegistrationApprovals />
+                </ProfilePendingGuard>
+              </RoleRoute>
+            } />
+            <Route path="admin/registration-approvals" element={
+              <RoleRoute allowedRoles={['admin']}>
+                <ProfilePendingGuard>
+                  <AdminRegistrationApprovals />
+                </ProfilePendingGuard>
+              </RoleRoute>
+            } />
             <Route path="jobs" element={
               <ProfilePendingGuardWithFallback>
                 <Opportunities filter="job" />
@@ -266,9 +329,24 @@ function App() {
                 <Opportunities filter="internship" />
               </ProfilePendingGuardWithFallback>
             } />
+            <Route path="opportunities/:opportunityId/edit" element={
+              <ProfilePendingGuardWithFallback>
+                <EditOpportunity />
+              </ProfilePendingGuardWithFallback>
+            } />
             <Route path="opportunities/:opportunityId" element={
               <ProfilePendingGuardWithFallback>
                 <OpportunityDetail />
+              </ProfilePendingGuardWithFallback>
+            } />
+            <Route path="opportunities/:opportunityId/applications" element={
+              <ProfilePendingGuardWithFallback>
+                <OpportunityApplications />
+              </ProfilePendingGuardWithFallback>
+            } />
+            <Route path="donations/:campaignId/edit" element={
+              <ProfilePendingGuardWithFallback>
+                <EditDonation />
               </ProfilePendingGuardWithFallback>
             } />
             <Route path="donations/:campaignId" element={
@@ -296,14 +374,19 @@ function App() {
                 <UserGallery />
               </ProfilePendingGuardWithFallback>
             } />
-            <Route path="insights" element={
+            <Route path="gallery/:department" element={
               <ProfilePendingGuardWithFallback>
-                <Insights />
+                <UserGallery />
               </ProfilePendingGuardWithFallback>
             } />
-            <Route path="insights/:type" element={
+            <Route path="gallery/:department/:folder" element={
               <ProfilePendingGuardWithFallback>
-                <InsightsDetail />
+                <UserGallery />
+              </ProfilePendingGuardWithFallback>
+            } />
+            <Route path="insights" element={
+              <ProfilePendingGuardWithFallback>
+                <UserInsights />
               </ProfilePendingGuardWithFallback>
             } />
             <Route path="applications" element={
@@ -311,14 +394,29 @@ function App() {
                 <MyApplications />
               </ProfilePendingGuardWithFallback>
             } />
-            <Route path="posts" element={
+            <Route path="mentorship-requests" element={
+              <ProfilePendingGuardWithFallback>
+                <MyRequests />
+              </ProfilePendingGuardWithFallback>
+            } />
+            <Route path="activity/content" element={
+              <ProfilePendingGuardWithFallback>
+                <ContentPosted />
+              </ProfilePendingGuardWithFallback>
+            } />
+            <Route path="my-posts" element={
               <ProfilePendingGuardWithFallback>
                 <MyPosts />
               </ProfilePendingGuardWithFallback>
             } />
-            <Route path="requests" element={
+            <Route path="events/:eventId/registrations" element={
               <ProfilePendingGuardWithFallback>
-                <MyRequests />
+                <EventRegistrations />
+              </ProfilePendingGuardWithFallback>
+            } />
+            <Route path="registered-events" element={
+              <ProfilePendingGuardWithFallback>
+                <RegisteredEvents />
               </ProfilePendingGuardWithFallback>
             } />
             <Route path="settings" element={

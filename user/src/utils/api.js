@@ -113,15 +113,15 @@ export const del = async (path, options = {}) => {
 export const setAuthToken = (token) => {
   if (typeof window === 'undefined') return
   if (token) {
-    window.localStorage.setItem('authToken', token)
+    window.localStorage.setItem('token', token)
   } else {
-    window.localStorage.removeItem('authToken')
+    window.localStorage.removeItem('token')
   }
 }
 
 export const getAuthToken = () => {
   if (typeof window === 'undefined') return null
-  return window.localStorage.getItem('authToken')
+  return window.localStorage.getItem('token')
 }
 
 export { API_BASE_URL }

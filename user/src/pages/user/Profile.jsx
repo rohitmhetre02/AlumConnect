@@ -10,7 +10,7 @@ import ProfileApprovalPopup from '../../components/user/ProfileApprovalPopup'
 import ProfileApprovedPopup from '../../components/user/ProfileApprovedPopup'
 import useModal from '../../hooks/useModal'
 import useToast from '../../hooks/useToast'
-import { get } from '../../utils/api'
+import { get, put } from '../../utils/api'
 import {
   PROFILE_STATUS,
   normalizeProfileStatus,

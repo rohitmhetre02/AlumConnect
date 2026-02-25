@@ -1,4 +1,5 @@
 const mongoose = require('mongoose')
+const { CONTENT_APPROVAL_STATUS } = require('../utils/contentApprovalStatus')
 
 const campaignSchema = new mongoose.Schema(
   {
@@ -111,6 +112,58 @@ const campaignSchema = new mongoose.Schema(
     priority: {
       type: Number,
       default: 0,
+    },
+    // Approval system fields
+    approvalStatus: {
+      type: String,
+      enum: Object.values(CONTENT_APPROVAL_STATUS),
+      default: CONTENT_APPROVAL_STATUS.PENDING,
+    },
+    approvalDepartment: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+    approvalDecisions: [{
+      status: {
+        type: String,
+        enum: Object.values(CONTENT_APPROVAL_STATUS),
+        required: true,
+      },
+      decidedByRole: {
+        type: String,
+        required: true,
+      },
+      decidedByName: {
+        type: String,
+        required: true,
+      },
+      decidedById: {
+        type: String,
+        required: true,
+      },
+      decidedAt: {
+        type: Date,
+        required: true,
+      },
+      reason: {
+        type: String,
+        trim: true,
+        default: '',
+      },
+    }],
+    approvedAt: {
+      type: Date,
+      default: null,
+    },
+    rejectedAt: {
+      type: Date,
+      default: null,
+    },
+    approvalRejectionReason: {
+      type: String,
+      trim: true,
+      default: '',
     },
   },
   {

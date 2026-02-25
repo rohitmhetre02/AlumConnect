@@ -8,9 +8,9 @@ const AdminLayout = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   return (
-    <div className="relative flex min-h-screen bg-[#F8FAFC]">
-      {/* Desktop sidebar */}
-      <div className="hidden lg:flex lg:w-72 lg:flex-shrink-0">
+    <div className="relative min-h-screen bg-[#F8FAFC]">
+      {/* Desktop sidebar - Fixed position */}
+      <div className="hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-50 lg:flex lg:w-72 lg:flex-shrink-0">
         <AdminSidebar />
       </div>
 
@@ -24,10 +24,10 @@ const AdminLayout = ({ children }) => {
         </div>
       )}
 
-      <div className="flex min-h-screen flex-1 flex-col pb-20 lg:pb-0">
+      <div className="flex min-h-screen flex-1 flex-col pb-20 lg:pb-0 lg:pl-72">
         <AdminTopbar onToggleSidebar={() => setSidebarOpen(true)} />
-        <main className="flex-1 overflow-y-auto px-4 py-6 sm:px-6 lg:px-10">
-          <div className="min-h-full">
+        <main className="flex-1 overflow-y-auto w-full">
+          <div className="min-h-full w-full">
             {children ?? <Outlet />}
           </div>
         </main>

@@ -9,7 +9,7 @@ import { useMentorResources } from '../../hooks/useMentorResources'
 import { useMentorSessions } from '../../hooks/useMentorSessions'
 import { useMentorRequests } from '../../hooks/useMentorRequests'
 import MentorPanelDashboard from './MentorPanelDashboard'
-
+          
 const FILTER_DEFAULTS = {
   experience: [],
   rating: [],
@@ -66,6 +66,34 @@ const mentorshipAreaOptions = [
   'Interview Preparation',
 ]
 
+const degreeOptions = [
+  'B.E. Computer Engineering',
+  'B.E. Information Technology',
+  'B.E. Electronics & Telecommunication',
+  'B.E. Mechanical Engineering',
+  'B.E. Civil Engineering',
+  'B.Tech Computer Engineering',
+  'B.Tech Information Technology',
+  'M.E. Computer Engineering',
+  'M.E. Information Technology',
+  'M.Tech Computer Engineering',
+  'MCA',
+  'Other',
+]
+
+const departmentOptions = [
+  'Computer Engineering',
+  'Information Technology',
+  'Artificial Intelligence & Data Science',
+  'Electronics & Telecommunication Engineering',
+  'Mechanical Engineering',
+  'Civil Engineering',
+  'Electronics Engineering (VLSI Design And Technology)',
+  'Electronics & Communication (Advanced Communication Technology)',
+  'School of Architecture',
+  'Other',
+]
+
 const preferredStudentOptions = ['UG', 'PG', 'Any']
 
 const weeklyHoursOptions = ['1–2 hours', '2–5 hours', '5+ hours']
@@ -85,7 +113,7 @@ const panelNavItems = [
 const Mentorship = () => {
   const navigate = useNavigate()
   const { panelSection: panelSectionParam } = useParams()
-  const { role: userRole, user } = useAuth()
+  const { role: userRole, user, updateUser } = useAuth()
   const [search, setSearch] = useState('')
   const [industry, setIndustry] = useState('all industries')
   const [showApplication, setShowApplication] = useState(false)
@@ -113,20 +141,44 @@ const Mentorship = () => {
 
   const isMentor = Boolean(currentMentorProfile)
 
+  useEffect(() => {
+    if (currentMentorProfile && !user?.isMentor) {
+      updateUser({
+        isMentor: true,
+        profile: {
+          ...(user?.profile ?? {}),
+          isMentor: true,
+        },
+      })
+    }
+  }, [currentMentorProfile, updateUser, user?.isMentor, user?.profile])
+
   const industries = useMemo(() => {
     const set = new Set()
     ;(Array.isArray(mentors) ? mentors : []).forEach((mentor) => {
-      const value = (mentor.industry ?? '').toLowerCase()
-      if (value) set.add(value)
+      // Exclude current user's own mentor profile from industries
+      const isOwnProfile = mentor.profileId === userProfileId || 
+                          mentor.applicationId === userProfileId || 
+                          mentor.id === userProfileId
+      if (!isOwnProfile) {
+        const value = (mentor.industry ?? '').toLowerCase()
+        if (value) set.add(value)
+      }
     })
     return Array.from(set).sort()
-  }, [mentors])
+  }, [mentors, userProfileId])
 
   const filteredMentors = useMemo(() => {
     const normalized = Array.isArray(mentors) ? mentors : []
     const searchValue = search.trim().toLowerCase()
 
     return normalized.filter((mentor) => {
+      // Exclude current user's own mentor profile
+      const isOwnProfile = mentor.profileId === userProfileId || 
+                          mentor.applicationId === userProfileId || 
+                          mentor.id === userProfileId
+      if (isOwnProfile) return false
+
       const industryValue = (mentor.industry ?? '').toLowerCase()
       const tags = toList(mentor.tags)
       const availabilityOptions = toList(mentor.availability)
@@ -165,15 +217,21 @@ const Mentorship = () => {
 
       return true
     })
-  }, [mentors, industry, search, filters])
+  }, [mentors, industry, search, filters, userProfileId])
 
   const uniqueTags = useMemo(() => {
     const tagSet = new Set()
     ;(Array.isArray(mentors) ? mentors : []).forEach((mentor) => {
-      toList(mentor.tags).forEach((tag) => tagSet.add(tag))
+      // Exclude current user's own mentor profile from tags
+      const isOwnProfile = mentor.profileId === userProfileId || 
+                          mentor.applicationId === userProfileId || 
+                          mentor.id === userProfileId
+      if (!isOwnProfile) {
+        toList(mentor.tags).forEach((tag) => tagSet.add(tag))
+      }
     })
     return Array.from(tagSet).sort((a, b) => a.localeCompare(b))
-  }, [mentors])
+  }, [mentors, userProfileId])
 
   const panelComponents = useMemo(
     () => ({
@@ -195,14 +253,53 @@ const Mentorship = () => {
 
   const ActivePanelComponent = panelConfig ? panelComponents[panelConfig.key] : null
   const activePanelLabel = panelConfig?.label ?? ''
+  const isBecomeRoute = panelSectionParam === 'become'
 
   const handleSubmitApplication = useCallback(
     async (payload) => {
       const result = await submitMentorApplication(payload)
+      if (result) {
+        updateUser({
+          isMentor: true,
+          profile: {
+            ...(user?.profile ?? {}),
+            isMentor: true,
+          },
+        })
+      }
       return result
     },
-    [submitMentorApplication]
+    [submitMentorApplication, updateUser, user?.profile]
   )
+
+  const handleOpenPanel = useCallback(() => {
+    setShowApplication(false)
+    navigate('/dashboard/mentorship/dashboard')
+  }, [navigate])
+
+  useEffect(() => {
+    // If user is already a mentor and trying to access become page, redirect to dashboard
+    if (isBecomeRoute && isMentor) {
+      navigate('/dashboard/mentorship/dashboard', { replace: true })
+      return
+    }
+    setShowApplication(Boolean(isBecomeRoute))
+  }, [isBecomeRoute, isMentor, navigate])
+
+  const handleOpenApplication = useCallback(() => {
+    if (isBecomeRoute) {
+      setShowApplication(true)
+    } else {
+      navigate('/dashboard/mentorship/become')
+    }
+  }, [isBecomeRoute, navigate])
+
+  const handleCloseApplication = useCallback(() => {
+    setShowApplication(false)
+    if (isBecomeRoute) {
+      navigate('/dashboard/mentorship', { replace: true })
+    }
+  }, [isBecomeRoute, navigate])
 
   return (
     <div className="space-y-8">
@@ -258,7 +355,7 @@ const Mentorship = () => {
               {isAlumni && !isMentor && (
                 <button
                   type="button"
-                  onClick={() => setShowApplication(true)}
+                  onClick={handleOpenApplication}
                   className="rounded-full bg-primary px-5 py-2 text-sm font-semibold text-white transition hover:bg-primary-dark"
                 >
                   Apply to be a Mentor
@@ -420,7 +517,7 @@ const Mentorship = () => {
 
       {showApplication && (
         <MentorApplicationModal
-          onClose={() => setShowApplication(false)}
+          onClose={handleCloseApplication}
           onSubmit={handleSubmitApplication}
           onSuccess={handleOpenPanel}
         />
@@ -437,6 +534,27 @@ export const PanelProfile = () => {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
+  const [isEditing, setIsEditing] = useState(false)
+  
+  // Section-wise editing states
+  const [editingSections, setEditingSections] = useState({
+    basic: false,
+    professional: false,
+    mentorship: false,
+    workExperience: false,
+    education: false,
+    socialMedia: false
+  })
+
+  // Social media links state
+  const [socialLinks, setSocialLinks] = useState({
+    linkedin: '',
+    twitter: '',
+    github: '',
+    portfolio: '',
+    facebook: '',
+    instagram: ''
+  })
 
   useEffect(() => {
     const load = async () => {
@@ -445,6 +563,16 @@ export const PanelProfile = () => {
         setError(null)
         const data = await getMyProfile()
         setProfile(data)
+        
+        // Initialize social links from profile data
+        setSocialLinks({
+          linkedin: data?.linkedin || '',
+          twitter: data?.twitter || '',
+          github: data?.github || '',
+          portfolio: data?.portfolio || '',
+          facebook: data?.facebook || '',
+          instagram: data?.instagram || ''
+        })
       } catch (err) {
         setError(err.message || 'Failed to load profile')
       } finally {
@@ -454,6 +582,92 @@ export const PanelProfile = () => {
     load()
   }, [getMyProfile])
 
+  const toggleSectionEdit = (section) => {
+    setEditingSections(prev => ({
+      ...prev,
+      [section]: !prev[section]
+    }))
+  }
+
+  const saveSection = async (section) => {
+    try {
+      setSaving(true)
+      setError(null)
+      
+      let updateData = {}
+      
+      switch(section) {
+        case 'basic':
+          updateData = {
+            fullName: profile.fullName,
+            email: profile.email,
+            phoneNumber: profile.phoneNumber,
+            graduationYear: profile.graduationYear,
+            degree: profile.degree,
+            department: profile.department,
+            currentLocation: profile.currentLocation
+          }
+          break
+        case 'professional':
+          updateData = {
+            currentJobTitle: profile.currentJobTitle,
+            company: profile.company,
+            industry: profile.industry,
+            expertise: profile.expertise
+          }
+          break
+        case 'mentorship':
+          updateData = {
+            mentorshipMode: profile.mentorshipMode,
+            availableDays: profile.availableDays,
+            timeCommitment: profile.timeCommitment,
+            mentorshipPreference: profile.mentorshipPreference,
+            maxMentees: profile.maxMentees
+          }
+          break
+        case 'socialMedia':
+          updateData = {
+            linkedin: socialLinks.linkedin,
+            twitter: socialLinks.twitter,
+            github: socialLinks.github,
+            portfolio: socialLinks.portfolio,
+            facebook: socialLinks.facebook,
+            instagram: socialLinks.instagram
+          }
+          break
+        case 'workExperience':
+          updateData = { workExperience: profile.workExperience }
+          break
+        case 'education':
+          updateData = { education: profile.education }
+          break
+      }
+      
+      const response = await updateMyProfile(updateData)
+      const updatedProfile = response.data || response
+      setProfile(updatedProfile)
+      
+      // Update social links state if social media section was saved
+      if (section === 'socialMedia') {
+        setSocialLinks({
+          linkedin: updatedProfile.linkedin || '',
+          twitter: updatedProfile.twitter || '',
+          github: updatedProfile.github || '',
+          portfolio: updatedProfile.portfolio || '',
+          facebook: updatedProfile.facebook || '',
+          instagram: updatedProfile.instagram || ''
+        })
+      }
+      
+      toggleSectionEdit(section)
+      alert(`${section.charAt(0).toUpperCase() + section.slice(1)} section updated successfully!`)
+    } catch (err) {
+      setError(err.message || 'Failed to update profile')
+    } finally {
+      setSaving(false)
+    }
+  }
+
   const handleChange = (field) => (e) => {
     const value = e.target.type === 'checkbox' ? e.target.checked : e.target.value
     setProfile((prev) => ({ ...prev, [field]: value }))
@@ -461,6 +675,14 @@ export const PanelProfile = () => {
 
   const handleArrayChange = (field) => (value) => {
     setProfile((prev) => ({ ...prev, [field]: value }))
+  }
+
+  const handleSocialLinkChange = (platform) => (e) => {
+    const value = e.target.value
+    setSocialLinks(prev => ({
+      ...prev,
+      [platform]: value
+    }))
   }
 
   const handleAddExperience = () => {
@@ -491,7 +713,6 @@ export const PanelProfile = () => {
         institution: '', 
         degree: '', 
         field: '', 
-        department: '', 
         admissionYear: '', 
         passoutYear: '', 
         cgpa: '', 
@@ -512,23 +733,6 @@ export const PanelProfile = () => {
       ...prev,
       education: prev.education.filter((_, i) => i !== index),
     }))
-  }
-
-  const handleSubmit = async (e) => {
-    e.preventDefault()
-    try {
-      setSaving(true)
-      console.log('Submitting profile data:', profile)
-      const response = await updateMyProfile(profile)
-      console.log('Backend response:', response)
-      const updatedProfile = response.data || response
-      setProfile(updatedProfile)
-    } catch (err) {
-      console.error('Submit error:', err)
-      setError(err.message || 'Failed to update profile')
-    } finally {
-      setSaving(false)
-    }
   }
 
   if (loading) {
@@ -556,378 +760,785 @@ export const PanelProfile = () => {
   }
 
   return (
-    <form id="mentor-panel-profile" onSubmit={handleSubmit} className="space-y-6">
-      <header>
-        <h2 className="text-xl font-semibold text-slate-900">Mentor Profile</h2>
-        <p className="text-sm text-slate-500">Update your mentor identity so mentees know what to expect.</p>
-      </header>
-
-      <div className="space-y-6 rounded-3xl border border-slate-200 bg-slate-50/60 p-6">
-        <div className="grid gap-4 sm:grid-cols-2">
-          <InputField
-            label="Full Name"
-            value={profile.fullName || ''}
-            onChange={handleChange('fullName')}
-            placeholder="Your full name"
-          />
-          <InputField
-            label="Email"
-            value={profile.email || ''}
-            onChange={handleChange('email')}
-            placeholder="your.email@example.com"
-          />
-          <InputField
-            label="Phone (optional)"
-            value={profile.contactNumber || ''}
-            onChange={handleChange('contactNumber')}
-            placeholder="+1 234 567 8900"
-          />
-          <InputField
-            label="Graduation Year"
-            value={profile.graduationYear || ''}
-            onChange={handleChange('graduationYear')}
-            placeholder="2020"
-          />
-          <InputField
-            label="Department"
-            value={profile.department || ''}
-            onChange={handleChange('department')}
-            placeholder="Computer Science"
-          />
-          <InputField
-            label="Location"
-            value={profile.location || ''}
-            onChange={handleChange('location')}
-            placeholder="City, Country"
-          />
-          <InputField
-            label="LinkedIn / Portfolio"
-            value={profile.linkedin || ''}
-            onChange={handleChange('linkedin')}
-            placeholder="https://linkedin.com/in/yourprofile"
-          />
-          <InputField
-            label="Current Job Role"
-            value={profile.jobRole || ''}
-            onChange={handleChange('jobRole')}
-            placeholder="Senior Software Engineer"
-          />
-          <InputField
-            label="Company"
-            value={profile.companyName || ''}
-            onChange={handleChange('companyName')}
-            placeholder="Tech Corp"
-          />
-          <SelectField
-            label="Industry"
-            value={profile.industry || ''}
-            onChange={handleChange('industry')}
-            options={industryOptions}
-          />
-          <InputField
-            label="Total Experience"
-            value={profile.experience || ''}
-            onChange={handleChange('experience')}
-            placeholder="5 years"
-          />
-          <SelectField
-            label="Preferred Students"
-            value={profile.preferredStudents || ''}
-            onChange={handleChange('preferredStudents')}
-            options={preferredStudentOptions}
-          />
-          <InputField
-            label="Max Students"
-            value={profile.maxStudents || ''}
-            onChange={handleChange('maxStudents')}
-            placeholder="5"
-          />
-          <SelectField
-            label="Weekly Hours"
-            value={profile.weeklyHours || ''}
-            onChange={handleChange('weeklyHours')}
-            options={weeklyHoursOptions}
-          />
-        </div>
-
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between rounded-3xl border border-slate-200 bg-gradient-to-r from-primary/5 to-blue-500/5 p-6">
         <div>
-          <label className="block text-sm font-semibold text-slate-700">Skills</label>
-          <div className="mt-2 flex flex-wrap gap-2">
-            {skillOptions.map((skill) => {
-              const selected = Array.isArray(profile.expertise) && profile.expertise.includes(skill)
-              return (
-                <button
-                  key={skill}
-                  type="button"
-                  onClick={() => {
-                    const next = selected
-                      ? profile.expertise.filter((s) => s !== skill)
-                      : [...(profile.expertise || []), skill]
-                    handleArrayChange('expertise')(next)
-                  }}
-                  className={`rounded-full px-3 py-1 text-xs font-semibold transition ${
-                    selected ? 'bg-primary text-white' : 'border border-slate-200 text-slate-600 hover:border-primary hover:text-primary'
-                  }`}
-                >
-                  {skill}
-                </button>
-              )
-            })}
-          </div>
+          <h1 className="text-2xl font-bold text-slate-900">Mentor Profile</h1>
+          <p className="mt-1 text-sm text-slate-600">Manage your mentorship presence and connect with mentees</p>
         </div>
-
-        <div>
-          <label className="block text-sm font-semibold text-slate-700">Mentorship Areas</label>
-          <div className="mt-2 flex flex-wrap gap-2">
-            {mentorshipAreaOptions.map((area) => {
-              const selected = Array.isArray(profile.categories) && profile.categories.includes(area)
-              return (
-                <button
-                  key={area}
-                  type="button"
-                  onClick={() => {
-                    const next = selected
-                      ? profile.categories.filter((a) => a !== area)
-                      : [...(profile.categories || []), area]
-                    handleArrayChange('categories')(next)
-                  }}
-                  className={`rounded-full px-3 py-1 text-xs font-semibold transition ${
-                    selected ? 'bg-primary text-white' : 'border border-slate-200 text-slate-600 hover:border-primary hover:text-primary'
-                  }`}
-                >
-                  {area}
-                </button>
-              )
-            })}
+        <div className="flex items-center gap-3">
+          <div className="text-right">
+            <p className="text-xs text-slate-500">Status</p>
+            <span className="inline-flex items-center rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-800">
+              {profile.status || 'Active'}
+            </span>
           </div>
+          {profile.profilePhoto && (
+            <img 
+              src={profile.profilePhoto} 
+              alt="Profile" 
+              className="h-12 w-12 rounded-full border-2 border-white shadow-sm"
+            />
+          )}
         </div>
+      </div>
 
-        <div>
-          <label className="block text-sm font-semibold text-slate-700">Mentorship Modes</label>
-          <div className="mt-2 flex flex-wrap gap-2">
-            {mentorshipModeOptions.map((mode) => {
-              const selected = Array.isArray(profile.modes) && profile.modes.includes(mode)
-              return (
-                <button
-                  key={mode}
-                  type="button"
-                  onClick={() => {
-                    const next = selected
-                      ? profile.modes.filter((m) => m !== mode)
-                      : [...(profile.modes || []), mode]
-                    handleArrayChange('modes')(next)
-                  }}
-                  className={`rounded-full px-3 py-1 text-xs font-semibold transition ${
-                    selected ? 'bg-primary text-white' : 'border border-slate-200 text-slate-600 hover:border-primary hover:text-primary'
-                  }`}
-                >
-                  {mode}
-                </button>
-              )
-            })}
+      {/* Basic Information */}
+      <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="mb-6 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-sm font-semibold text-white">
+              1
+            </div>
+            <h2 className="text-lg font-semibold text-slate-900">Basic Information</h2>
           </div>
-        </div>
-
-        <TextareaField
-          label="Career Path"
-          value={profile.skills || ''}
-          onChange={handleChange('skills')}
-          placeholder="Briefly describe your career journey and key milestones..."
-        />
-
-        <TextareaField
-          label="Mentorship Summary"
-          value={profile.bio || ''}
-          onChange={handleChange('bio')}
-          placeholder="Share what mentees can expect from working with you..."
-        />
-
-        <TextareaField
-          label="Motivation"
-          value={profile.motivation || ''}
-          onChange={handleChange('motivation')}
-          placeholder="Why do you want to mentor? What drives you?"
-        />
-
-        <div id="mentor-panel-experience" className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm font-semibold text-slate-700">Work Experience</h3>
+          {editingSections.basic ? (
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => toggleSectionEdit('basic')}
+                className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:border-primary hover:text-primary"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => saveSection('basic')}
+                disabled={saving}
+                className="rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-50"
+              >
+                {saving ? 'Saving...' : 'Save'}
+              </button>
+            </div>
+          ) : (
             <button
               type="button"
-              onClick={handleAddExperience}
-              className="rounded-full border border-primary px-3 py-1 text-xs font-semibold text-primary transition hover:bg-primary hover:text-white"
+              onClick={() => toggleSectionEdit('basic')}
+              className="rounded-full bg-primary px-4 py-2 text-sm font-semibold text-white transition hover:bg-primary/90"
             >
-              + Add Experience
+              Edit
             </button>
+          )}
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div>
+            <label className="block text-sm font-semibold text-slate-700 mb-2">Full Name</label>
+            {editingSections.basic ? (
+              <input
+                type="text"
+                value={profile.fullName || ''}
+                onChange={handleChange('fullName')}
+                className="w-full rounded-xl border border-slate-200 px-4 py-3 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                placeholder="Your full name"
+              />
+            ) : (
+              <div className="w-full rounded-xl border border-slate-100 bg-slate-50 px-4 py-3 text-slate-700">
+                {profile.fullName || 'Not provided'}
+              </div>
+            )}
           </div>
-          <div className="space-y-3">
-            {(profile.workExperience || []).map((exp, index) => (
-              <div key={index} className="rounded-2xl border border-slate-200 bg-white p-4">
+
+          <div>
+            <label className="block text-sm font-semibold text-slate-700 mb-2">Email</label>
+            <div className="w-full rounded-xl border border-slate-100 bg-slate-50 px-4 py-3 text-slate-700">
+              {profile.email || 'Not provided'}
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-slate-700 mb-2">Phone Number</label>
+            {editingSections.basic ? (
+              <input
+                type="tel"
+                value={profile.phoneNumber || ''}
+                onChange={handleChange('phoneNumber')}
+                className="w-full rounded-xl border border-slate-200 px-4 py-3 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                placeholder="+1 (555) 000-0000"
+              />
+            ) : (
+              <div className="w-full rounded-xl border border-slate-100 bg-slate-50 px-4 py-3 text-slate-700">
+                {profile.phoneNumber || 'Not provided'}
+              </div>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-slate-700 mb-2">Graduation Year</label>
+            {editingSections.basic ? (
+              <input
+                type="text"
+                value={profile.graduationYear || ''}
+                onChange={handleChange('graduationYear')}
+                className="w-full rounded-xl border border-slate-200 px-4 py-3 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                placeholder="2020"
+              />
+            ) : (
+              <div className="w-full rounded-xl border border-slate-100 bg-slate-50 px-4 py-3 text-slate-700">
+                {profile.graduationYear || 'Not provided'}
+              </div>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-slate-700 mb-2">Degree</label>
+            {editingSections.basic ? (
+              <select
+                value={profile.degree || ''}
+                onChange={handleChange('degree')}
+                className="w-full rounded-xl border border-slate-200 px-4 py-3 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+              >
+                <option value="">Select Degree</option>
+                <option value="B.E. Computer Engineering">B.E. Computer Engineering</option>
+                <option value="B.E. Information Technology">B.E. Information Technology</option>
+                <option value="B.E. Electronics & Telecommunication">B.E. Electronics & Telecommunication</option>
+                <option value="B.E. Mechanical Engineering">B.E. Mechanical Engineering</option>
+                <option value="B.E. Civil Engineering">B.E. Civil Engineering</option>
+                <option value="B.Tech Computer Engineering">B.Tech Computer Engineering</option>
+                <option value="B.Tech Information Technology">B.Tech Information Technology</option>
+                <option value="M.E. Computer Engineering">M.E. Computer Engineering</option>
+                <option value="M.E. Information Technology">M.E. Information Technology</option>
+                <option value="M.Tech Computer Engineering">M.Tech Computer Engineering</option>
+                <option value="MCA">MCA</option>
+                <option value="Other">Other</option>
+              </select>
+            ) : (
+              <div className="w-full rounded-xl border border-slate-100 bg-slate-50 px-4 py-3 text-slate-700">
+                {profile.degree || 'Not provided'}
+              </div>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-slate-700 mb-2">Department</label>
+            {editingSections.basic ? (
+              <select
+                value={profile.department || ''}
+                onChange={handleChange('department')}
+                className="w-full rounded-xl border border-slate-200 px-4 py-3 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+              >
+                <option value="">Select Department</option>
+                <option value="Computer Engineering">Computer Engineering</option>
+                <option value="Information Technology">Information Technology</option>
+                <option value="Artificial Intelligence & Data Science">Artificial Intelligence & Data Science</option>
+                <option value="Electronics & Telecommunication Engineering">Electronics & Telecommunication Engineering</option>
+                <option value="Mechanical Engineering">Mechanical Engineering</option>
+                <option value="Civil Engineering">Civil Engineering</option>
+                <option value="Other">Other</option>
+              </select>
+            ) : (
+              <div className="w-full rounded-xl border border-slate-100 bg-slate-50 px-4 py-3 text-slate-700">
+                {profile.department || 'Not provided'}
+              </div>
+            )}
+          </div>
+
+          <div className="sm:col-span-2 lg:col-span-3">
+            <label className="block text-sm font-semibold text-slate-700 mb-2">Current Location</label>
+            {editingSections.basic ? (
+              <input
+                type="text"
+                value={profile.currentLocation || ''}
+                onChange={handleChange('currentLocation')}
+                className="w-full rounded-xl border border-slate-200 px-4 py-3 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                placeholder="City, Country"
+              />
+            ) : (
+              <div className="w-full rounded-xl border border-slate-100 bg-slate-50 px-4 py-3 text-slate-700">
+                {profile.currentLocation || 'Not provided'}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Professional Information */}
+      <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="mb-6 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-sm font-semibold text-white">
+              2
+            </div>
+            <h2 className="text-lg font-semibold text-slate-900">Professional Information</h2>
+          </div>
+          {editingSections.professional ? (
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => toggleSectionEdit('professional')}
+                className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:border-primary hover:text-primary"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => saveSection('professional')}
+                disabled={saving}
+                className="rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-50"
+              >
+                {saving ? 'Saving...' : 'Save'}
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => toggleSectionEdit('professional')}
+              className="rounded-full bg-primary px-4 py-2 text-sm font-semibold text-white transition hover:bg-primary/90"
+            >
+              Edit
+            </button>
+          )}
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div>
+            <label className="block text-sm font-semibold text-slate-700 mb-2">Current Job Title</label>
+            {editingSections.professional ? (
+              <input
+                type="text"
+                value={profile.currentJobTitle || ''}
+                onChange={handleChange('currentJobTitle')}
+                className="w-full rounded-xl border border-slate-200 px-4 py-3 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                placeholder="Senior Software Engineer"
+              />
+            ) : (
+              <div className="w-full rounded-xl border border-slate-100 bg-slate-50 px-4 py-3 text-slate-700">
+                {profile.currentJobTitle || 'Not provided'}
+              </div>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-slate-700 mb-2">Company</label>
+            {editingSections.professional ? (
+              <input
+                type="text"
+                value={profile.company || ''}
+                onChange={handleChange('company')}
+                className="w-full rounded-xl border border-slate-200 px-4 py-3 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                placeholder="Tech Corp"
+              />
+            ) : (
+              <div className="w-full rounded-xl border border-slate-100 bg-slate-50 px-4 py-3 text-slate-700">
+                {profile.company || 'Not provided'}
+              </div>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-slate-700 mb-2">Industry</label>
+            {editingSections.professional ? (
+              <select
+                value={profile.industry || ''}
+                onChange={handleChange('industry')}
+                className="w-full rounded-xl border border-slate-200 px-4 py-3 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+              >
+                <option value="">Select Industry</option>
+                <option value="IT / Software">IT / Software</option>
+                <option value="Core Engineering">Core Engineering</option>
+                <option value="Management">Management</option>
+                <option value="Government">Government</option>
+                <option value="Startup">Startup</option>
+                <option value="Research / Academia">Research / Academia</option>
+                <option value="Other">Other</option>
+              </select>
+            ) : (
+              <div className="w-full rounded-xl border border-slate-100 bg-slate-50 px-4 py-3 text-slate-700">
+                {profile.industry || 'Not provided'}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Skills & Expertise */}
+        <div className="mt-6">
+          <label className="block text-sm font-semibold text-slate-700 mb-3">
+            Skills & Expertise <span className="text-slate-400 font-normal">({profile.expertise?.length || 0} skills)</span>
+          </label>
+          <div className="flex flex-wrap gap-2">
+            {(profile.expertise || []).map((skill, index) => (
+              <span
+                key={index}
+                className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-sm font-medium ${
+                  isEditing ? 'bg-primary/10 text-primary' : 'bg-slate-100 text-slate-600'
+                }`}
+              >
+                {skill}
+                {isEditing && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const updatedSkills = profile.expertise.filter((s) => s !== skill)
+                      handleArrayChange('expertise')(updatedSkills)
+                    }}
+                    className="ml-1 hover:text-primary-dark"
+                  >
+                    ×
+                  </button>
+                )}
+              </span>
+            ))}
+            {isEditing && (
+              <input
+                type="text"
+                placeholder="Add skill and press Enter"
+                className="rounded-full border border-slate-200 px-3 py-1 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault()
+                    const skill = e.target.value.trim()
+                    if (skill && !profile.expertise.includes(skill)) {
+                      handleArrayChange('expertise')([...profile.expertise, skill])
+                      e.target.value = ''
+                    }
+                  }
+                }}
+              />
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Mentorship Preferences */}
+      <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="mb-6 flex items-center gap-3">
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-sm font-semibold text-white">
+            3
+          </div>
+          <h2 className="text-lg font-semibold text-slate-900">Mentorship Preferences</h2>
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div>
+            <label className="block text-sm font-semibold text-slate-700 mb-2">Mentorship Mode</label>
+            {editingSections.basic ? (
+              <select
+                value={profile.mentorshipMode || ''}
+                onChange={handleChange('mentorshipMode')}
+                className="w-full rounded-xl border border-slate-200 px-4 py-3 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+              >
+                <option value="">Select Mode</option>
+                <option value="online">Online</option>
+                <option value="offline">Offline</option>
+                <option value="both">Both</option>
+              </select>
+            ) : (
+              <div className="w-full rounded-xl border border-slate-100 bg-slate-50 px-4 py-3 text-slate-700 capitalize">
+                {profile.mentorshipMode || 'Not provided'}
+              </div>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-slate-700 mb-2">Available Days</label>
+            {editingSections.basic ? (
+              <select
+                value={profile.availableDays || ''}
+                onChange={handleChange('availableDays')}
+                className="w-full rounded-xl border border-slate-200 px-4 py-3 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+              >
+                <option value="">Select Availability</option>
+                <option value="weekdays">Weekdays</option>
+                <option value="weekends">Weekends</option>
+                <option value="flexible">Flexible</option>
+              </select>
+            ) : (
+              <div className="w-full rounded-xl border border-slate-100 bg-slate-50 px-4 py-3 text-slate-700 capitalize">
+                {profile.availableDays || 'Not provided'}
+              </div>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-slate-700 mb-2">Time Commitment</label>
+            {editingSections.basic ? (
+              <select
+                value={profile.timeCommitment || ''}
+                onChange={handleChange('timeCommitment')}
+                className="w-full rounded-xl border border-slate-200 px-4 py-3 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+              >
+                <option value="">Select Commitment</option>
+                <option value="1-2">1-2 hours per week</option>
+                <option value="3-5">3-5 hours per week</option>
+                <option value="on-demand">On demand</option>
+              </select>
+            ) : (
+              <div className="w-full rounded-xl border border-slate-100 bg-slate-50 px-4 py-3 text-slate-700">
+                {profile.timeCommitment === '1-2' ? '1-2 hours per week' :
+                 profile.timeCommitment === '3-5' ? '3-5 hours per week' :
+                 profile.timeCommitment === 'on-demand' ? 'On demand' :
+                 'Not provided'}
+              </div>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-slate-700 mb-2">Mentorship Preference</label>
+            {editingSections.basic ? (
+              <select
+                value={profile.mentorshipPreference || ''}
+                onChange={handleChange('mentorshipPreference')}
+                className="w-full rounded-xl border border-slate-200 px-4 py-3 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+              >
+                <option value="">Select Preference</option>
+                <option value="students">Students</option>
+                <option value="alumni">Alumni</option>
+                <option value="both">Both</option>
+              </select>
+            ) : (
+              <div className="w-full rounded-xl border border-slate-100 bg-slate-50 px-4 py-3 text-slate-700 capitalize">
+                {profile.mentorshipPreference || 'Not provided'}
+              </div>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-slate-700 mb-2">Maximum Mentees</label>
+            {editingSections.basic ? (
+              <select
+                value={profile.maxMentees || ''}
+                onChange={handleChange('maxMentees')}
+                className="w-full rounded-xl border border-slate-200 px-4 py-3 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+              >
+                <option value="">Select Max Mentees</option>
+                <option value="1">1</option>
+                <option value="3">3</option>
+                <option value="5">5</option>
+                <option value="10">10</option>
+              </select>
+            ) : (
+              <div className="w-full rounded-xl border border-slate-100 bg-slate-50 px-4 py-3 text-slate-700">
+                {profile.maxMentees || 'Not provided'}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Work Experience Section */}
+      <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="mb-6 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-sm font-semibold text-white">
+              4
+            </div>
+            <h2 className="text-lg font-semibold text-slate-900">Work Experience</h2>
+          </div>
+          <button
+            type="button"
+            onClick={handleAddExperience}
+            className="rounded-full border border-primary bg-primary px-4 py-2 text-sm font-semibold text-white transition hover:bg-primary/90"
+          >
+            + Add Experience
+          </button>
+        </div>
+        
+        <div className="space-y-4">
+          {(profile.workExperience || []).length === 0 ? (
+            <div className="text-center py-8 text-slate-500">
+              <p>No work experience added yet</p>
+              <p className="text-sm mt-1">Click "Add Experience" to get started</p>
+            </div>
+          ) : (
+            (profile.workExperience || []).map((exp, index) => (
+              <div key={index} className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4">
                 <div className="grid gap-3 sm:grid-cols-2">
-                  <InputField
-                    label="Company"
-                    value={exp.company}
-                    onChange={(e) => handleUpdateExperience(index, 'company', e.target.value)}
-                    placeholder="Company name"
-                  />
-                  <InputField
-                    label="Role"
-                    value={exp.role}
-                    onChange={(e) => handleUpdateExperience(index, 'role', e.target.value)}
-                    placeholder="Job title"
-                  />
-                  <InputField
-                    label="Start Date"
-                    value={exp.startDate}
-                    onChange={(e) => handleUpdateExperience(index, 'startDate', e.target.value)}
-                    placeholder="e.g., 2020-01"
-                  />
                   <div>
-                    <label className="block text-sm font-semibold text-slate-700">End Date</label>
-                    {exp.isCurrentJob ? (
-                      <div className="mt-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm text-slate-500">
-                        Present
-                      </div>
-                    ) : (
-                      <InputField
-                        label=""
-                        value={exp.endDate}
-                        onChange={(e) => handleUpdateExperience(index, 'endDate', e.target.value)}
-                        placeholder="e.g., 2023-12"
+                    <label className="block text-sm font-semibold text-slate-700 mb-2">Company</label>
+                    {editingSections.basic ? (
+                      <input
+                        type="text"
+                        value={exp.company || ''}
+                        onChange={(e) => handleUpdateExperience(index, 'company', e.target.value)}
+                        className="w-full rounded-xl border border-slate-200 px-4 py-3 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                        placeholder="Company name"
                       />
+                    ) : (
+                      <div className="w-full rounded-xl border border-slate-100 bg-white px-4 py-3 text-slate-700">
+                        {exp.company || 'Not provided'}
+                      </div>
                     )}
                   </div>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      id={`current-job-${index}`}
-                      checked={exp.isCurrentJob || false}
-                      onChange={(e) => handleUpdateExperience(index, 'isCurrentJob', e.target.checked)}
-                      className="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary"
-                    />
-                    <label htmlFor={`current-job-${index}`} className="text-sm text-slate-700">
-                      Currently working here
-                    </label>
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-2">Role</label>
+                    {editingSections.basic ? (
+                      <input
+                        type="text"
+                        value={exp.role || ''}
+                        onChange={(e) => handleUpdateExperience(index, 'role', e.target.value)}
+                        className="w-full rounded-xl border border-slate-200 px-4 py-3 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                        placeholder="Job title"
+                      />
+                    ) : (
+                      <div className="w-full rounded-xl border border-slate-100 bg-white px-4 py-3 text-slate-700">
+                        {exp.role || 'Not provided'}
+                      </div>
+                    )}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-2">Start Date</label>
+                    {editingSections.basic ? (
+                      <input
+                        type="month"
+                        value={exp.startDate || ''}
+                        onChange={(e) => handleUpdateExperience(index, 'startDate', e.target.value)}
+                        className="w-full rounded-xl border border-slate-200 px-4 py-3 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                      />
+                    ) : (
+                      <div className="w-full rounded-xl border border-slate-100 bg-white px-4 py-3 text-slate-700">
+                        {exp.startDate || 'Not provided'}
+                      </div>
+                    )}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-2">End Date</label>
+                    {editingSections.basic ? (
+                      <div className="space-y-2">
+                        <input
+                          type="month"
+                          value={exp.endDate || ''}
+                          onChange={(e) => handleUpdateExperience(index, 'endDate', e.target.value)}
+                          disabled={exp.isCurrentJob}
+                          className="w-full rounded-xl border border-slate-200 px-4 py-3 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-50"
+                        />
+                        <label className="flex items-center gap-2 text-sm">
+                          <input
+                            type="checkbox"
+                            checked={exp.isCurrentJob || false}
+                            onChange={(e) => handleUpdateExperience(index, 'isCurrentJob', e.target.checked)}
+                            className="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary"
+                          />
+                          Currently working here
+                        </label>
+                      </div>
+                    ) : (
+                      <div className="w-full rounded-xl border border-slate-100 bg-white px-4 py-3 text-slate-700">
+                        {exp.isCurrentJob ? 'Present' : (exp.endDate || 'Not provided')}
+                      </div>
+                    )}
                   </div>
                   <div className="sm:col-span-2">
-                    <TextareaField
-                      label="Description"
-                      value={exp.description}
-                      onChange={(e) => handleUpdateExperience(index, 'description', e.target.value)}
-                      placeholder="Brief description of responsibilities and achievements"
-                    />
+                    <label className="block text-sm font-semibold text-slate-700 mb-2">Description</label>
+                    {editingSections.basic ? (
+                      <textarea
+                        value={exp.description || ''}
+                        onChange={(e) => handleUpdateExperience(index, 'description', e.target.value)}
+                        className="w-full rounded-xl border border-slate-200 px-4 py-3 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                        rows={3}
+                        placeholder="Brief description of responsibilities and achievements"
+                      />
+                    ) : (
+                      <div className="w-full rounded-xl border border-slate-100 bg-white px-4 py-3 text-slate-700">
+                        {exp.description || 'Not provided'}
+                      </div>
+                    )}
                   </div>
                 </div>
-                <div className="mt-3 flex justify-end">
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveExperience(index)}
-                    className="rounded-full border border-rose-200 px-3 py-1 text-xs font-semibold text-rose-600 transition hover:border-rose-400 hover:text-rose-500"
-                  >
-                    Remove
-                  </button>
-                </div>
+                {isEditing && (
+                  <div className="mt-3 flex justify-end">
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveExperience(index)}
+                      className="rounded-full border border-rose-200 px-3 py-1 text-xs font-semibold text-rose-600 transition hover:border-rose-400 hover:text-rose-500"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                )}
               </div>
-            ))}
-          </div>
+            ))
+          )}
         </div>
-
-        <div id="mentor-panel-education" className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm font-semibold text-slate-700">Education Details</h3>
-            <button
-              type="button"
-              onClick={handleAddEducation}
-              className="rounded-full border border-primary px-3 py-1 text-xs font-semibold text-primary transition hover:bg-primary hover:text-white"
-            >
-              + Add Education
-            </button>
-          </div>
-          <div className="space-y-3">
-            {(profile.education || []).map((edu, index) => (
-              <div key={index} className="rounded-2xl border border-slate-200 bg-white p-4">
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <InputField
-                    label="Institution"
-                    value={edu.institution}
-                    onChange={(e) => handleUpdateEducation(index, 'institution', e.target.value)}
-                    placeholder="University name"
-                  />
-                  <InputField
-                    label="Degree"
-                    value={edu.degree}
-                    onChange={(e) => handleUpdateEducation(index, 'degree', e.target.value)}
-                    placeholder="e.g., B.Tech Computer Science"
-                  />
-                  <InputField
-                    label="Field/Department"
-                    value={edu.field}
-                    onChange={(e) => handleUpdateEducation(index, 'field', e.target.value)}
-                    placeholder="e.g., Computer Science"
-                  />
-                  <InputField
-                    label="Admission Year"
-                    value={edu.admissionYear}
-                    onChange={(e) => handleUpdateEducation(index, 'admissionYear', e.target.value)}
-                    placeholder="e.g., 2020"
-                  />
-                  <InputField
-                    label="Passout Year"
-                    value={edu.isCurrentlyPursuing ? '' : edu.passoutYear}
-                    onChange={(e) => handleUpdateEducation(index, 'passoutYear', e.target.value)}
-                    placeholder="e.g., 2024"
-                    disabled={edu.isCurrentlyPursuing}
-                  />
-                  <InputField
-                    label="CGPA / Percentage"
-                    value={edu.cgpa}
-                    onChange={(e) => handleUpdateEducation(index, 'cgpa', e.target.value)}
-                    placeholder="e.g., 8.7 CGPA or 85%"
-                  />
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      id={`currently-pursuing-${index}`}
-                      checked={edu.isCurrentlyPursuing || false}
-                      onChange={(e) => handleUpdateEducation(index, 'isCurrentlyPursuing', e.target.checked)}
-                      className="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary"
-                    />
-                    <label htmlFor={`currently-pursuing-${index}`} className="text-sm text-slate-700">
-                      Currently pursuing
-                    </label>
-                  </div>
-                  <div className="sm:col-span-2">
-                    <TextareaField
-                      label="Description"
-                      value={edu.description}
-                      onChange={(e) => handleUpdateEducation(index, 'description', e.target.value)}
-                      placeholder="Achievements, activities, or relevant coursework"
-                    />
-                  </div>
-                </div>
-                <div className="mt-3 flex justify-end">
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveEducation(index)}
-                    className="rounded-full border border-rose-200 px-3 py-1 text-xs font-semibold text-rose-600 transition hover:border-rose-400 hover:text-rose-500"
-                  >
-                    Remove
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <button
-          type="submit"
-          disabled={saving}
-          className="rounded-full bg-primary px-5 py-2 text-sm font-semibold text-white transition hover:bg-primary/90 disabled:cursor-wait disabled:opacity-80"
-        >
-          {saving ? 'Saving...' : 'Save Changes'}
-        </button>
       </div>
-    </form>
+
+      {/* Education Section */}
+      <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="mb-6 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-sm font-semibold text-white">
+              5
+            </div>
+            <h2 className="text-lg font-semibold text-slate-900">Education</h2>
+          </div>
+          <button
+            type="button"
+            onClick={handleAddEducation}
+            className="rounded-full border border-primary bg-primary px-4 py-2 text-sm font-semibold text-white transition hover:bg-primary/90"
+          >
+            + Add Education
+          </button>
+        </div>
+        
+        <div className="space-y-4">
+          {(profile.education || []).length === 0 ? (
+            <div className="text-center py-8 text-slate-500">
+              <p>No education details added yet</p>
+              <p className="text-sm mt-1">Click "Add Education" to get started</p>
+            </div>
+          ) : (
+            (profile.education || []).map((edu, index) => (
+              <div key={index} className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4">
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-2">Institution</label>
+                    {editingSections.basic ? (
+                      <input
+                        type="text"
+                        value={edu.institution || ''}
+                        onChange={(e) => handleUpdateEducation(index, 'institution', e.target.value)}
+                        className="w-full rounded-xl border border-slate-200 px-4 py-3 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                        placeholder="University name"
+                      />
+                    ) : (
+                      <div className="w-full rounded-xl border border-slate-100 bg-white px-4 py-3 text-slate-700">
+                        {edu.institution || 'Not provided'}
+                      </div>
+                    )}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-2">Degree</label>
+                    {editingSections.basic ? (
+                      <input
+                        type="text"
+                        value={edu.degree || ''}
+                        onChange={(e) => handleUpdateEducation(index, 'degree', e.target.value)}
+                        className="w-full rounded-xl border border-slate-200 px-4 py-3 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                        placeholder="e.g., B.Tech Computer Science"
+                      />
+                    ) : (
+                      <div className="w-full rounded-xl border border-slate-100 bg-white px-4 py-3 text-slate-700">
+                        {edu.degree || 'Not provided'}
+                      </div>
+                    )}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-2">Field/Department</label>
+                    {editingSections.basic ? (
+                      <input
+                        type="text"
+                        value={edu.field || ''}
+                        onChange={(e) => handleUpdateEducation(index, 'field', e.target.value)}
+                        className="w-full rounded-xl border border-slate-200 px-4 py-3 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                        placeholder="e.g., Computer Science"
+                      />
+                    ) : (
+                      <div className="w-full rounded-xl border border-slate-100 bg-white px-4 py-3 text-slate-700">
+                        {edu.field || 'Not provided'}
+                      </div>
+                    )}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-2">Admission Year</label>
+                    {editingSections.basic ? (
+                      <input
+                        type="number"
+                        value={edu.admissionYear || ''}
+                        onChange={(e) => handleUpdateEducation(index, 'admissionYear', e.target.value)}
+                        className="w-full rounded-xl border border-slate-200 px-4 py-3 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                        placeholder="e.g., 2020"
+                        min="1950"
+                        max="2030"
+                      />
+                    ) : (
+                      <div className="w-full rounded-xl border border-slate-100 bg-white px-4 py-3 text-slate-700">
+                        {edu.admissionYear || 'Not provided'}
+                      </div>
+                    )}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-2">Passout Year</label>
+                    {editingSections.basic ? (
+                      <div className="space-y-2">
+                        <input
+                          type="number"
+                          value={edu.passoutYear || ''}
+                          onChange={(e) => handleUpdateEducation(index, 'passoutYear', e.target.value)}
+                          disabled={edu.isCurrentlyPursuing}
+                          className="w-full rounded-xl border border-slate-200 px-4 py-3 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-50"
+                          placeholder="e.g., 2024"
+                          min="1950"
+                          max="2030"
+                        />
+                        <label className="flex items-center gap-2 text-sm">
+                          <input
+                            type="checkbox"
+                            checked={edu.isCurrentlyPursuing || false}
+                            onChange={(e) => handleUpdateEducation(index, 'isCurrentlyPursuing', e.target.checked)}
+                            className="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary"
+                          />
+                          Currently pursuing
+                        </label>
+                      </div>
+                    ) : (
+                      <div className="w-full rounded-xl border border-slate-100 bg-white px-4 py-3 text-slate-700">
+                        {edu.isCurrentlyPursuing ? 'Currently pursuing' : (edu.passoutYear || 'Not provided')}
+                      </div>
+                    )}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-2">CGPA / Percentage</label>
+                    {editingSections.basic ? (
+                      <input
+                        type="text"
+                        value={edu.cgpa || ''}
+                        onChange={(e) => handleUpdateEducation(index, 'cgpa', e.target.value)}
+                        className="w-full rounded-xl border border-slate-200 px-4 py-3 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                        placeholder="e.g., 8.7 CGPA or 85%"
+                      />
+                    ) : (
+                      <div className="w-full rounded-xl border border-slate-100 bg-white px-4 py-3 text-slate-700">
+                        {edu.cgpa || 'Not provided'}
+                      </div>
+                    )}
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label className="block text-sm font-semibold text-slate-700 mb-2">Description</label>
+                    {editingSections.basic ? (
+                      <textarea
+                        value={edu.description || ''}
+                        onChange={(e) => handleUpdateEducation(index, 'description', e.target.value)}
+                        className="w-full rounded-xl border border-slate-200 px-4 py-3 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                        rows={3}
+                        placeholder="Achievements, activities, or relevant coursework"
+                      />
+                    ) : (
+                      <div className="w-full rounded-xl border border-slate-100 bg-white px-4 py-3 text-slate-700">
+                        {edu.description || 'Not provided'}
+                      </div>
+                    )}
+                  </div>
+                </div>
+                {isEditing && (
+                  <div className="mt-3 flex justify-end">
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveEducation(index)}
+                      className="rounded-full border border-rose-200 px-3 py-1 text-xs font-semibold text-rose-600 transition hover:border-rose-400 hover:text-rose-500"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                )}
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+
+      {/* Save Button */}
+      {isEditing && (
+        <div className="flex justify-end">
+          <button
+            type="submit"
+            disabled={saving}
+            className="rounded-full bg-primary px-8 py-3 text-base font-semibold text-white shadow-lg transition hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {saving ? 'Saving...' : 'Save Profile Changes'}
+          </button>
+        </div>
+      )}
+    </div>
   )
 }
 
@@ -940,6 +1551,7 @@ const PanelMentees = () => {
     getRequestDetails,
     acceptRequest,
     rejectRequest,
+    reviewRequest,
     updateMeetingLink,
   } = useMentorRequests()
 
@@ -990,7 +1602,7 @@ const PanelMentees = () => {
     setMeetingLink('')
     setMeetingLinkError('')
     resetSlotOptions()
-  }
+  }   
 
   const openDetails = async (requestId, action = null) => {
     setSelectedId(requestId)
@@ -1070,6 +1682,13 @@ const PanelMentees = () => {
   const handleAccept = async () => {
     if (!selectedId) return
 
+    // Instead of quick accept, open scheduling modal
+    setSelectedAction('accept-schedule')
+  }
+
+  const handleAcceptWithSchedule = async () => {
+    if (!selectedId) return
+
     const preparedSlots = slotOptions
       .map((slot) => {
         if (!slot.slotDate) return null
@@ -1095,7 +1714,7 @@ const PanelMentees = () => {
       })
       closeModal()
     } catch (err) {
-      setScheduleError(err?.message ?? 'Unable to share the proposed schedule. Please review the options and try again.')
+      setScheduleError(err?.message ?? 'Unable to share proposed schedule. Please review options and try again.')
     } finally {
       setActionState({ id: '', type: '' })
     }
@@ -1104,7 +1723,34 @@ const PanelMentees = () => {
   const handleAction = async (requestId, type) => {
     try {
       setActionState({ id: requestId, type })
-      await rejectRequest(requestId)
+      
+      if (type === 'review') {
+        await reviewRequest(requestId)
+        closeModal()
+      } else if (type === 'reject') {
+        await rejectRequest(requestId)
+        closeModal()
+      }
+    } finally {
+      setActionState({ id: '', type: '' })
+    }
+  }
+
+  const handleQuickAccept = async (requestId) => {
+    try {
+      setActionState({ id: requestId, type: 'accept' })
+      
+      // Accept with a simple confirmation - mentor will add details later
+      await acceptRequest(requestId, {
+        proposedSlots: [{
+          slotDate: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // Tomorrow
+          mode: 'online'
+        }]
+      })
+      
+      closeModal()
+    } catch (err) {
+      setModalError(err?.message ?? 'Unable to accept request. Please try again.')
     } finally {
       setActionState({ id: '', type: '' })
     }
@@ -1160,9 +1806,13 @@ const PanelMentees = () => {
               ? 'bg-emerald-100 text-emerald-600'
               : requestStatus === 'rejected'
               ? 'bg-rose-100 text-rose-600'
+              : requestStatus === 'review'
+              ? 'bg-purple-100 text-purple-600'
               : 'bg-amber-100 text-amber-600'
 
           const actionDisabled = ['accepted', 'rejected', 'confirmed'].includes(requestStatus)
+                const isPending = requestStatus === 'pending'
+                const isReview = requestStatus === 'review'
 
           return (
             <article key={request.id} className="flex flex-col gap-4 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm md:flex-row md:items-center md:justify-between">
@@ -1254,33 +1904,62 @@ const PanelMentees = () => {
                   View Details
                 </button>
                 <div className="flex gap-2">
-                  {requestStatus === 'pending' && (
+                  {isPending && (
                     <>
                       <button
                         type="button"
-                        onClick={() => openDetails(request.id, 'accept')}
-                        disabled={actionState.id === selectedId && actionState.type === 'accept'}
-                        className="rounded-full border border-primary px-4 py-2 text-xs font-semibold text-primary transition hover:bg-primary hover:text-white disabled:opacity-60"
+                        onClick={() => handleQuickAccept(request.id)}
+                        disabled={actionState.id === request.id && actionState.type === 'accept'}
+                        className="rounded-full border border-emerald-500 px-3 py-2 text-xs font-semibold text-emerald-600 transition hover:bg-emerald-500 hover:text-white disabled:opacity-60"
                       >
                         Accept
                       </button>
                       <button
                         type="button"
-                        onClick={() => openDetails(request.id, 'reject')}
-                        disabled={actionState.id === selectedId && actionState.type === 'reject'}
-                        className="rounded-full border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-600 transition hover:border-rose-400 hover:text-rose-500 disabled:opacity-60"
+                        onClick={() => handleAction(request.id, 'review')}
+                        disabled={actionState.id === request.id && actionState.type === 'review'}
+                        className="rounded-full border border-amber-500 px-3 py-2 text-xs font-semibold text-amber-600 transition hover:bg-amber-500 hover:text-white disabled:opacity-60"
+                      >
+                        Review
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleAction(request.id, 'reject')}
+                        disabled={actionState.id === request.id && actionState.type === 'reject'}
+                        className="rounded-full border border-rose-500 px-3 py-2 text-xs font-semibold text-rose-600 transition hover:bg-rose-500 hover:text-white disabled:opacity-60"
                       >
                         Reject
                       </button>
                     </>
                   )}
-                  {requestStatus === 'confirmed' && !request.meetingLink && (
+                  {isReview && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => handleQuickAccept(request.id)}
+                        disabled={actionState.id === request.id && actionState.type === 'accept'}
+                        className="rounded-full border border-emerald-500 px-3 py-2 text-xs font-semibold text-emerald-600 transition hover:bg-emerald-500 hover:text-white disabled:opacity-60"
+                      >
+                        Accept
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleAction(request.id, 'reject')}
+                        disabled={actionState.id === request.id && actionState.type === 'reject'}
+                        className="rounded-full border border-rose-500 px-3 py-2 text-xs font-semibold text-rose-600 transition hover:bg-rose-500 hover:text-white disabled:opacity-60"
+                      >
+                        Reject
+                      </button>
+                    </>
+                  )}
+                  {requestStatus === 'accepted' && (
                     <button
                       type="button"
                       onClick={() => openDetails(request.id, 'add-meeting-link')}
-                      className="rounded-full border border-green-200 px-4 py-2 text-xs font-semibold text-green-600 transition hover:border-green-400 hover:text-green-700"
+                      disabled={actionState.id === request.id && actionState.type === 'meeting-link'}
+                      className="rounded-full border border-blue-500 px-3 py-2 text-xs font-semibold text-blue-600 transition hover:bg-blue-500 hover:text-white disabled:opacity-60"
                     >
-                      Add Link
+                      Add Meeting Link
                     </button>
                   )}
                 </div>
@@ -1374,79 +2053,197 @@ const PanelMentees = () => {
                   </section>
                 )}
 
-                {selectedDetails.request?.status === 'pending' ? (
+                {selectedAction === 'accept-schedule' && selectedDetails?.request && (
                   <section className="space-y-3 rounded-3xl border border-slate-200 bg-white p-5">
                     <header className="space-y-1">
-                      <p className="text-xs font-semibold uppercase tracking-widest text-slate-500">Schedule Options</p>
-                      <p className="text-xs text-slate-500">Share up to three options. Your mentee will confirm one of these after reviewing.</p>
+                      <p className="text-xs font-semibold uppercase tracking-widest text-slate-500">Schedule Mentorship Session</p>
+                      <p className="text-xs text-slate-500">Set date, time, and meeting link for this mentorship session.</p>
                     </header>
-                    <div className="space-y-3">
-                      {slotOptions.map((slot, index) => (
-                        <label
-                          key={index}
-                          className={`flex flex-col gap-3 rounded-2xl border px-4 py-3 text-sm transition ${
-                            selectedSlotIndex === index ? 'border-primary/70 bg-primary/5' : 'border-slate-200'
-                          }`}
-                        >
-                          <div className="flex items-center justify-between gap-3">
-                            <div className="flex items-center gap-2">
-                              <input
-                                type="radio"
-                                name="schedule-slot"
-                                checked={selectedSlotIndex === index}
-                                onChange={() => setSelectedSlotIndex(index)}
-                              />
-                              <span className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500">Option {index + 1}</span>
-                            </div>
-                            <select
-                              className="rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600"
-                              value={slot.mode}
-                              onChange={(event) => handleSlotChange(index, 'mode', event.target.value)}
-                            >
-                              {slotModeOptions.map((mode) => (
-                                <option key={mode.value} value={mode.value}>
-                                  {mode.label}
-                                </option>
-                              ))}
-                            </select>
-                          </div>
+                    <div className="space-y-4">
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        <label className="space-y-1 text-sm font-semibold text-slate-700">
+                          Session Date & Time
                           <input
                             type="datetime-local"
-                            className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-700 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                            value={slot.slotDate}
-                            onChange={(event) => handleSlotChange(index, 'slotDate', event.target.value)}
+                            value={formatInputValue(selectedDetails.request.preferredDateTime)}
+                            onChange={(e) => {
+                              const updatedRequest = {
+                                ...selectedDetails.request,
+                                preferredDateTime: new Date(e.target.value).toISOString()
+                              }
+                              setSelectedDetails({ ...selectedDetails, request: updatedRequest })
+                            }}
+                            className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                            min={new Date().toISOString().slice(0, 16)}
                           />
                         </label>
-                      ))}
+                        <label className="space-y-1 text-sm font-semibold text-slate-700">
+                          Meeting Mode
+                          <select
+                            value={selectedDetails.request.preferredMode || 'online'}
+                            onChange={(e) => {
+                              const updatedRequest = {
+                                ...selectedDetails.request,
+                                preferredMode: e.target.value
+                              }
+                              setSelectedDetails({ ...selectedDetails, request: updatedRequest })
+                            }}
+                            className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                          >
+                            <option value="online">Online</option>
+                            <option value="offline">Offline</option>
+                            <option value="hybrid">Hybrid</option>
+                          </select>
+                        </label>
+                      </div>
+                      <label className="space-y-1 text-sm font-semibold text-slate-700">
+                        Meeting Link
+                        <input
+                          type="url"
+                          value={meetingLink}
+                          onChange={(e) => {
+                            setMeetingLink(e.target.value)
+                            setMeetingLinkError('')
+                          }}
+                          placeholder="https://zoom.us/j/123456789"
+                          className={`w-full rounded-2xl border px-4 py-3 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 ${
+                            meetingLinkError ? 'border-rose-300' : 'border-slate-200'
+                          }`}
+                        />
+                        {meetingLinkError && (
+                          <p className="text-xs text-rose-500">{meetingLinkError}</p>
+                        )}
+                      </label>
+                      {scheduleError && (
+                        <div className="rounded-2xl border border-rose-200 bg-rose-50 p-3">
+                          <p className="text-xs text-rose-500">{scheduleError}</p>
+                        </div>
+                      )}
+                      <div className="flex flex-wrap justify-end gap-3">
+                        <button
+                          type="button"
+                          onClick={closeModal}
+                          disabled={actionState.id === selectedId && actionState.type === 'accept'}
+                          className="rounded-full border border-slate-200 px-5 py-2 text-xs font-semibold text-slate-600 transition hover:border-slate-300 hover:text-slate-700 disabled:opacity-60"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleAcceptWithSchedule}
+                          disabled={actionState.id === selectedId && actionState.type === 'accept'}
+                          className="rounded-full bg-emerald-500 px-5 py-2 text-xs font-semibold text-white transition hover:bg-emerald-600 disabled:opacity-60"
+                        >
+                          {actionState.id === selectedId && actionState.type === 'accept' ? 'Accepting…' : 'Accept & Schedule'}
+                        </button>
+                      </div>
                     </div>
                   </section>
-                ) : selectedDetails.request?.status === 'accepted' ? (
+                )}
+
+                {selectedAction === 'add-meeting-link' && selectedDetails?.request && (
                   <section className="space-y-3 rounded-3xl border border-slate-200 bg-white p-5">
                     <header className="space-y-1">
-                      <p className="text-xs font-semibold uppercase tracking-widest text-slate-500">Proposed Schedule</p>
-                      <p className="text-xs text-slate-500">Awaiting mentee confirmation. They will select one of these options.</p>
+                      <p className="text-xs font-semibold uppercase tracking-widest text-slate-500">Add Meeting Details</p>
+                      <p className="text-xs text-slate-500">Set the final date, time, and meeting link for this mentorship session.</p>
                     </header>
-                    <div className="space-y-3">
-                      {selectedDetails.request?.proposedSlots?.length ? (
-                        selectedDetails.request.proposedSlots.map((slot, index) => (
-                          <div key={index} className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 px-4 py-3 text-sm">
-                            <span>{formatDateTime(slot.slotDate)}</span>
-                            <span className="rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600">{capitalize(slot.mode)}</span>
-                          </div>
-                        ))
-                      ) : (
-                        <p className="text-xs text-slate-500">No proposed slots are currently available for this request.</p>
-                      )}
+                    <div className="space-y-4">
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        <label className="space-y-1 text-sm font-semibold text-slate-700">
+                          Final Date & Time
+                          <input
+                            type="datetime-local"
+                            value={formatInputValue(selectedDetails.request.preferredDateTime)}
+                            onChange={(e) => {
+                              const updatedRequest = {
+                                ...selectedDetails.request,
+                                preferredDateTime: new Date(e.target.value).toISOString()
+                              }
+                              setSelectedDetails({ ...selectedDetails, request: updatedRequest })
+                            }}
+                            className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                            min={new Date().toISOString().slice(0, 16)}
+                          />
+                        </label>
+                        <label className="space-y-1 text-sm font-semibold text-slate-700">
+                          Meeting Mode
+                          <select
+                            value={selectedDetails.request.preferredMode || 'online'}
+                            onChange={(e) => {
+                              const updatedRequest = {
+                                ...selectedDetails.request,
+                                preferredMode: e.target.value
+                              }
+                              setSelectedDetails({ ...selectedDetails, request: updatedRequest })
+                            }}
+                            className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                          >
+                            <option value="online">Online</option>
+                            <option value="offline">Offline</option>
+                            <option value="hybrid">Hybrid</option>
+                          </select>
+                        </label>
+                      </div>
+                      <label className="space-y-1 text-sm font-semibold text-slate-700">
+                        Meeting Link
+                        <input
+                          type="url"
+                          value={meetingLink}
+                          onChange={(e) => {
+                            setMeetingLink(e.target.value)
+                            setMeetingLinkError('')
+                          }}
+                          placeholder="https://zoom.us/j/123456789"
+                          className={`w-full rounded-2xl border px-4 py-3 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 ${
+                            meetingLinkError ? 'border-rose-300' : 'border-slate-200'
+                          }`}
+                        />
+                        {meetingLinkError && (
+                          <p className="text-xs text-rose-500">{meetingLinkError}</p>
+                        )}
+                      </label>
+                      <div className="flex flex-wrap justify-end gap-3">
+                        <button
+                          type="button"
+                          onClick={closeModal}
+                          disabled={actionState.id === selectedId && actionState.type === 'meeting-link'}
+                          className="rounded-full border border-slate-200 px-5 py-2 text-xs font-semibold text-slate-600 transition hover:border-slate-300 hover:text-slate-700 disabled:opacity-60"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleUpdateMeetingLink}
+                          disabled={actionState.id === selectedId && actionState.type === 'meeting-link'}
+                          className="rounded-full bg-primary px-5 py-2 text-xs font-semibold text-white transition hover:bg-primary/90 disabled:opacity-60"
+                        >
+                          {actionState.id === selectedId && actionState.type === 'meeting-link' ? 'Saving…' : 'Save Meeting Details'}
+                        </button>
+                      </div>
                     </div>
                   </section>
-                ) : selectedDetails.request?.scheduledDateTime ? (
-                  <section className="space-y-2 rounded-3xl border border-slate-200 bg-slate-50/60 p-5">
-                    <p className="text-xs font-semibold uppercase tracking-widest text-slate-500">Confirmed Schedule</p>
-                    <p className="text-sm text-slate-600">
-                      {formatDateTime(selectedDetails.request.scheduledDateTime)} • {capitalize(selectedDetails.request.scheduledMode || selectedDetails.request.preferredMode)}
-                    </p>
-                  </section>
-                ) : null}
+                )}
+
+                {selectedDetails.request?.status === 'pending' && (
+                  <div className="flex flex-wrap justify-end gap-3">
+                    <button
+                      type="button"
+                      onClick={() => handleAction(selectedId, 'reject')}
+                      disabled={actionState.id === selectedId && actionState.type === 'reject'}
+                      className="rounded-full border border-rose-500 px-5 py-2 text-xs font-semibold text-rose-600 transition hover:bg-rose-500 hover:text-white disabled:opacity-60"
+                    >
+                      {actionState.id === selectedId && actionState.type === 'reject' ? 'Rejecting…' : 'Reject'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleQuickAccept(selectedId)}
+                      disabled={actionState.id === selectedId && actionState.type === 'accept'}
+                      className="rounded-full bg-emerald-500 px-5 py-2 text-xs font-semibold text-white transition hover:bg-emerald-600 disabled:opacity-60"
+                    >
+                      {actionState.id === selectedId && actionState.type === 'accept' ? 'Accepting…' : 'Accept'}
+                    </button>
+                  </div>
+                )}
 
                 {selectedDetails.session ? (
                   <section className="space-y-2 rounded-3xl border border-slate-200 bg-slate-50/60 p-5">
@@ -1494,33 +2291,6 @@ const PanelMentees = () => {
                     </div>
                   </section>
                 )}
-
-                {selectedDetails.request?.status === 'pending' ? (
-                  <div className="flex flex-wrap justify-end gap-3">
-                    <button
-                      type="button"
-                      onClick={() => handleAction(selectedId, 'reject')}
-                      disabled={actionState.id === selectedId && actionState.type === 'reject'}
-                      className="rounded-full border border-slate-200 px-5 py-2 text-xs font-semibold text-slate-600 transition hover:border-rose-400 hover:text-rose-500 disabled:opacity-60"
-                    >
-                      {actionState.id === selectedId && actionState.type === 'reject' ? 'Rejecting…' : 'Reject'}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleAccept}
-                      disabled={actionState.id === selectedId && actionState.type === 'accept'}
-                      className="rounded-full bg-primary px-5 py-2 text-xs font-semibold text-white transition hover:bg-primary/90 disabled:opacity-60"
-                    >
-                      {actionState.id === selectedId && actionState.type === 'accept' ? 'Accepting…' : 'Accept Request'}
-                    </button>
-                  </div>
-                ) : selectedDetails.request?.status === 'accepted' ? (
-                  <div className="flex flex-wrap justify-end gap-3">
-                    <span className="rounded-full border border-amber-200 bg-amber-50 px-4 py-2 text-xs font-semibold text-amber-600">
-                      Awaiting mentee confirmation
-                    </span>
-                  </div>
-                ) : null}
               </div>
             ) : null}
           </div>
@@ -2976,7 +3746,7 @@ const MentorApplicationModal = ({ onClose, onSubmit, onSuccess }) => {
     email: '',
     phoneNumber: '',
     graduationYear: '',
-    department: '',
+    degree: '', // Add degree field
     location: '',
     linkedin: '',
     jobRole: '',
@@ -2990,6 +3760,8 @@ const MentorApplicationModal = ({ onClose, onSubmit, onSuccess }) => {
     maxStudents: '',
     weeklyHours: weeklyHoursOptions[0],
     modes: ['Chat', 'Video'],
+    department: departmentOptions[0],
+    availableDays: 'flexible', // Add availableDays field
   })
   const [submitting, setSubmitting] = useState(false)
   const [submissionError, setSubmissionError] = useState(null)
@@ -3001,27 +3773,34 @@ const MentorApplicationModal = ({ onClose, onSubmit, onSuccess }) => {
 
     try {
       const payload = {
+        // Step 1: Basic Information
         fullName: form.fullName,
         email: form.email,
-        contactNumber: form.phoneNumber,
-        linkedin: form.linkedin,
-        jobRole: form.jobRole,
-        experience: form.totalExperience ? `${form.totalExperience}` : '',
-        expertise: Array.isArray(form.skills) ? form.skills : [],
-        skills: Array.isArray(form.skills) ? form.skills.join(', ') : '',
-        bio: form.careerPath,
-        motivation: '',
-        categories: Array.isArray(form.mentorshipAreas) ? form.mentorshipAreas : [],
-        availability: form.weeklyHours,
-        modes: form.modes,
-        termsAccepted: true,
+        phoneNumber: form.phoneNumber,
         graduationYear: form.graduationYear,
+        degree: form.degree || '', // Add degree field
         department: form.department,
-        location: form.location,
-        companyName: form.companyName,
+        currentLocation: form.location,
+        profilePhoto: '', // Will be handled by file upload
+        
+        // Step 2: Professional Information
+        currentJobTitle: form.jobRole,
+        company: form.companyName,
         industry: form.industry,
-        preferredStudents: form.preferredStudents,
-        maxStudents: form.maxStudents,
+        mentorshipAreas: Array.isArray(form.mentorshipAreas) ? form.mentorshipAreas : [],
+        expertise: Array.isArray(form.skills) ? form.skills : [],
+        
+        // Step 3: Availability & Preferences
+        mentorshipMode: form.modes?.[0] || 'online', // Take first mode
+        availableDays: form.availableDays || 'flexible',
+        timeCommitment: form.weeklyHours || 'on-demand',
+        mentorshipPreference: form.preferredStudents || 'both',
+        maxMentees: form.maxStudents || '5',
+        
+        // Consent checkboxes (required fields)
+        consent1: true,
+        consent2: true,
+        consent3: true,
       }
 
       await onSubmit(payload)
@@ -3077,20 +3856,21 @@ const MentorApplicationModal = ({ onClose, onSubmit, onSuccess }) => {
 
   const goNext = () => {
     if (step === 0) {
-      if (!form.fullName || !form.email) return
+      if (!form.fullName || !form.email || !form.graduationYear || !form.degree || !form.department || !form.location) return
       setStep(1)
       return
     }
 
     if (step === 1) {
-      if (!form.jobRole || !form.totalExperience) return
+      if (!form.jobRole || !form.companyName || !form.industry || form.skills.length === 0) return
       setStep(2)
       return
     }
 
     if (step === 2) {
-      if (!form.mentorshipAreas.length || !form.modes.length || !form.weeklyHours) return
+      if (!form.preferredStudents || !form.maxStudents || !form.weeklyHours || !form.availableDays || form.mentorshipAreas.length === 0) return
       handleCompletion()
+      return
     }
   }
 
@@ -3196,7 +3976,8 @@ const MentorApplicationModal = ({ onClose, onSubmit, onSuccess }) => {
                     <InputField label="Email Address" value={form.email} onChange={handleInputChange('email')} type="email" placeholder="alex.j@example.com" />
                     <InputField label="Phone Number (optional)" value={form.phoneNumber} onChange={handleInputChange('phoneNumber')} placeholder="+1 (555) 000-0000" />
                     <InputField label="Graduation Year" value={form.graduationYear} onChange={handleInputChange('graduationYear')} type="number" placeholder="2020" />
-                    <InputField label="Department" value={form.department} onChange={handleInputChange('department')} placeholder="Computer Science" />
+                    <SelectField label="Degree / Program" value={form.degree} onChange={handleChange('degree')} options={degreeOptions} />
+                    <SelectField label="Department" value={form.department} onChange={handleChange('department')} options={departmentOptions} />
                     <InputField label="Current Location" value={form.location} onChange={handleInputChange('location')} placeholder="City, Country" />
                   </div>
 
@@ -3312,25 +4093,9 @@ const MentorApplicationModal = ({ onClose, onSubmit, onSuccess }) => {
                     </div>
                   </div>
 
-                  <div>
-                    <p className="text-sm font-semibold text-slate-700">Mode</p>
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      {mentorshipModeOptions.map((mode) => {
-                        const isSelected = form.modes.includes(mode)
-                        return (
-                          <button
-                            key={mode}
-                            type="button"
-                            onClick={() => toggleMode(mode)}
-                            className={`rounded-full px-4 py-1 text-xs font-semibold transition ${
-                              isSelected ? 'bg-primary text-white shadow-sm shadow-primary/45' : 'border border-slate-200 text-slate-600 hover:border-primary hover:text-primary'
-                            }`}
-                          >
-                            {mode}
-                          </button>
-                        )
-                      })}
-                    </div>
+                  <div className="grid gap-5 md:grid-cols-2">
+                    <SelectField label="Preferred Mentorship Mode" value={form.modes?.[0] || ''} onChange={(value) => setForm(prev => ({ ...prev, modes: [value] }))} options={mentorshipModeOptions} />
+                    <SelectField label="Available Days" value={form.availableDays} onChange={handleChange('availableDays')} options={['weekdays', 'weekends', 'flexible']} />
                   </div>
 
                   <p className="text-xs text-slate-400">
