@@ -137,14 +137,28 @@ const listMembersByRole = async (req, res, roleOverride) => {
       return res.status(400).json({ success: false, message: 'Unsupported role.' })
     }
 
-    // Only show approved profiles in admin management
-    // Include profiles without profileApprovalStatus (legacy data) - treat as approved
-    const members = await Model.find({
+    // Build query based on user role
+    let query = {
       $or: [
         { profileApprovalStatus: 'APPROVED' },
         { profileApprovalStatus: { $exists: false } }
       ]
-    }).select('-password').sort({ firstName: 1, lastName: 1 }).lean()
+    }
+
+    // If current user is a coordinator, filter by their department (except for coordinator management)
+    if (currentUserRole === 'coordinator' && normalizedRole !== 'coordinator') {
+      const currentUser = await require('../models/Coordinator').findById(currentUserId).lean()
+      if (currentUser && currentUser.department) {
+        query.department = currentUser.department
+      }
+    }
+
+    // Only show approved profiles in admin management
+    // Include profiles without profileApprovalStatus (legacy data) - treat as approved
+    const members = await Model.find(query)
+      .select('-password')
+      .sort({ firstName: 1, lastName: 1 })
+      .lean()
 
     // Filter out current user from their own role directory
     const filteredMembers = members.filter(member => {

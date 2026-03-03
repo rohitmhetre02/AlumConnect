@@ -334,16 +334,19 @@ const getPendingItems = async (req, res) => {
     // Get pending alumni profiles
     try {
       const pendingAlumni = await Alumni.find({ approvalStatus: 'pending' })
-        .populate('userId', 'name email')
+        .populate('userId', 'firstName lastName name email')
         .select('userId department createdAt approvalStatus')
         .lean()
 
       pendingAlumni.forEach(alumni => {
+        const fullName = alumni.userId 
+          ? `${alumni.userId.firstName || ''} ${alumni.userId.lastName || ''}`.trim() || alumni.userId.name || 'Unknown'
+          : 'Unknown';
         pendingItems.push({
           id: alumni._id,
           type: 'profile',
-          title: `${alumni.userId?.name || 'Unknown'} - Alumni Profile`,
-          submittedBy: alumni.userId?.name || 'Unknown',
+          title: `${fullName} - Alumni Profile`,
+          submittedBy: fullName,
           department: alumni.department || 'Not specified',
           date: alumni.createdAt,
           status: alumni.approvalStatus
@@ -356,16 +359,19 @@ const getPendingItems = async (req, res) => {
     // Get pending jobs
     try {
       const pendingJobs = await Opportunity.find({ approvalStatus: 'pending' })
-        .populate('createdBy', 'name email')
+        .populate('createdBy', 'firstName lastName name email')
         .select('title createdBy department createdAt approvalStatus')
         .lean()
 
       pendingJobs.forEach(job => {
+        const fullName = job.createdBy 
+          ? `${job.createdBy.firstName || ''} ${job.createdBy.lastName || ''}`.trim() || job.createdBy.name || 'Unknown'
+          : 'Unknown';
         pendingItems.push({
           id: job._id,
           type: 'job',
           title: job.title,
-          submittedBy: job.createdBy?.name || 'Unknown',
+          submittedBy: fullName,
           department: job.department || 'Not specified',
           date: job.createdAt,
           status: job.approvalStatus
@@ -378,17 +384,20 @@ const getPendingItems = async (req, res) => {
     // Get pending events
     try {
       const pendingEvents = await Event.find({ status: 'pending' })
-        .populate('organizer', 'name email')
+        .populate('createdBy', 'firstName lastName name email')
         .populate('department', 'name')
-        .select('title organizer department date createdAt status')
+        .select('title createdBy department date createdAt status')
         .lean()
 
       pendingEvents.forEach(event => {
+        const fullName = event.createdBy 
+          ? `${event.createdBy.firstName || ''} ${event.createdBy.lastName || ''}`.trim() || event.createdBy.name || 'Unknown'
+          : 'Unknown';
         pendingItems.push({
           id: event._id,
           type: 'event',
           title: event.title,
-          submittedBy: event.organizer?.name || 'Unknown',
+          submittedBy: fullName,
           department: event.department?.name || 'Not specified',
           date: event.createdAt,
           status: event.status
@@ -401,17 +410,20 @@ const getPendingItems = async (req, res) => {
     // Get pending campaigns
     try {
       const pendingCampaigns = await Campaign.find({ status: 'pending' })
-        .populate('organizer', 'name email')
+        .populate('organizer', 'firstName lastName name email')
         .populate('department', 'name')
         .select('title organizer department createdAt status')
         .lean()
 
       pendingCampaigns.forEach(campaign => {
+        const fullName = campaign.organizer 
+          ? `${campaign.organizer.firstName || ''} ${campaign.organizer.lastName || ''}`.trim() || campaign.organizer.name || 'Unknown'
+          : 'Unknown';
         pendingItems.push({
           id: campaign._id,
           type: 'campaign',
           title: campaign.title,
-          submittedBy: campaign.organizer?.name || 'Unknown',
+          submittedBy: fullName,
           department: campaign.department?.name || 'Not specified',
           date: campaign.createdAt,
           status: campaign.status
@@ -453,16 +465,19 @@ const getRecentActivity = async (req, res) => {
     // Get recent job postings
     try {
       const recentJobs = await Opportunity.find()
-        .populate('createdBy', 'name')
+        .populate('createdBy', 'firstName lastName name')
         .sort({ createdAt: -1 })
         .limit(limit)
         .select('title createdBy createdAt')
         .lean()
 
       recentJobs.forEach(job => {
+        const fullName = job.createdBy 
+          ? `${job.createdBy.firstName || ''} ${job.createdBy.lastName || ''}`.trim() || job.createdBy.name || 'Unknown'
+          : 'Unknown';
         activities.push({
           id: `job-${job._id}`,
-          user: job.createdBy?.name || 'Unknown',
+          user: fullName,
           action: 'posted a new job',
           entity: job.title,
           timestamp: formatTimeAgo(job.createdAt),
@@ -476,16 +491,19 @@ const getRecentActivity = async (req, res) => {
     // Get recent events
     try {
       const recentEvents = await Event.find()
-        .populate('organizer', 'name')
+        .populate('createdBy', 'firstName lastName name')
         .sort({ createdAt: -1 })
         .limit(limit)
-        .select('title organizer createdAt')
+        .select('title createdBy createdAt')
         .lean()
 
       recentEvents.forEach(event => {
+        const fullName = event.createdBy 
+          ? `${event.createdBy.firstName || ''} ${event.createdBy.lastName || ''}`.trim() || event.createdBy.name || 'Unknown'
+          : 'Unknown';
         activities.push({
           id: `event-${event._id}`,
-          user: event.organizer?.name || 'Unknown',
+          user: fullName,
           action: 'created an event',
           entity: event.title,
           timestamp: formatTimeAgo(event.createdAt),
@@ -521,7 +539,7 @@ const getRecentActivity = async (req, res) => {
       const latestDonations = recentDonations.slice(0, 10)
       
       latestDonations.forEach(donation => {
-        dashboardData.recentActivities.push({
+        activities.push({
           id: `donation-${donation._id || donation.donatedAt}`,
           user: donation.anonymous ? 'Anonymous' : donation.donorName,
           action: 'donated',

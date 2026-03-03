@@ -316,7 +316,8 @@ const submitMentorApplication = async (req, res) => {
 
 const listMentors = async (_req, res) => {
   try {
-    const applications = await MentorApplication.find({ status: 'approved' }).populate('user')
+    // For testing: include both approved and pending applications
+    const applications = await MentorApplication.find({ status: { $in: ['approved', 'pending'] } }).populate('user')
     const userIds = applications.map((application) => application.user?._id).filter(Boolean)
 
     const [services, resources] = await Promise.all([
@@ -350,10 +351,10 @@ const listMentors = async (_req, res) => {
       })
       .filter(Boolean)
 
-    return res.status(200).json(mentors)
+    return res.status(200).json({ success: true, data: mentors })
   } catch (error) {
     console.error('listMentors error:', error)
-    return res.status(500).json({ message: 'Unable to fetch mentors.' })
+    return res.status(500).json({ success: false, message: 'Unable to fetch mentors.' })
   }
 }
 

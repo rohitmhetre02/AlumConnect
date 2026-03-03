@@ -24,6 +24,11 @@ const UserManagement = () => {
   const memberId = memberIdParam ? decodeURIComponent(memberIdParam) : null
   const studentsList = Array.isArray(students) ? students : []
 
+  // Get current user info for department filtering
+  const adminUser = JSON.parse(localStorage.getItem('adminUser') || '{}')
+  const isCoordinator = adminUser.role === 'coordinator'
+  const userDepartment = adminUser.department || ''
+
   const normalizedStudents = useMemo(() => {
     return studentsList.map((student, index) => {
       const firstName = student.firstName?.trim() ?? ''
@@ -155,6 +160,11 @@ const UserManagement = () => {
 
   const confirmStatusChange = async (member, newStatus) => {
     try {
+      // For coordinators, if no newStatus is provided, it means suspend action
+      if (isCoordinator && !newStatus) {
+        newStatus = 'Inactive'
+      }
+
       // Map admin status to profile approval status
       let profileApprovalStatus = 'APPROVED' // Default
       if (newStatus === 'Pending') {
@@ -174,7 +184,8 @@ const UserManagement = () => {
       setStatusModalMember(null)
       
       // Show success message
-      alert(`Status updated to ${newStatus} successfully!`)
+      const actionText = newStatus === 'Inactive' ? 'suspended' : `status updated to ${newStatus}`
+      alert(`Member ${actionText} successfully!`)
       
       // Refetch data to get updated status
       refetch()
@@ -235,7 +246,19 @@ const UserManagement = () => {
     <div className="space-y-6">
       <header>
         <h1 className="text-2xl font-bold text-slate-900">Student Management</h1>
-        <p className="text-slate-600">Manage student records, enrollment details, and access levels.</p>
+        <p className="text-slate-600">
+          Manage student records, enrollment details, and access levels.
+          {isCoordinator && userDepartment && (
+            <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+              {userDepartment} Department
+            </span>
+          )}
+        </p>
+        {isCoordinator && (
+          <p className="text-sm text-blue-600 mt-1">
+            Showing students from your department only
+          </p>
+        )}
       </header>
 
       <section className="rounded-3xl border border-slate-100 bg-white p-6 shadow-soft">
@@ -367,6 +390,7 @@ const UserManagement = () => {
                           onProfileView={handleStudentClick}
                           onStatusChange={handleStatusChange}
                           onDelete={handleDelete}
+                          userRole={adminUser.role || 'admin'}
                         />
                       </div>
                     </td>

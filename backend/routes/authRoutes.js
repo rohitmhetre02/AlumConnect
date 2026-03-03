@@ -13,6 +13,17 @@ const {
 const { getMyProfile } = require('../controllers/profileController')
 const authMiddleware = require('../middleware/authMiddleware')
 
+// Account Settings Controller
+const {
+  updateEmail,
+  verifyEmailOTP,
+  resendEmailOTP,
+  updatePassword,
+  forgotPassword,
+  verifyForgotPasswordOTP,
+  resendForgotPasswordOTP,
+} = require('../controllers/accountSettingsController')
+
 const router = express.Router()
 
 router.post('/signup', signup)
@@ -26,5 +37,14 @@ router.get('/oauth/google/callback', handleOAuthCallback('google'))
 router.get('/oauth/linkedin', startOAuth('linkedin'))
 router.get('/oauth/linkedin/callback', handleOAuthCallback('linkedin'))
 router.get('/profile', authMiddleware, getMyProfile)
+
+// Account Settings Routes
+router.put('/update-email', authMiddleware, updateEmail)
+router.put('/verify-email-otp', verifyEmailOTP)
+router.put('/resend-email-otp', resendEmailOTP)
+router.put('/update-password', authMiddleware, updatePassword)
+router.post('/forgot-password', forgotPassword)
+router.post('/verify-forgot-password-otp', verifyForgotPasswordOTP)
+router.post('/resend-forgot-password-otp', resendForgotPasswordOTP)
 
 module.exports = router

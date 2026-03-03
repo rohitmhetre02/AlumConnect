@@ -14,7 +14,6 @@ const DashboardOverviewEnhanced = () => {
   const [searchQuery, setSearchQuery] = useState('')
   const [showNotifications, setShowNotifications] = useState(false)
   const [showProfile, setShowProfile] = useState(false)
-  const [dateFilter, setDateFilter] = useState('30days')
   const [notifications, setNotifications] = useState([])
   const [error, setError] = useState(null)
   
@@ -67,8 +66,8 @@ const DashboardOverviewEnhanced = () => {
       
       console.log('Fetching data for role:', userRole, 'department:', userDepartment)
 
-      // Fetch stats from backend with date filter and role info
-      const statsUrl = `http://localhost:5000/api/admin/dashboard/stats?period=${dateFilter}&role=${userRole}&department=${encodeURIComponent(userDepartment)}`
+      // Fetch stats from backend with role info
+      const statsUrl = `http://localhost:5000/api/admin/dashboard/stats?role=${userRole}&department=${encodeURIComponent(userDepartment)}`
       console.log('Fetching stats from:', statsUrl)
       
       const statsResponse = await fetch(statsUrl, {
@@ -149,9 +148,8 @@ const DashboardOverviewEnhanced = () => {
   }
 
   useEffect(() => {
-    console.log('Date filter changed to:', dateFilter)
     fetchDashboardData()
-  }, [dateFilter])
+  }, [])
 
   const handleApprove = async (id, type) => {
     try {
@@ -260,16 +258,6 @@ const DashboardOverviewEnhanced = () => {
           <div className="flex-1">
             <p className="text-sm font-medium text-gray-600 mb-1">{title}</p>
             <p className="text-3xl font-bold text-gray-900">{value.toLocaleString()}</p>
-            <div className={`flex items-center mt-2 text-sm ${
-              changeType === 'increase' ? 'text-green-600' : 'text-red-600'
-            }`}>
-              {changeType === 'increase' ? (
-                <TrendingUp className="w-4 h-4 mr-1" />
-              ) : (
-                <TrendingDown className="w-4 h-4 mr-1" />
-              )}
-              {change}% from last 30 days
-            </div>
           </div>
           <div className={`p-3 rounded-xl ${isPriority ? 'bg-red-100' : classes.bg} ${isPriority ? '' : classes.hoverBg} group-hover:scale-105 transition-transform`}>
             <Icon className={`w-6 h-6 ${isPriority ? 'text-red-600' : classes.text}`} />
@@ -404,23 +392,6 @@ const DashboardOverviewEnhanced = () => {
           <div className="mb-4 lg:mb-6 px-2">
             <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">Dashboard Overview</h1>
             <p className="text-sm lg:text-base text-gray-600 mt-1">Welcome back, {adminUser.name}! Here's what's happening in your alumni network.</p>
-          </div>
-
-          {/* Date Filter */}
-          <div className="mb-4 lg:mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 px-2">
-            <div className="flex items-center space-x-4">
-              <label className="text-sm font-medium text-gray-700">Time Period:</label>
-              <select
-                value={dateFilter}
-                onChange={(e) => setDateFilter(e.target.value)}
-                className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="7days">Last 7 days</option>
-                <option value="30days">Last 30 days</option>
-                <option value="90days">Last 90 days</option>
-                <option value="1year">Last year</option>
-              </select>
-            </div>
           </div>
 
           {/* Enhanced Stats Cards - Optimized for full width */}
@@ -564,7 +535,7 @@ const DashboardOverviewEnhanced = () => {
                 icon={UserCheck}
                 title="Student Management"
                 description="Manage student records"
-                path="/admin/students"
+                path="/admin/users"
                 color="green"
                 count={stats.totalStudents}
               />
@@ -572,7 +543,7 @@ const DashboardOverviewEnhanced = () => {
                 icon={Briefcase}
                 title="Job Management"
                 description="Manage job postings and applications"
-                path="/admin/jobs"
+                path="/admin/opportunities"
                 color="purple"
                 count={stats.activeJobs}
               />
@@ -588,7 +559,7 @@ const DashboardOverviewEnhanced = () => {
                 icon={Heart}
                 title="Donation Management"
                 description="Manage donation campaigns"
-                path="/admin/donations"
+                path="/admin/campaigns"
                 color="red"
                 count={stats.activeCampaigns}
               />
@@ -596,14 +567,14 @@ const DashboardOverviewEnhanced = () => {
                 icon={Building2}
                 title="Department Management"
                 description="Manage departments and programs"
-                path="/admin/departments"
+                path="/admin/coordinators"
                 color="indigo"
               />
               <ManagementCard
                 icon={FileText}
                 title="Reports & Analytics"
                 description="View detailed reports and analytics"
-                path="/admin/reports"
+                path="/admin/analytics"
                 color="gray"
               />
               <ManagementCard
@@ -620,11 +591,16 @@ const DashboardOverviewEnhanced = () => {
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 lg:p-6 mx-2">
             <div className="flex items-center justify-between mb-4 lg:mb-6">
               <h2 className="text-lg font-semibold text-gray-900">Recent Activity</h2>
-              <button className="text-sm text-blue-600 hover:text-blue-700">View All →</button>
+              <button 
+  onClick={() => navigate('/admin/activity')}
+  className="text-sm text-blue-600 hover:text-blue-700"
+>
+  View All →
+</button>
             </div>
             
             <div className="space-y-4">
-              {recentActivity.map((activity, index) => (
+              {recentActivity.slice(0, 5).map((activity, index) => (
                 <div key={activity.id} className="flex items-start space-x-4 pb-4 border-b border-gray-100 last:border-0">
                   <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold ${
                     activity.type === 'job' ? 'bg-purple-100 text-purple-600' :

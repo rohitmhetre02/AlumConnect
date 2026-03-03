@@ -39,11 +39,14 @@ const ToastItem = ({ toast, onDismiss }) => {
     <div
       onMouseEnter={pauseTimer}
       onMouseLeave={resumeTimer}
-      className={`flex items-center gap-3 rounded-2xl bg-white p-4 shadow-lg ring-1 ring-slate-100 transition ${COLORS[toast.type]}`}
+      className={`flex items-start gap-3 rounded-2xl bg-white p-4 shadow-lg ring-1 ring-slate-100 transition ${COLORS[toast.tone]}`}
       role="status"
     >
-      <span className="text-lg">{ICONS[toast.type]}</span>
-      <p className="text-sm text-slate-700">{toast.message}</p>
+      <span className="text-lg mt-0.5">{ICONS[toast.tone]}</span>
+      <div className="flex-1">
+        {toast.title && <p className="text-sm font-medium text-slate-900">{toast.title}</p>}
+        {toast.description && <p className="text-sm text-slate-700">{toast.description}</p>}
+      </div>
     </div>
   )
 }

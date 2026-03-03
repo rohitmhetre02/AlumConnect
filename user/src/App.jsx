@@ -255,12 +255,16 @@ function App() {
             } />
             <Route path="events/post" element={
               <ProfilePendingGuardWithFallback>
-                <PostEvent />
+                <RoleRoute allowedRoles={['alumni']}>
+                  <PostEvent />
+                </RoleRoute>
               </ProfilePendingGuardWithFallback>
             } />
             <Route path="events/:eventId/edit" element={
               <ProfilePendingGuardWithFallback>
-                <EditEvent />
+                <RoleRoute allowedRoles={['alumni']}>
+                  <EditEvent />
+                </RoleRoute>
               </ProfilePendingGuardWithFallback>
             } />
             <Route path="events/:eventId" element={
@@ -287,7 +291,9 @@ function App() {
             } />
             <Route path="campaigns/create" element={
               <ProfilePendingGuardWithFallback>
-                <PostDonationCampaign />
+                <RoleRoute allowedRoles={['alumni']}>
+                  <PostDonationCampaign />
+                </RoleRoute>
               </ProfilePendingGuardWithFallback>
             } />
             <Route path="campaigns/:campaignId" element={
@@ -302,7 +308,9 @@ function App() {
             } />
             <Route path="opportunities/post" element={
               <ProfilePendingGuardWithFallback>
-                <PostOpportunity />
+                <RoleRoute allowedRoles={['alumni']}>
+                  <PostOpportunity />
+                </RoleRoute>
               </ProfilePendingGuardWithFallback>
             } />
             <Route path="registrations/coordinator" element={
@@ -331,7 +339,9 @@ function App() {
             } />
             <Route path="opportunities/:opportunityId/edit" element={
               <ProfilePendingGuardWithFallback>
-                <EditOpportunity />
+                <RoleRoute allowedRoles={['alumni']}>
+                  <EditOpportunity />
+                </RoleRoute>
               </ProfilePendingGuardWithFallback>
             } />
             <Route path="opportunities/:opportunityId" element={
@@ -346,7 +356,9 @@ function App() {
             } />
             <Route path="donations/:campaignId/edit" element={
               <ProfilePendingGuardWithFallback>
-                <EditDonation />
+                <RoleRoute allowedRoles={['alumni']}>
+                  <EditDonation />
+                </RoleRoute>
               </ProfilePendingGuardWithFallback>
             } />
             <Route path="donations/:campaignId" element={
@@ -361,7 +373,9 @@ function App() {
             } />
             <Route path="news/create" element={
               <ProfilePendingGuardWithFallback>
-                <NewsCreate />
+                <RoleRoute allowedRoles={['alumni']}>
+                  <NewsCreate />
+                </RoleRoute>
               </ProfilePendingGuardWithFallback>
             } />
             <Route path="news/:articleId" element={

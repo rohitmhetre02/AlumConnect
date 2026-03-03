@@ -210,8 +210,12 @@ const PostApprovalManagement = () => {
                       {post.createdAt ? new Date(post.createdAt).toLocaleString() : '—'}
                     </p>
                   </div>
-                  <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700">
-                    Pending Review
+                  <span className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold ${
+                    isPendingRoute 
+                      ? 'bg-amber-50 text-amber-700' 
+                      : 'bg-emerald-50 text-emerald-700'
+                  }`}>
+                    {isPendingRoute ? 'Pending Review' : 'Approved'}
                   </span>
                 </header>
 
@@ -228,20 +232,29 @@ const PostApprovalManagement = () => {
                 ) : null}
 
                 <footer className="mt-5 flex flex-wrap gap-3">
-                  <button
-                    onClick={() => handleDecision({ item: post, action: 'approve' })}
-                    disabled={decidingId === post.id}
-                    className={`inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-emerald-400`}
-                  >
-                    {decidingId === post.id ? 'Processing…' : <><Check className="h-4 w-4" /> Approve</>}
-                  </button>
-                  <button
-                    onClick={() => openRejectModal(post)}
-                    disabled={decidingId === post.id}
-                    className="inline-flex items-center gap-2 rounded-lg bg-rose-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-rose-700 disabled:cursor-not-allowed disabled:bg-rose-400"
-                  >
-                    <X className="h-4 w-4" /> Reject
-                  </button>
+                  {isPendingRoute ? (
+                    <>
+                      <button
+                        onClick={() => handleDecision({ item: post, action: 'approve' })}
+                        disabled={decidingId === post.id}
+                        className={`inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-emerald-400`}
+                      >
+                        {decidingId === post.id ? 'Processing…' : <><Check className="h-4 w-4" /> Approve</>}
+                      </button>
+                      <button
+                        onClick={() => openRejectModal(post)}
+                        disabled={decidingId === post.id}
+                        className="inline-flex items-center gap-2 rounded-lg bg-rose-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-rose-700 disabled:cursor-not-allowed disabled:bg-rose-400"
+                      >
+                        <X className="h-4 w-4" /> Reject
+                      </button>
+                    </>
+                  ) : (
+                    <div className="inline-flex items-center gap-2 rounded-lg bg-emerald-100 px-4 py-2 text-sm font-semibold text-emerald-700">
+                      <Check className="h-4 w-4" />
+                      Approved
+                    </div>
+                  )}
                 </footer>
               </article>
             ))}

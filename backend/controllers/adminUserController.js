@@ -18,6 +18,7 @@ const ROLE_MAP = new Map([
   ['student', 'student'],
   ['alumni', 'alumni'],
   ['faculty', 'faculty'],
+  ['coordinator', 'coordinator'],
 ])
 
 const normalizeRole = (inputRole) => {
@@ -81,7 +82,7 @@ const provisionUsers = async ({ payloads, role }) => {
 const createSingleUser = async (req, res) => {
   try {
     const normalizedRole = ensureRoleSupported(req.params.role)
-    const { email, name } = req.body ?? {}
+    const { email, name, department } = req.body ?? {}
 
     if (!email) {
       return res.status(400).json({ message: 'email is required.' })
@@ -97,6 +98,7 @@ const createSingleUser = async (req, res) => {
           email,
           firstName,
           lastName,
+          department,
           password,
         },
       ],

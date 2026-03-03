@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 
-const ActionMenu = ({ member, onProfileView, onStatusChange, onDelete }) => {
+const ActionMenu = ({ member, onProfileView, onStatusChange, onDelete, userRole = 'admin' }) => {
   const [isOpen, setIsOpen] = useState(false)
   const menuRef = useRef(null)
 
@@ -32,6 +32,14 @@ const ActionMenu = ({ member, onProfileView, onStatusChange, onDelete }) => {
     onDelete(member)
   }
 
+  const handleSuspend = () => {
+    setIsOpen(false)
+    // For coordinators, suspend means setting status to 'Inactive'
+    onStatusChange(member, 'Inactive')
+  }
+
+  const isCoordinator = userRole === 'coordinator'
+
   return (
     <div className="relative" ref={menuRef}>
       <button
@@ -46,34 +54,53 @@ const ActionMenu = ({ member, onProfileView, onStatusChange, onDelete }) => {
 
       {isOpen && (
         <div className="absolute right-0 z-10 mt-2 w-48 rounded-lg border border-slate-200 bg-white py-1 shadow-lg">
-          <button
-            onClick={handleProfileClick}
-            className="flex w-full items-center px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
-          >
-            <svg className="mr-3 h-4 w-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-            </svg>
-            Profile
-          </button>
-          <button
-            onClick={handleStatusChange}
-            className="flex w-full items-center px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
-          >
-            <svg className="mr-3 h-4 w-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            Status Change
-          </button>
-          <div className="border-t border-slate-100"></div>
-          <button
-            onClick={handleDelete}
-            className="flex w-full items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50"
-          >
-            <svg className="mr-3 h-4 w-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 011-1h2a1 1 0 011 1v3M4 7h16" />
-            </svg>
-            Delete
-          </button>
+          {isCoordinator ? (
+            <>
+              {/* Coordinator Actions - Only Suspend and Delete */}
+              <button
+                onClick={handleSuspend}
+                className="flex w-full items-center px-4 py-2 text-sm text-orange-600 hover:bg-orange-50"
+              >
+                <svg className="mr-3 h-4 w-4 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Suspend
+              </button>
+              <div className="border-t border-slate-100"></div>
+              <button
+                onClick={handleDelete}
+                className="flex w-full items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+              >
+                <svg className="mr-3 h-4 w-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 011-1h2a1 1 0 011 1v3M4 7h16" />
+                </svg>
+                Delete
+              </button>
+            </>
+          ) : (
+            <>
+              {/* Admin Actions - Only Suspend and Delete */}
+              <button
+                onClick={handleSuspend}
+                className="flex w-full items-center px-4 py-2 text-sm text-orange-600 hover:bg-orange-50"
+              >
+                <svg className="mr-3 h-4 w-4 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Suspend
+              </button>
+              <div className="border-t border-slate-100"></div>
+              <button
+                onClick={handleDelete}
+                className="flex w-full items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+              >
+                <svg className="mr-3 h-4 w-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 011-1h2a1 1 0 011 1v3M4 7h16" />
+                </svg>
+                Delete
+              </button>
+            </>
+          )}
         </div>
       )}
     </div>

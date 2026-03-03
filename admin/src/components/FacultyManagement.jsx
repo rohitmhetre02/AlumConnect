@@ -24,6 +24,11 @@ const FacultyManagement = () => {
   const [statusModalMember, setStatusModalMember] = useState(null)
   const [deleteModalMember, setDeleteModalMember] = useState(null)
 
+  // Get current user info for department filtering
+  const adminUser = JSON.parse(localStorage.getItem('adminUser') || '{}')
+  const isCoordinator = adminUser.role === 'coordinator'
+  const userDepartment = adminUser.department || ''
+
   const normalizedFaculty = useMemo(() => {
     return facultyList.map((member, index) => {
       const firstName = member.firstName?.trim() ?? ''
@@ -144,11 +149,17 @@ const FacultyManagement = () => {
 
   const confirmStatusChange = async (member, newStatus) => {
     try {
+      // For coordinators, if no newStatus is provided, it means suspend action
+      if (isCoordinator && !newStatus) {
+        newStatus = 'Inactive'
+      }
+
       const response = await put(`/directory/faculty/${member.id}/status`, { status: newStatus })
       setStatusModalMember(null)
       
       // Show success message
-      alert(`Status updated to ${newStatus} successfully!`)
+      const actionText = newStatus === 'Inactive' ? 'suspended' : `status updated to ${newStatus}`
+      alert(`Member ${actionText} successfully!`)
       
       // Refetch data to get updated status
       refetch()
@@ -224,7 +235,19 @@ const FacultyManagement = () => {
     <div className="space-y-6">
       <header>
         <h1 className="text-2xl font-bold text-slate-900">Faculty Management</h1>
-        <p className="text-slate-600">Manage faculty records, academic profiles, and administrative access.</p>
+        <p className="text-slate-600">
+          Manage faculty records, academic profiles, and administrative access.
+          {isCoordinator && userDepartment && (
+            <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+              {userDepartment} Department
+            </span>
+          )}
+        </p>
+        {isCoordinator && (
+          <p className="text-sm text-blue-600 mt-1">
+            Showing faculty from your department only
+          </p>
+        )}
       </header>
 
       <section className="rounded-3xl border border-slate-100 bg-white p-6 shadow-soft">
@@ -280,7 +303,10 @@ const FacultyManagement = () => {
             </button>
             <button
               type="button"
-              onClick={provisionModal.openModal}
+              onClick={() => {
+                console.log('Faculty add button clicked')
+                provisionModal.openModal()
+              }}
               className="rounded-2xl bg-primary px-4 py-2.5 text-sm font-semibold text-white shadow-[0_14px_30px_rgba(37,99,235,0.25)] transition hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
             >
               Add Faculty
@@ -356,6 +382,7 @@ const FacultyManagement = () => {
                           onProfileView={handleFacultyClick}
                           onStatusChange={handleStatusChange}
                           onDelete={handleDelete}
+                          userRole={adminUser.role || 'admin'}
                         />
                       </div>
                     </td>

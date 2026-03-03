@@ -130,7 +130,7 @@ const listOpportunities = async (_req, res) => {
 
 const listAllOpportunitiesForAdmin = async (req, res) => {
   try {
-    const items = await Opportunity.find({})
+    const items = await Opportunity.find({ approvalStatus: CONTENT_APPROVAL_STATUS.APPROVED })
       .sort({ createdAt: -1 })
       .lean()
 

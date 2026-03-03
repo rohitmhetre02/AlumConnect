@@ -10,9 +10,9 @@ export const ToastProvider = ({ children }) => {
     setToasts((prev) => prev.filter((toast) => toast.id !== id))
   }, [])
 
-  const addToast = useCallback(({ type = 'info', message }) => {
+  const addToast = useCallback(({ title, description, tone = 'info' }) => {
     const id = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : String(Date.now() + Math.random())
-    const toast = { id, type, message }
+    const toast = { id, title, description, tone }
     setToasts((prev) => [...prev, toast])
     return toast.id
   }, [])

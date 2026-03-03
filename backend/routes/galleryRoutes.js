@@ -125,6 +125,26 @@ router.get('/departments', async (req, res) => {
   }
 });
 
+// GET /api/gallery/all-images - Get all images from all departments and folders
+router.get('/all-images', async (req, res) => {
+  try {
+    const images = await Gallery.find({})
+      .sort({ createdAt: -1 })
+      .select('_id imageUrl imageName department folder createdAt');
+
+    res.json({
+      success: true,
+      images: images
+    });
+  } catch (error) {
+    console.error('Error fetching all images:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch images'
+    });
+  }
+});
+
 // GET /api/gallery/:department/folders - Get folders for a department
 router.get('/:department/folders', async (req, res) => {
   try {
@@ -218,7 +238,7 @@ router.get('/:department/:folder/images', async (req, res) => {
   }
 });
 
-// POST /api/gallery/test-upload - Simple test upload (Admin/Coordinator only)
+// POST /api/gallery/test-upload - Simple test upload (Admin only)
 router.post('/test-upload', authMiddleware, upload.array('images', 10), async (req, res) => {
   try {
     console.log('=== TEST UPLOAD REQUEST ===');
@@ -230,8 +250,13 @@ router.post('/test-upload', authMiddleware, upload.array('images', 10), async (r
       return res.status(401).json({ success: false, error: 'No user found' });
     }
 
-    if (req.user.role !== 'admin' && req.user.role !== 'coordinator') {
-      return res.status(403).json({ success: false, error: 'Access denied' });
+    // Check if user has upload permissions (Admin only)
+    if (req.user.role !== 'admin') {
+      console.log('Permission denied for role:', req.user.role);
+      return res.status(403).json({
+        success: false,
+        error: 'Access denied. Only admins can upload images.'
+      });
     }
 
     if (!req.files || req.files.length === 0) {
@@ -274,22 +299,23 @@ router.post('/upload', authMiddleware, upload.array('images', 10), async (req, r
     console.log('Files:', req.files ? req.files.length : 'No files');
     console.log('Body:', req.body);
 
-    // Check if user has upload permissions
-    if (req.user.role !== 'admin' && req.user.role !== 'coordinator') {
+    // Check if user has upload permissions (Admin only)
+    if (req.user.role !== 'admin') {
       console.log('Permission denied for role:', req.user.role);
       return res.status(403).json({
         success: false,
-        error: 'Access denied. Only admins and coordinators can upload images.'
+        error: 'Access denied. Only admins can upload images.'
       });
     }
 
-    const { department, folder } = req.body;
+    const { department = 'General', folder = 'Gallery' } = req.body;
 
     console.log('Department:', department);
     console.log('Folder:', folder);
 
     // Validate department and folder
     const validDepartments = [
+      'General',
       'Civil Engineering',
       'Computer Engineering',
       'Information Technology',
@@ -300,7 +326,7 @@ router.post('/upload', authMiddleware, upload.array('images', 10), async (req, r
       'Electronics & Communication (Advanced Communication Technology)'
     ];
 
-    const validFolders = ['Events', 'Campus', 'Traditional Day', 'Alumni Meet', 'Industrial Visit'];
+    const validFolders = ['Gallery', 'Events', 'Campus', 'Traditional Day', 'Alumni Meet', 'Industrial Visit'];
 
     if (!validDepartments.includes(department) || !validFolders.includes(folder)) {
       console.log('Invalid department or folder');
@@ -334,7 +360,12 @@ router.post('/upload', authMiddleware, upload.array('images', 10), async (req, r
       try {
         console.log('Uploading file:', file.originalname);
         
-        const result = await cloudinary.uploader.upload(file.buffer, {
+        // Get image mime type
+        const mimeType = file.mimetype || 'image/jpeg'
+        const base64Image = file.buffer.toString('base64')
+        const dataUri = `data:${mimeType};base64,${base64Image}`
+        
+        const result = await cloudinary.uploader.upload(dataUri, {
           folder: `gallery/${department.replace(/\s+/g, '_')}/${folder}`,
           resource_type: 'image',
           quality: 'auto',
@@ -389,10 +420,10 @@ router.post('/upload', authMiddleware, upload.array('images', 10), async (req, r
   }
 });
 
-// GET /api/gallery/upload/departments - Get available departments for upload (Admin/Coordinator only)
+// GET /api/gallery/upload/departments - Get available departments for upload (Admin only)
 router.get('/upload/departments', authMiddleware, async (req, res) => {
   try {
-    if (req.user.role !== 'admin' && req.user.role !== 'coordinator') {
+    if (req.user.role !== 'admin') {
       return res.status(403).json({
         success: false,
         error: 'Access denied'
@@ -413,13 +444,13 @@ router.get('/upload/departments', authMiddleware, async (req, res) => {
   }
 });
 
-// DELETE /api/gallery/:imageId - Delete an image (Admin/Coordinator only)
+// DELETE /api/gallery/:imageId - Delete an image (Admin only)
 router.delete('/:imageId', authMiddleware, async (req, res) => {
   try {
-    if (req.user.role !== 'admin' && req.user.role !== 'coordinator') {
+    if (req.user.role !== 'admin') {
       return res.status(403).json({
         success: false,
-        error: 'Access denied. Only admins and coordinators can delete images.'
+        error: 'Access denied. Only admins can delete images.'
       });
     }
 
@@ -428,14 +459,6 @@ router.delete('/:imageId', authMiddleware, async (req, res) => {
       return res.status(404).json({
         success: false,
         error: 'Image not found'
-      });
-    }
-
-    // Check department access for coordinators
-    if (!canAccessDepartment(req.user, image.department)) {
-      return res.status(403).json({
-        success: false,
-        error: 'You can only delete images from your assigned department'
       });
     }
 

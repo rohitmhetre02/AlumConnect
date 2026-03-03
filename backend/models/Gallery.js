@@ -5,6 +5,7 @@ const gallerySchema = new mongoose.Schema({
     type: String,
     required: true,
     enum: [
+      'General',
       'Civil Engineering',
       'Computer Engineering',
       'Information Technology',
@@ -18,7 +19,7 @@ const gallerySchema = new mongoose.Schema({
   folder: {
     type: String,
     required: true,
-    enum: ['Events', 'Campus', 'Traditional Day', 'Alumni Meet', 'Industrial Visit']
+    enum: ['Gallery', 'Events', 'Campus', 'Traditional Day', 'Alumni Meet', 'Industrial Visit']
   },
   imageName: {
     type: String,

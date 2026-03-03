@@ -13,7 +13,7 @@ const News = () => {
   const { role } = useAuth()
   const addToast = useToast()
   const normalizedRole = role?.toLowerCase() ?? null
-  const canPublish = normalizedRole === 'faculty'
+  const canPublish = normalizedRole === 'alumni'
 
   const { items, loading, error, refresh } = useNews()
   const navigate = useNavigate()

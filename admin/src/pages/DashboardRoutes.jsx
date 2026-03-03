@@ -1,5 +1,6 @@
 import { Routes, Route } from 'react-router-dom'
 import AdminDashboard from './AdminDashboard'
+import AdminActivityPage from './AdminActivityPage'
 
 // Dashboard Overview
 import DashboardOverview from './DashboardOverview'
@@ -30,6 +31,7 @@ import NewsManagement from '../components/NewsManagement'
 import CoordinatorNewsReview from '../components/CoordinatorNewsReview'
 import AdminNewsDetail from '../components/AdminNewsDetail'
 import Mentorship from '../components/Mentorship'
+import MentorDetails from '../components/MentorDetails'
 import Gallery from '../components/Gallery'
 import AdminAnalyticsDashboard from '../components/AdminAnalyticsDashboard'
 import Settings from '../components/Settings'
@@ -81,12 +83,14 @@ const DashboardRoutes = () => {
         <Route path="news/:articleId" element={<AdminNewsDetail />} />
         <Route path="news/:articleId/edit" element={<AdminPostArticle />} />
         <Route path="mentorship" element={<Mentorship />} />
+        <Route path="mentorship/:mentorId" element={<MentorDetails />} />
         <Route path="gallery" element={<Gallery />} />
         <Route path="analytics" element={<AdminAnalyticsDashboard />} />
         <Route path="settings" element={<Settings />} />
         <Route path="profile-approval" element={<ProfileApprovalManagement />} />
         <Route path="profile-approval/pending" element={<ProfileApprovalManagement />} />
         <Route path="profile-approval/approved" element={<ProfileApprovalManagement />} />
+        <Route path="activity" element={<AdminActivityPage />} />
         <Route path="post-approval" element={<PostApprovalManagement />} />
         <Route path="post-approval/pending" element={<PostApprovalManagement />} />
         <Route path="post-approval/approved" element={<PostApprovalManagement />} />

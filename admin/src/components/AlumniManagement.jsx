@@ -23,6 +23,11 @@ const AlumniManagement = () => {
   const { memberId: memberIdParam } = useParams()
   const memberId = memberIdParam ? decodeURIComponent(memberIdParam) : null
 
+  // Get current user info for department filtering
+  const adminUser = JSON.parse(localStorage.getItem('adminUser') || '{}')
+  const isCoordinator = adminUser.role === 'coordinator'
+  const userDepartment = adminUser.department || ''
+
   const normalizedAlumni = useMemo(() => {
     return alumni.map((member, index) => {
       const firstName = member.firstName?.trim() ?? ''
@@ -108,11 +113,17 @@ const AlumniManagement = () => {
 
   const confirmStatusChange = async (member, newStatus) => {
     try {
+      // For coordinators, if no newStatus is provided, it means suspend action
+      if (isCoordinator && !newStatus) {
+        newStatus = 'Inactive'
+      }
+
       const response = await put(`/directory/alumni/${member.id}/status`, { status: newStatus })
       setStatusModalMember(null)
       
       // Show success message
-      alert(`Status updated to ${newStatus} successfully!`)
+      const actionText = newStatus === 'Inactive' ? 'suspended' : `status updated to ${newStatus}`
+      alert(`Member ${actionText} successfully!`)
       
       // Refetch data to get updated status
       refetch()
@@ -203,7 +214,19 @@ const AlumniManagement = () => {
     <div className="space-y-6">
       <header>
         <h1 className="text-2xl font-bold text-slate-900">Alumni Management</h1>
-        <p className="text-slate-600">Manage alumni profiles and their professional information.</p>
+        <p className="text-slate-600">
+          Manage alumni profiles and their professional information.
+          {isCoordinator && userDepartment && (
+            <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+              {userDepartment} Department
+            </span>
+          )}
+        </p>
+        {isCoordinator && (
+          <p className="text-sm text-blue-600 mt-1">
+            Showing alumni from your department only
+          </p>
+        )}
       </header>
 
       <section className="rounded-3xl border border-slate-100 bg-white p-6 shadow-soft">
@@ -335,6 +358,7 @@ const AlumniManagement = () => {
                           onProfileView={handleAlumniClick}
                           onStatusChange={handleStatusChange}
                           onDelete={handleDelete}
+                          userRole={adminUser.role || 'admin'}
                         />
                       </div>
                     </td>

@@ -12,6 +12,7 @@
   "dependencies": {
     "@heroicons/react": "^2.2.0",
     "@stripe/stripe-js": "^8.7.0",
+    "axios": "^1.13.6",
     "chart.js": "^4.5.1",
     "lucide-react": "^0.562.0",
     "react": "^19.2.0",

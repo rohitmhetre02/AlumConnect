@@ -52,7 +52,7 @@ const formatNews = (doc) => {
 
 const listNews = async (_req, res) => {
   try {
-    const items = await News.find().sort({ publishedAt: -1, createdAt: -1 }).lean()
+    const items = await News.find({ status: 'published' }).sort({ publishedAt: -1, createdAt: -1 }).lean()
     return res.status(200).json({ success: true, data: items.map(formatNews).filter(Boolean) })
   } catch (error) {
     console.error('listNews error:', error)

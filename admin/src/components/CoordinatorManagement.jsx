@@ -3,6 +3,8 @@ import useDirectoryMembers from '../hooks/useDirectoryMembers'
 import getStatusBadgeClass from '../utils/status'
 import ActionMenu from './ActionMenu'
 import StatusChangeModal from './StatusChangeModal'
+import UserProvisionModal from './UserProvisionModal'
+import useModal from '../hooks/useModal'
 import { put } from '../utils/api'
 
 const CoordinatorManagement = () => {
@@ -10,8 +12,14 @@ const CoordinatorManagement = () => {
   const [filterDepartment, setFilterDepartment] = useState('all')
   const [filterStatus, setFilterStatus] = useState('all')
   const [statusModalMember, setStatusModalMember] = useState(null)
+  const provisionModal = useModal(false)
 
   const { data: coordinators, isLoading, error, refetch } = useDirectoryMembers('coordinator')
+
+  // Get current user info for department filtering
+  const adminUser = JSON.parse(localStorage.getItem('adminUser') || '{}')
+  const isCoordinator = adminUser.role === 'coordinator'
+  const userDepartment = adminUser.department || ''
 
   const normalizedCoordinators = useMemo(() => {
     return coordinators.map((coordinator) => {
@@ -115,6 +123,11 @@ const CoordinatorManagement = () => {
 
   const confirmStatusChange = async (member, newStatus) => {
     try {
+      // For coordinators, if no newStatus is provided, it means suspend action
+      if (isCoordinator && !newStatus) {
+        newStatus = 'Inactive'
+      }
+
       // Map admin status to profile approval status
       let profileApprovalStatus = 'APPROVED' // Default
       if (newStatus === 'Pending') {
@@ -134,7 +147,8 @@ const CoordinatorManagement = () => {
       setStatusModalMember(null)
       
       // Show success message
-      alert(`Status updated to ${newStatus} successfully!`)
+      const actionText = newStatus === 'Inactive' ? 'suspended' : `status updated to ${newStatus}`
+      alert(`Member ${actionText} successfully!`)
       
       // Refetch data to get updated status
       refetch()
@@ -148,7 +162,24 @@ const CoordinatorManagement = () => {
     <div className="space-y-6">
       <header>
         <h1 className="text-2xl font-bold text-slate-900">Coordinator Management</h1>
-        <p className="text-slate-600">Manage coordinator accounts, permissions, and assignments.</p>
+        <p className="text-slate-600">
+          Manage coordinator accounts, permissions, and assignments.
+          {!isCoordinator && userDepartment && (
+            <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+              {userDepartment} Department
+            </span>
+          )}
+        </p>
+        {!isCoordinator && userDepartment && (
+          <p className="text-sm text-blue-600 mt-1">
+            Showing coordinators from your department only
+          </p>
+        )}
+        {isCoordinator && (
+          <p className="text-sm text-green-600 mt-1">
+            Showing all coordinators across all departments
+          </p>
+        )}
       </header>
 
       <section className="rounded-3xl border border-slate-100 bg-white p-6 shadow-soft">
@@ -190,9 +221,17 @@ const CoordinatorManagement = () => {
             </select>
           </div>
 
-          <button className="rounded-2xl bg-primary px-4 py-2.5 text-sm font-semibold text-white shadow-[0_14px_30px_rgba(37,99,235,0.25)] transition hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-primary/50">
-            Add Coordinator
-          </button>
+          {!isCoordinator && (
+            <button 
+              onClick={() => {
+                console.log('Coordinator add button clicked')
+                provisionModal.openModal()
+              }}
+              className="rounded-2xl bg-primary px-4 py-2.5 text-sm font-semibold text-white shadow-[0_14px_30px_rgba(37,99,235,0.25)] transition hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
+            >
+              Add Coordinator
+            </button>
+          )}
         </div>
 
         <div className="overflow-x-auto">
@@ -204,27 +243,27 @@ const CoordinatorManagement = () => {
                 <th className="px-4 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">Contact</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">Status</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">Join Date</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">Assignments</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">Actions</th>
+                {!isCoordinator && <th className="px-4 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">Assignments</th>}
+                {!isCoordinator && <th className="px-4 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">Actions</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {isLoading ? (
                 <tr>
-                  <td colSpan="7" className="px-4 py-12 text-center text-sm text-slate-500">
+                  <td colSpan={isCoordinator ? "5" : "7"} className="px-4 py-12 text-center text-sm text-slate-500">
                     Loading coordinators…
                   </td>
                 </tr>
               ) : error ? (
                 <tr>
-                  <td colSpan="7" className="px-4 py-12 text-center">
+                  <td colSpan={isCoordinator ? "5" : "7"} className="px-4 py-12 text-center text-sm text-slate-500">
                     <p className="text-sm text-red-600 mb-2">Error loading coordinators</p>
                     <p className="text-xs text-slate-500">{error}</p>
                   </td>
                 </tr>
               ) : filteredCoordinators.length === 0 ? (
                 <tr>
-                  <td colSpan="7" className="px-4 py-12 text-center text-sm text-slate-500">
+                  <td colSpan={isCoordinator ? "5" : "7"} className="px-4 py-12 text-center text-sm text-slate-500">
                     No coordinators match the filters.
                   </td>
                 </tr>
@@ -259,20 +298,25 @@ const CoordinatorManagement = () => {
                     <td className="px-4 py-4">
                       <p className="text-sm text-slate-700">{formatDate(coordinator.joinDate)}</p>
                     </td>
-                    <td className="px-4 py-4">
-                      <div className="space-y-1">
-                        <p className="text-sm text-slate-700">{coordinator.assignedEvents} Events</p>
-                        <p className="text-xs text-slate-500">{coordinator.assignedStudents} Students</p>
-                      </div>
-                    </td>
-                    <td className="px-4 py-4">
-                      <div className="flex items-center gap-2">
-                        <ActionMenu
-                          member={coordinator}
-                          onStatusChange={handleStatusChange}
-                        />
-                      </div>
-                    </td>
+                    {!isCoordinator && (
+                      <td className="px-4 py-4">
+                        <div className="space-y-1">
+                          <p className="text-sm text-slate-700">{coordinator.assignedEvents} Events</p>
+                          <p className="text-xs text-slate-500">{coordinator.assignedStudents} Students</p>
+                        </div>
+                      </td>
+                    )}
+                    {!isCoordinator && (
+                      <td className="px-4 py-4">
+                        <div className="flex items-center gap-2">
+                          <ActionMenu
+                            member={coordinator}
+                            onStatusChange={handleStatusChange}
+                            userRole={adminUser.role || 'admin'}
+                          />
+                        </div>
+                      </td>
+                    )}
                   </tr>
                 ))
               )}
@@ -286,6 +330,16 @@ const CoordinatorManagement = () => {
         isOpen={!!statusModalMember}
         onClose={() => setStatusModalMember(null)}
         onConfirm={confirmStatusChange}
+      />
+      
+      <UserProvisionModal
+        isOpen={provisionModal.isOpen}
+        onClose={provisionModal.closeModal}
+        role="coordinator"
+        onSuccess={() => {
+          provisionModal.closeModal()
+          refetch()
+        }}
       />
     </div>
   )

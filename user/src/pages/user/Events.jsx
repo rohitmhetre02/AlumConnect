@@ -56,7 +56,7 @@ const Events = () => {
   const { role } = useAuth()
   const addToast = useToast()
   const normalizedRole = role?.toLowerCase() ?? null
-  const canCreateEvent = normalizedRole === 'alumni' || normalizedRole === 'faculty'
+  const canCreateEvent = normalizedRole === 'alumni'
 
   const { items, loading, error, refresh } = useEvents()
 

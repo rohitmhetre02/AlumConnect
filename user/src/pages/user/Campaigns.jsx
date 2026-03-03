@@ -60,7 +60,7 @@ const Campaigns = () => {
   const navigate = useNavigate()
   const normalizedRole = role?.toLowerCase() ?? null
   const canCreateCampaign = useMemo(() => {
-    return ['alumni', 'faculty', 'admin', 'coordinator'].includes(normalizedRole)
+    return ['alumni', 'admin', 'coordinator'].includes(normalizedRole)
   }, [normalizedRole])
 
   const { items, loading, error, refresh } = useCampaigns()

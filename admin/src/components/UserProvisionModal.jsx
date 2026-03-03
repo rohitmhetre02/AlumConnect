@@ -4,6 +4,17 @@ import PropTypes from 'prop-types'
 import { post } from '../utils/api'
 import { useToast } from '../context/ToastContext'
 
+const DEPARTMENT_OPTIONS = [
+  { value: 'civil', label: 'Civil Engineering' },
+  { value: 'computer', label: 'Computer Engineering' },
+  { value: 'it', label: 'Information Technology' },
+  { value: 'entc', label: 'Electronics & Telecommunication Engineering' },
+  { value: 'mechanical', label: 'Mechanical Engineering' },
+  { value: 'aids', label: 'Artificial Intelligence & Data Science' },
+  { value: 'vlsi', label: 'Electronics Engineering (VLSI Design And Technology)' },
+  { value: 'communication', label: 'Electronics & Communication (Advanced Communication Technology)' },
+]
+
 const TABS = [
   { id: 'single', label: 'Add one' },
   { id: 'bulk', label: 'Bulk upload' },
@@ -63,9 +74,11 @@ const UserProvisionModal = ({ isOpen, onClose, role, onSuccess }) => {
   const toast = useToast()
   const portalRoot = ensurePortalRoot()
 
+  console.log('UserProvisionModal rendered:', { isOpen, role })
+
   const [activeTab, setActiveTab] = useState('single')
 
-  const [singleForm, setSingleForm] = useState({ name: '', email: '' })
+  const [singleForm, setSingleForm] = useState({ name: '', email: '', department: '' })
   const [singleLoading, setSingleLoading] = useState(false)
   const [singleResult, setSingleResult] = useState(null)
 
@@ -78,7 +91,7 @@ const UserProvisionModal = ({ isOpen, onClose, role, onSuccess }) => {
   useEffect(() => {
     if (!isOpen) {
       setActiveTab('single')
-      setSingleForm({ name: '', email: '' })
+      setSingleForm({ name: '', email: '', department: '' })
       setSingleResult(null)
       setBulkFile(null)
       setBulkResult(null)
@@ -97,15 +110,25 @@ const UserProvisionModal = ({ isOpen, onClose, role, onSuccess }) => {
 
     const trimmedEmail = singleForm.email.trim().toLowerCase()
     const trimmedName = singleForm.name.trim()
+    const department = singleForm.department.trim()
 
     if (!trimmedEmail) {
       toast({ type: 'error', message: 'Email is required.' })
       return
     }
 
+    if (!department) {
+      toast({ type: 'error', message: 'Department is required.' })
+      return
+    }
+
     try {
       setSingleLoading(true)
-      const response = await post(`/admin/users/${role}/single`, { email: trimmedEmail, name: trimmedName })
+      const response = await post(`/admin/users/${role}/single`, { 
+        email: trimmedEmail, 
+        name: trimmedName,
+        department: department
+      })
       setSingleResult(response)
       toast({ type: 'success', message: `${roleLabel} user created successfully.` })
       onSuccess?.()
@@ -165,6 +188,22 @@ const UserProvisionModal = ({ isOpen, onClose, role, onSuccess }) => {
           required
           className="w-full rounded-2xl border border-slate-200 px-4 py-2.5 text-sm text-slate-900 shadow-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/40"
         />
+      </div>
+      <div className="space-y-2">
+        <FieldLabel>Department *</FieldLabel>
+        <select
+          value={singleForm.department}
+          onChange={(event) => setSingleForm((prev) => ({ ...prev, department: event.target.value }))}
+          required
+          className="w-full rounded-2xl border border-slate-200 px-4 py-2.5 text-sm text-slate-900 shadow-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/40"
+        >
+          <option value="">Select Department</option>
+          {DEPARTMENT_OPTIONS.map((dept) => (
+            <option key={dept.value} value={dept.value}>
+              {dept.label}
+            </option>
+          ))}
+        </select>
       </div>
       <button
         type="submit"

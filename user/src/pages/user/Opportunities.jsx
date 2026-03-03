@@ -160,7 +160,7 @@ const Opportunities = ({ filter }) => {
   const { user, role } = useAuth()
   const navigate = useNavigate()
   const normalizedRole = role?.toLowerCase() ?? null
-  const canPostOpportunity = normalizedRole === 'alumni' || normalizedRole === 'faculty'
+  const canPostOpportunity = normalizedRole === 'alumni'
   const currentUserId = user?.id || user?._id || user?.profile?._id || user?.profile?.id
   const { items, loading, error, refresh } = useOpportunities()
   const {

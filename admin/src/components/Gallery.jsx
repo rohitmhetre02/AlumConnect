@@ -1,512 +1,168 @@
 import { useState, useEffect } from 'react'
-import FolderIcon from '@heroicons/react/24/outline/FolderIcon'
-import PhotoIcon from '@heroicons/react/24/outline/PhotoIcon'
-import ArrowLeftIcon from '@heroicons/react/24/outline/ArrowLeftIcon'
-import CloudArrowUpIcon from '@heroicons/react/24/outline/CloudArrowUpIcon'
-import TrashIcon from '@heroicons/react/24/outline/TrashIcon'
-import XMarkIcon from '@heroicons/react/24/outline/XMarkIcon'
-import ChevronRightIcon from '@heroicons/react/24/outline/ChevronRightIcon'
-import BuildingOfficeIcon from '@heroicons/react/24/outline/BuildingOfficeIcon'
-import CalendarIcon from '@heroicons/react/24/outline/CalendarIcon'
-import AcademicCapIcon from '@heroicons/react/24/outline/AcademicCapIcon'
-import UserGroupIcon from '@heroicons/react/24/outline/UserGroupIcon'
-import BriefcaseIcon from '@heroicons/react/24/outline/BriefcaseIcon'
+import { get } from '../utils/api'
+import Lightbox from './gallery/Lightbox'
+import UploadModal from './gallery/UploadModal'
 
 const Gallery = () => {
-  const [view, setView] = useState('departments') // departments, folders, images
-  const [selectedDepartment, setSelectedDepartment] = useState('')
-  const [selectedFolder, setSelectedFolder] = useState('')
-  const [departments, setDepartments] = useState([])
-  const [folders, setFolders] = useState([])
   const [images, setImages] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [uploadModalOpen, setUploadModalOpen] = useState(false)
-  const [selectedImages, setSelectedImages] = useState([])
-  const [uploading, setUploading] = useState(false)
-  const [previewImage, setPreviewImage] = useState(null)
-  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState(null)
+  const [lightboxIndex, setLightboxIndex] = useState(0)
+  const [isLightboxOpen, setLightboxOpen] = useState(false)
+  const [isUploadModalOpen, setUploadModalOpen] = useState(false)
+  const [userRole, setUserRole] = useState('')
 
-  // Department icons mapping
-  const getDepartmentIcon = (dept) => {
-    const iconMap = {
-      'Civil Engineering': BuildingOfficeIcon,
-      'Computer Engineering': AcademicCapIcon,
-      'Information Technology': AcademicCapIcon,
-      'Electronics & Telecommunication Engineering': AcademicCapIcon,
-      'Mechanical Engineering': BriefcaseIcon,
-      'Artificial Intelligence & Data Science': AcademicCapIcon,
-      'Electronics Engineering (VLSI Design & Technology)': AcademicCapIcon,
-      'Electronics & Communication (Advanced Communication Technology)': AcademicCapIcon
-    }
-    return iconMap[dept] || BuildingOfficeIcon
-  }
-
-  // Folder icons mapping
-  const getFolderIcon = (folder) => {
-    const iconMap = {
-      'Events': CalendarIcon,
-      'Campus': BuildingOfficeIcon,
-      'Traditional Day': UserGroupIcon,
-      'Alumni Meet': UserGroupIcon,
-      'Industrial Visit': BriefcaseIcon
-    }
-    return iconMap[folder] || FolderIcon
-  }
-
-  // Load departments
-  const loadDepartments = async () => {
-    try {
-      setLoading(true)
-      setError('')
-      const response = await fetch('http://localhost:5000/api/gallery')
-      const data = await response.json()
-      
-      if (data.success) {
-        setDepartments(data.departments)
-      } else {
-        setError(data.error || 'Failed to load departments')
-      }
-    } catch (error) {
-      setError('Failed to connect to server')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  // Load folders for a department
-  const loadFolders = async (department) => {
-    try {
-      setLoading(true)
-      setError('')
-      const response = await fetch(`http://localhost:5000/api/gallery/${encodeURIComponent(department)}/folders`)
-      const data = await response.json()
-      
-      if (data.success) {
-        setFolders(data.folders)
-        setSelectedDepartment(department)
-        setView('folders')
-      } else {
-        setError(data.error || 'Failed to load folders')
-      }
-    } catch (error) {
-      setError('Failed to connect to server')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  // Load images for a folder
-  const loadImages = async (department, folder) => {
-    try {
-      setLoading(true)
-      setError('')
-      const response = await fetch(`http://localhost:5000/api/gallery/${encodeURIComponent(department)}/${encodeURIComponent(folder)}/images`)
-      const data = await response.json()
-      
-      if (data.success) {
-        setImages(data.images)
-        setSelectedDepartment(department)
-        setSelectedFolder(folder)
-        setView('images')
-      } else {
-        setError(data.error || 'Failed to load images')
-      }
-    } catch (error) {
-      setError('Failed to connect to server')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  // Handle image upload
-  const handleUpload = async () => {
-    if (selectedImages.length === 0) {
-      setError('Please select at least one image')
-      return
-    }
-
-    const department = document.getElementById('upload-department').value
-    const folder = document.getElementById('upload-folder').value
-
-    if (!department || !folder) {
-      setError('Please select department and folder')
-      return
-    }
-
-    setUploading(true)
-    try {
-      const formData = new FormData()
-      formData.append('department', department)
-      formData.append('folder', folder)
-      
-      selectedImages.forEach(image => {
-        formData.append('images', image)
-      })
-
-      // Get token from admin-specific storage
-      const token = localStorage.getItem('adminToken') || 
-                   sessionStorage.getItem('adminToken') || 
-                   document.cookie.split(';').find(c => c.trim().startsWith('adminToken='))?.split('=')[1]
-
-      if (!token) {
-        setError('Authentication required. Please login again.')
-        setUploading(false)
-        return
-      }
-
-      const response = await fetch('http://localhost:5000/api/gallery/test-upload', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        },
-        body: formData
-      })
-
-      const data = await response.json()
-      
-      if (data.success) {
-        setUploadModalOpen(false)
-        setSelectedImages([])
-        setError('')
-        
-        // Refresh current view
-        if (view === 'departments') {
-          loadDepartments()
-        } else if (view === 'folders') {
-          loadFolders(selectedDepartment)
-        } else if (view === 'images') {
-          loadImages(selectedDepartment, selectedFolder)
-        }
-      } else {
-        setError(data.error || 'Upload failed')
-      }
-    } catch (error) {
-      setError('Upload failed: ' + error.message)
-    } finally {
-      setUploading(false)
-    }
-  }
-
-  // Handle image deletion
-  const handleDeleteImage = async (imageId) => {
-    if (!confirm('Are you sure you want to delete this image?')) return
-
-    try {
-      // Get token from admin-specific storage
-      const token = localStorage.getItem('adminToken') || 
-                   sessionStorage.getItem('adminToken') || 
-                   document.cookie.split(';').find(c => c.trim().startsWith('adminToken='))?.split('=')[1]
-
-      if (!token) {
-        setError('Authentication required. Please login again.')
-        return
-      }
-
-      const response = await fetch(`http://localhost:5000/api/gallery/${imageId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      })
-
-      const data = await response.json()
-      
-      if (data.success) {
-        loadImages(selectedDepartment, selectedFolder)
-        setError('')
-      } else {
-        setError(data.error || 'Failed to delete image')
-      }
-    } catch (error) {
-      setError('Failed to delete image: ' + error.message)
-    }
-  }
-
-  // Initialize
+  // Get user role from localStorage or token
   useEffect(() => {
-    loadDepartments()
+    const token = localStorage.getItem('adminToken') || sessionStorage.getItem('adminToken')
+    if (token) {
+      try {
+        // Get user data from localStorage
+        const adminUserStr = localStorage.getItem('adminUser')
+        
+        if (adminUserStr) {
+          const adminUser = JSON.parse(adminUserStr)
+          const detectedRole = adminUser.role || 'admin'
+          setUserRole(detectedRole)
+        } else {
+          // Fallback - check if role is stored separately
+          const storedRole = localStorage.getItem('userRole')
+          setUserRole(storedRole || 'admin')
+        }
+      } catch (error) {
+        console.error('Error getting user role:', error)
+        setUserRole('admin') // Fallback to admin
+      }
+    } else {
+      setUserRole('')
+    }
   }, [])
 
+  // Fetch all images
+  const fetchAllImages = async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const response = await get('/gallery/all-images')
+      if (response.success) {
+        setImages(response.images)
+      }
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleOpen = (image) => {
+    const index = images.findIndex((img) => img._id === image._id)
+    setLightboxIndex(index === -1 ? 0 : index)
+    setLightboxOpen(true)
+  }
+
+  const handleUploadSuccess = () => {
+    fetchAllImages()
+  }
+
+  useEffect(() => {
+    fetchAllImages()
+  }, [])
+
+  const isAdmin = userRole === 'admin'
+
   return (
-    <div className="space-y-6">
-      <header>
-        <h1 className="text-2xl font-bold text-slate-900">Gallery</h1>
-        <p className="text-slate-600">Manage featured campus memories, alumni events, and showcase moments.</p>
-      </header>
-
-      <section className="rounded-3xl border border-slate-100 bg-white p-6 shadow-soft">
-        {/* Navigation Header */}
-        <div className="mb-6 flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            {view !== 'departments' && (
-              <button
-                onClick={() => {
-                  if (view === 'images') {
-                    loadFolders(selectedDepartment)
-                  } else {
-                    loadDepartments()
-                  }
-                }}
-                className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
-              >
-                <ArrowLeftIcon className="h-5 w-5" />
-              </button>
-            )}
-            <div>
-              <h2 className="text-xl font-semibold text-gray-900">
-                {view === 'departments' && 'Departments'}
-                {view === 'folders' && selectedDepartment}
-                {view === 'images' && `${selectedDepartment} / ${selectedFolder}`}
-              </h2>
-              <p className="text-gray-600 text-sm">
-                {view === 'departments' && 'Browse department galleries'}
-                {view === 'folders' && 'Select a folder to view images'}
-                {view === 'images' && `Showing ${images.length} images`}
-              </p>
-            </div>
+    <div className="min-h-screen bg-white">
+      {/* Header */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Gallery</h1>
+            <p className="text-gray-600 mt-1">Manage campus images and media</p>
           </div>
-          
-          <button
-            onClick={() => setUploadModalOpen(true)}
-            className="flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            <CloudArrowUpIcon className="h-5 w-5" />
-            <span>Upload Media</span>
-          </button>
+          {isAdmin && (
+            <button
+              onClick={() => setUploadModalOpen(true)}
+              className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              Upload Images
+            </button>
+          )}
         </div>
-
-        {/* Error Display */}
-        {error && (
-          <div className="mb-6 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-600">
-            {error}
-          </div>
-        )}
 
         {/* Loading State */}
         {loading && (
-          <div className="flex justify-center items-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          <div className="flex justify-center items-center py-20">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
           </div>
         )}
 
-        {/* Departments View */}
-        {view === 'departments' && !loading && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {departments.map((dept) => {
-              const Icon = getDepartmentIcon(dept.department)
-              return (
-                <div
-                  key={dept.department}
-                  onClick={() => loadFolders(dept.department)}
-                  className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow cursor-pointer p-6 border border-slate-100"
-                >
-                  <div className="flex items-center justify-between mb-4">
-                    <Icon className="h-8 w-8 text-blue-600" />
-                    <ChevronRightIcon className="h-5 w-5 text-gray-400" />
-                  </div>
-                  <h3 className="font-semibold text-gray-900 mb-2">{dept.department}</h3>
-                  <p className="text-sm text-gray-600">{dept.imageCount} images</p>
-                </div>
-              )
-            })}
+        {/* Error State */}
+        {error && (
+          <div className="text-center py-20">
+            <p className="text-red-600">Error loading images: {error}</p>
           </div>
         )}
 
-        {/* Folders View */}
-        {view === 'folders' && !loading && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {folders.map((folder) => {
-              const Icon = getFolderIcon(folder.folder)
-              return (
-                <div
-                  key={folder.folder}
-                  onClick={() => loadImages(selectedDepartment, folder.folder)}
-                  className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow cursor-pointer p-6 border border-slate-100"
-                >
-                  <div className="flex items-center justify-between mb-4">
-                    <Icon className="h-8 w-8 text-green-600" />
-                    <ChevronRightIcon className="h-5 w-5 text-gray-400" />
-                  </div>
-                  <h3 className="font-semibold text-gray-900 mb-2">{folder.folder}</h3>
-                  <p className="text-sm text-gray-600">{folder.imageCount} images</p>
+        {/* Images Grid */}
+        {!loading && !error && (
+          <>
+            {images.length === 0 ? (
+              <div className="text-center py-20">
+                <div className="text-gray-400 mb-4">
+                  <svg className="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
                 </div>
-              )
-            })}
-          </div>
-        )}
-
-        {/* Images View */}
-        {view === 'images' && !loading && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-            {images.map((image) => (
-              <div key={image._id} className="relative group">
-                <div
-                  onClick={() => setPreviewImage(image)}
-                  className="aspect-square rounded-lg overflow-hidden bg-gray-100 cursor-pointer hover:opacity-95 transition-opacity"
-                >
-                  <img
-                    src={image.imageUrl}
-                    alt={image.imageName}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-                
-                <button
-                  onClick={() => handleDeleteImage(image._id)}
-                  className="absolute top-2 right-2 p-2 bg-red-600 text-white rounded-lg opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-700"
-                >
-                  <TrashIcon className="h-4 w-4" />
-                </button>
-                
-                <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/60 to-transparent">
-                  <p className="text-white text-xs truncate">{image.imageName}</p>
-                </div>
+                <h3 className="text-lg font-medium text-gray-900 mb-2">No images found</h3>
+                <p className="text-gray-500">No images available in the gallery</p>
+                {isAdmin && (
+                  <button
+                    onClick={() => setUploadModalOpen(true)}
+                    className="mt-4 bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    Upload First Images
+                  </button>
+                )}
               </div>
-            ))}
-          </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                {images.map((image) => (
+                  <div
+                    key={image._id}
+                    onClick={() => handleOpen(image)}
+                    className="group cursor-pointer overflow-hidden rounded-lg shadow-md hover:shadow-lg transition-all duration-300 ease-in-out transform hover:scale-105"
+                  >
+                    <div className="aspect-square bg-gray-100">
+                      <img
+                        src={image.imageUrl}
+                        alt={image.imageName}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
         )}
+      </div>
 
-        {/* Empty State */}
-        {!loading && ((view === 'departments' && departments.length === 0) ||
-                     (view === 'folders' && folders.length === 0) ||
-                     (view === 'images' && images.length === 0)) && (
-          <div className="text-center py-12">
-            <PhotoIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-600">No images found</p>
-          </div>
-        )}
-      </section>
+      {/* Lightbox */}
+      <Lightbox
+        images={images.map(img => ({ url: img.imageUrl, alt: img.imageName }))}
+        startIndex={lightboxIndex}
+        isOpen={isLightboxOpen}
+        onClose={() => setLightboxOpen(false)}
+      />
 
       {/* Upload Modal */}
-      {uploadModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6 border-b">
-              <div className="flex items-center justify-between">
-                <h2 className="text-xl font-semibold">Upload Images</h2>
-                <button
-                  onClick={() => setUploadModalOpen(false)}
-                  className="p-2 hover:bg-gray-100 rounded-lg"
-                >
-                  <XMarkIcon className="h-5 w-5" />
-                </button>
-              </div>
-            </div>
-
-            <div className="p-6 space-y-4">
-              {/* Department Selection */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Department
-                </label>
-                <select
-                  id="upload-department"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                >
-                  <option value="">Select Department</option>
-                  {[
-                    'Civil Engineering',
-                    'Computer Engineering',
-                    'Information Technology',
-                    'Electronics & Telecommunication Engineering',
-                    'Mechanical Engineering',
-                    'Artificial Intelligence & Data Science',
-                    'Electronics Engineering (VLSI Design & Technology)',
-                    'Electronics & Communication (Advanced Communication Technology)'
-                  ].map((dept) => (
-                    <option key={dept} value={dept}>{dept}</option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Folder Selection */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Folder
-                </label>
-                <select
-                  id="upload-folder"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                >
-                  <option value="">Select Folder</option>
-                  <option value="Events">Events</option>
-                  <option value="Campus">Campus</option>
-                  <option value="Traditional Day">Traditional Day</option>
-                  <option value="Alumni Meet">Alumni Meet</option>
-                  <option value="Industrial Visit">Industrial Visit</option>
-                </select>
-              </div>
-
-              {/* File Upload */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Images (Max 10 files, 10MB each)
-                </label>
-                <input
-                  type="file"
-                  multiple
-                  accept="image/*"
-                  onChange={(e) => setSelectedImages(Array.from(e.target.files))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                />
-              </div>
-
-              {/* Selected Files Preview */}
-              {selectedImages.length > 0 && (
-                <div>
-                  <p className="text-sm font-medium text-gray-700 mb-2">
-                    Selected Files ({selectedImages.length})
-                  </p>
-                  <div className="space-y-2 max-h-32 overflow-y-auto">
-                    {selectedImages.map((file, index) => (
-                      <div key={index} className="text-sm text-gray-600">
-                        {file.name} ({(file.size / 1024 / 1024).toFixed(2)} MB)
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div className="p-6 border-t flex justify-end space-x-3">
-              <button
-                onClick={() => setUploadModalOpen(false)}
-                className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleUpload}
-                disabled={uploading}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
-              >
-                {uploading ? 'Uploading...' : 'Upload'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Image Preview Modal */}
-      {previewImage && (
-        <div 
-          className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center p-4 z-50"
-          onClick={() => setPreviewImage(null)}
-        >
-          <div className="relative max-w-4xl max-h-[90vh]">
-            <img
-              src={previewImage.imageUrl}
-              alt={previewImage.imageName}
-              className="max-w-full max-h-full object-contain"
-            />
-            <button
-              onClick={() => setPreviewImage(null)}
-              className="absolute top-4 right-4 p-2 bg-white rounded-full hover:bg-gray-100"
-            >
-              <XMarkIcon className="h-6 w-6" />
-            </button>
-          </div>
-        </div>
+      {isAdmin && (
+        <UploadModal
+          isOpen={isUploadModalOpen}
+          onClose={() => setUploadModalOpen(false)}
+          onSuccess={handleUploadSuccess}
+          isAdmin={true}
+        />
       )}
     </div>
   )

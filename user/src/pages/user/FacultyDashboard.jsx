@@ -1,48 +1,114 @@
+import React, { useState, useEffect } from 'react'
 import { useAuth } from '../../context/AuthContext'
-import { useState } from 'react'
-import useFacultyDashboard from '../../hooks/useFacultyDashboard'
-import InteractiveCalendar from '../../components/shared/InteractiveCalendar'
-import useCalendarNotes from '../../hooks/useCalendarNotes'
+import { get } from '../../utils/api'
 
 const FacultyDashboard = () => {
   const { user } = useAuth()
-  const [selectedDate, setSelectedDate] = useState(null)
-  const { overviewStats, studentActivities, alumniCoordination, eventsApprovals, engagementMetrics, calendarData, loading, error, refresh } = useFacultyDashboard(user)
-  const { notes, addNote, deleteNote, loading: notesLoading } = useCalendarNotes()
+  const [searchTerm, setSearchTerm] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+  
+  // Real data states
+  const [counts, setCounts] = useState({
+    students: 0,
+    alumni: 0,
+    opportunities: 0,
+    events: 0
+  })
+  
+  const [upcomingEvents, setUpcomingEvents] = useState([])
+  const [recentActivities, setRecentActivities] = useState([])
 
-  const colorClasses = {
-    blue: "bg-blue-50 text-blue-600 border-blue-200",
-    green: "bg-green-50 text-green-600 border-green-200",
-    purple: "bg-purple-50 text-purple-600 border-purple-200",
-    orange: "bg-orange-50 text-orange-600 border-orange-200",
+  // Fetch real data from backend
+  const fetchDashboardData = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+      
+      // Fetch all data in parallel
+      const [
+        studentsRes,
+        alumniRes,
+        opportunitiesRes,
+        eventsRes,
+        eventsResponse,
+        activitiesResponse
+      ] = await Promise.all([
+        get('/api/faculty/students/count'),
+        get('/api/faculty/alumni/count'),
+        get('/api/faculty/opportunities/count'),
+        get('/api/faculty/events/count'),
+        get('/api/faculty/events/upcoming'),
+        get('/api/faculty/activities/department')
+      ])
+
+      setCounts({
+        students: studentsRes.count || 0,
+        alumni: alumniRes.count || 0,
+        opportunities: opportunitiesRes.count || 0,
+        events: eventsRes.count || 0
+      })
+
+      setUpcomingEvents(eventsResponse || [])
+      setRecentActivities(activitiesResponse || [])
+
+    } catch (err) {
+      console.error('Error fetching dashboard data:', err)
+      setError('Failed to load dashboard data. Please try again.')
+    } finally {
+      setLoading(false)
+    }
   }
 
-  const statusColorClasses = {
-    pending: "bg-yellow-100 text-yellow-700",
-    approved: "bg-green-100 text-green-700",
-    completed: "bg-blue-100 text-blue-700",
-    rejected: "bg-red-100 text-red-700",
-    under_review: "bg-amber-100 text-amber-700",
+  useEffect(() => {
+    fetchDashboardData()
+  }, [])
+
+  const formatDate = (dateString) => {
+    const date = new Date(dateString)
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+  }
+
+  const getActivityColor = (type) => {
+    switch(type) {
+      case 'student': return 'bg-blue-100 text-blue-700'
+      case 'alumni': return 'bg-purple-100 text-purple-700'
+      case 'opportunity': return 'bg-green-100 text-green-700'
+      case 'event': return 'bg-orange-100 text-orange-700'
+      case 'news': return 'bg-red-100 text-red-700'
+      case 'campaign': return 'bg-pink-100 text-pink-700'
+      default: return 'bg-gray-100 text-gray-700'
+    }
+  }
+
+  const getActivityIcon = (type) => {
+    switch(type) {
+      case 'student': return '📝'
+      case 'alumni': return '🎓'
+      case 'opportunity': return '💼'
+      case 'event': return '📅'
+      case 'news': return '📰'
+      case 'campaign': return '🎯'
+      default: return '📋'
+    }
   }
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-slate-600">Loading dashboard...</p>
-        </div>
+      <div className="flex items-center justify-center min-h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <p className="ml-4 text-slate-600">Loading dashboard...</p>
       </div>
     )
   }
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 flex items-center justify-center">
+      <div className="flex items-center justify-center min-h-64">
         <div className="text-center">
-          <p className="text-red-600 mb-4">Error loading dashboard data</p>
+          <p className="text-red-600 mb-4">{error}</p>
           <button 
-            onClick={refresh}
+            onClick={fetchDashboardData}
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
           >
             Try Again
@@ -52,336 +118,162 @@ const FacultyDashboard = () => {
     )
   }
 
-  const getEventColor = (type) => {
-    switch(type) {
-      case 'event': return 'bg-blue-500'
-      case 'job': return 'bg-green-500'
-      case 'mentorship': return 'bg-purple-500'
-      default: return 'bg-gray-500'
-    }
-  }
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-gray-50">
-      {/* Header - Full Width */}
-      <div className="bg-white shadow-sm border-b border-slate-100">
-        <div className="w-full px-4 py-6">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-            <div>
-              <h1 className="text-3xl font-bold text-slate-900">
-                Welcome back, {user?.name?.split(' ')[0] || 'Faculty'}! 👨‍🏫
-              </h1>
-              <p className="text-slate-600 mt-1">
-                {user?.profile?.role || 'Professor'} • {user?.profile?.department || 'Computer Science'}
-              </p>
-            </div>
-            <div className="w-full lg:w-96">
-              <div className="relative">
-                <input
-                  type="text"
-                  placeholder="Search students, alumni, jobs, events..."
-                  className="w-full px-4 py-3 pl-12 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-                <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
-              </div>
-            </div>
+    <div className="space-y-6">
+      <header>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900">Faculty Dashboard</h1>
+            <p className="text-slate-600">Manage your department and track student activities.</p>
           </div>
-          
-          {/* Quick Access Buttons */}
-          <div className="flex flex-wrap gap-3 mt-4">
-            <button className="px-4 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-700 transition-colors flex items-center gap-2">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 17v1a1 1 0 001 1h4a1 1 0 001-1v-1m3-2V8a2 2 0 00-2-2H8a2 2 0 00-2 2v6m9 4h.01" />
-              </svg>
-              View Reports
-            </button>
-            <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-              Manage Events
-            </button>
-            <button className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center gap-2">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-              </svg>
-              Analytics
-            </button>
+          <button
+            onClick={fetchDashboardData}
+            disabled={loading}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+          >
+            <svg className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            Refresh
+          </button>
+        </div>
+      </header>
+
+      {/* Counts Section */}
+      <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-soft">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-slate-500">Students</p>
+              <p className="text-2xl font-bold text-slate-900">{counts.students}</p>
+            </div>
+            <span className="grid h-12 w-12 place-items-center rounded-full bg-blue-100 text-lg font-semibold text-blue-600">
+              👥
+            </span>
           </div>
         </div>
-      </div>
-
-      <div className="w-full px-4 py-8">
-        {/* Overview Cards - Full Width */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <div className={`rounded-2xl border p-6 bg-white shadow-sm hover:shadow-md transition-all ${colorClasses.blue}`}>
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-sm font-medium text-slate-600">Students Under Guidance</p>
-                <p className="text-2xl font-bold text-slate-900 mt-1">{overviewStats.studentsUnderGuidance}</p>
-                <p className="text-sm text-slate-500 mt-1">{overviewStats.studentsTrend}</p>
-              </div>
-              <div className="p-3 rounded-xl bg-white/50">
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-                </svg>
-              </div>
+        <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-soft">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-slate-500">Alumni</p>
+              <p className="text-2xl font-bold text-slate-900">{counts.alumni}</p>
             </div>
-          </div>
-
-          <div className={`rounded-2xl border p-6 bg-white shadow-sm hover:shadow-md transition-all ${colorClasses.green}`}>
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-sm font-medium text-slate-600">Alumni Linked to Department</p>
-                <p className="text-2xl font-bold text-slate-900 mt-1">{overviewStats.alumniLinkedToDepartment}</p>
-                <p className="text-sm text-slate-500 mt-1">{overviewStats.alumniTrend}</p>
-              </div>
-              <div className="p-3 rounded-xl bg-white/50">
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                </svg>
-              </div>
-            </div>
-          </div>
-
-          <div className={`rounded-2xl border p-6 bg-white shadow-sm hover:shadow-md transition-all ${colorClasses.purple}`}>
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-sm font-medium text-slate-600">Active Department Events</p>
-                <p className="text-2xl font-bold text-slate-900 mt-1">{overviewStats.activeDepartmentEvents}</p>
-                <p className="text-sm text-slate-500 mt-1">{overviewStats.eventsTrend}</p>
-              </div>
-              <div className="p-3 rounded-xl bg-white/50">
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
-              </div>
-            </div>
-          </div>
-
-          <div className={`rounded-2xl border p-6 bg-white shadow-sm hover:shadow-md transition-all ${colorClasses.orange}`}>
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-sm font-medium text-slate-600">Pending Requests / Approvals</p>
-                <p className="text-2xl font-bold text-slate-900 mt-1">{overviewStats.pendingRequests}</p>
-                <p className="text-sm text-slate-500 mt-1">{overviewStats.requestsTrend}</p>
-              </div>
-              <div className="p-3 rounded-xl bg-white/50">
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 17v1a1 1 0 001 1h4a1 1 0 001-1v-1m3-2V8a2 2 0 00-2-2H8a2 2 0 00-2 2v6m9 4h.01" />
-                </svg>
-              </div>
-            </div>
+            <span className="grid h-12 w-12 place-items-center rounded-full bg-purple-100 text-lg font-semibold text-purple-600">
+              🎓
+            </span>
           </div>
         </div>
-
-        {/* Main Content Grid - Full Width */}
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
-          {/* Left Column - Student Activities and Alumni Coordination */}
-          <div className="xl:col-span-2 space-y-8">
-            {/* Student Activity & Monitoring Section */}
+        <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-soft">
+          <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-xl font-bold text-slate-900 mb-4">Student Activity & Monitoring</h2>
-              <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead className="bg-slate-50 border-b border-slate-200">
-                      <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Student Name</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Activity Type</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Status</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Last Updated</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-200">
-                      {studentActivities.map((student, index) => (
-                        <tr key={index} className="hover:bg-slate-50 transition-colors">
-                          <td className="px-6 py-4 text-sm font-medium text-slate-900">{student.name}</td>
-                          <td className="px-6 py-4 text-sm text-slate-600">{student.activity}</td>
-                          <td className="px-6 py-4">
-                            <span className={`px-2 py-1 text-xs font-medium rounded-full ${statusColorClasses[student.status]}`}>
-                              {student.status}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 text-sm text-slate-600">{student.date}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
+              <p className="text-sm font-medium text-slate-500">Opportunities</p>
+              <p className="text-2xl font-bold text-slate-900">{counts.opportunities}</p>
             </div>
-
-            {/* Alumni Coordination Section */}
-            <div>
-              <h2 className="text-xl font-bold text-slate-900 mb-4">Alumni Coordination</h2>
-              <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead className="bg-slate-50 border-b border-slate-200">
-                      <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Alumni Name</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Industry</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Mentorship</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Events</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-200">
-                      {alumniCoordination.map((alumni, index) => (
-                        <tr key={index} className="hover:bg-slate-50 transition-colors">
-                          <td className="px-6 py-4 text-sm font-medium text-slate-900">{alumni.name}</td>
-                          <td className="px-6 py-4 text-sm text-slate-600">{alumni.industry}</td>
-                          <td className="px-6 py-4">
-                            <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                              alumni.mentorship === 'Active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
-                            }`}>
-                              {alumni.mentorship}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 text-sm text-slate-600">{alumni.events}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-
-            {/* Events & Approvals Section */}
-            <div>
-              <h2 className="text-xl font-bold text-slate-900 mb-4">Events & Approvals</h2>
-              <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead className="bg-slate-50 border-b border-slate-200">
-                      <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Event Name</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Date</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Organizer</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Status</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-200">
-                      {eventsApprovals.map((event, index) => (
-                        <tr key={index} className="hover:bg-slate-50 transition-colors">
-                          <td className="px-6 py-4 text-sm font-medium text-slate-900">{event.name}</td>
-                          <td className="px-6 py-4 text-sm text-slate-600">{event.date}</td>
-                          <td className="px-6 py-4 text-sm text-slate-600">{event.organizer}</td>
-                          <td className="px-6 py-4">
-                            <span className={`px-2 py-1 text-xs font-medium rounded-full ${statusColorClasses[event.status]}`}>
-                              {event.status}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4">
-                            <div className="flex gap-2">
-                              {event.status === 'pending' && (
-                                <>
-                                  <button className="px-3 py-1 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700">
-                                    Approve
-                                  </button>
-                                  <button className="px-3 py-1 text-sm border border-slate-200 rounded-lg hover:bg-slate-50">
-                                    Review
-                                  </button>
-                                </>
-                              )}
-                              <button className="px-3 py-1 text-sm border border-slate-200 rounded-lg hover:bg-slate-50">
-                                View Details
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Right Column - Interactive Calendar and Analytics */}
-          <div className="space-y-6">
-            {/* Interactive Calendar Section */}
-            <div>
-              <h2 className="text-xl font-bold text-slate-900 mb-4">Interactive Calendar</h2>
-              <InteractiveCalendar 
-                initialNotes={notes}
-                onNotesChange={(updatedNotes) => {
-                  // Handle notes update if needed
-                  console.log('Calendar notes updated:', updatedNotes)
-                }}
-              />
-            </div>
-
-            {/* Calendar Legend */}
-            <div>
-              <h3 className="text-lg font-semibold text-slate-900 mb-3">Calendar Legend</h3>
-              <div className="bg-white rounded-xl border border-slate-200 p-4 space-y-2">
-                <div className="flex items-center gap-3">
-                  <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-                  <span className="text-sm text-slate-600">Events</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                  <span className="text-sm text-slate-600">Job-Related Activities</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
-                  <span className="text-sm text-slate-600">Mentorship Sessions</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Reports & Insights Section */}
-            <div>
-              <h2 className="text-xl font-bold text-slate-900 mb-4">Reports & Insights</h2>
-              <div className="bg-white rounded-xl border border-slate-200 p-5">
-                <h3 className="text-lg font-semibold text-slate-900 mb-4">Engagement Metrics</h3>
-                
-                {/* Student Engagement */}
-                <div className="mb-4">
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="text-sm font-medium text-slate-700">Student Engagement</span>
-                    <span className="text-sm font-bold text-slate-900">{engagementMetrics.studentEngagement}%</span>
-                  </div>
-                  <div className="w-full bg-slate-200 rounded-full h-2">
-                    <div className="bg-blue-600 h-2 rounded-full" style={{width: `${engagementMetrics.studentEngagement}%`}}></div>
-                  </div>
-                </div>
-
-                {/* Alumni Participation */}
-                <div className="mb-4">
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="text-sm font-medium text-slate-700">Alumni Participation</span>
-                    <span className="text-sm font-bold text-slate-900">{engagementMetrics.alumniParticipation}%</span>
-                  </div>
-                  <div className="w-full bg-slate-200 rounded-full h-2">
-                    <div className="bg-green-600 h-2 rounded-full" style={{width: `${engagementMetrics.alumniParticipation}%`}}></div>
-                  </div>
-                </div>
-
-                {/* Event Success */}
-                <div className="mb-4">
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="text-sm font-medium text-slate-700">Event Success Rate</span>
-                    <span className="text-sm font-bold text-slate-900">{engagementMetrics.eventSuccess}%</span>
-                  </div>
-                  <div className="w-full bg-slate-200 rounded-full h-2">
-                    <div className="bg-purple-600 h-2 rounded-full" style={{width: `${engagementMetrics.eventSuccess}%`}}></div>
-                  </div>
-                </div>
-
-                <div className="mt-4 pt-4 border-t border-slate-200">
-                  <button className="w-full px-4 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-700 transition-colors">
-                    View Full Report
-                  </button>
-                </div>
-              </div>
-            </div>
+            <span className="grid h-12 w-12 place-items-center rounded-full bg-green-100 text-lg font-semibold text-green-600">
+              💼
+            </span>
           </div>
         </div>
+        <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-soft">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-slate-500">Events</p>
+              <p className="text-2xl font-bold text-slate-900">{counts.events}</p>
+            </div>
+            <span className="grid h-12 w-12 place-items-center rounded-full bg-orange-100 text-lg font-semibold text-orange-600">
+              📅
+            </span>
+          </div>
+        </div>
+      </section>
+
+      <div className="grid gap-6 lg:grid-cols-2">
+        {/* Upcoming Events */}
+        <section className="rounded-3xl border border-slate-100 bg-white p-6 shadow-soft">
+          <div className="mb-6 flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-slate-900">Upcoming Events</h2>
+            <button className="text-sm text-blue-600 hover:text-blue-700 font-medium">View All</button>
+          </div>
+          <div className="space-y-4">
+            {upcomingEvents.length > 0 ? (
+              upcomingEvents.map((event) => (
+                <article
+                  key={event._id || event.id}
+                  className="rounded-2xl border border-slate-100 bg-white p-4 shadow-soft transition hover:shadow-lg"
+                >
+                  <div className="flex items-start gap-4">
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-slate-900">{event.title}</h3>
+                      <div className="mt-2 space-y-1 text-sm text-slate-600">
+                        <div className="flex items-center gap-2">
+                          <svg className="h-4 w-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                          </svg>
+                          <span>{formatDate(event.date)}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <svg className="h-4 w-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          <span>{event.time}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <svg className="h-4 w-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                          </svg>
+                          <span>{event.location}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex flex-col items-end">
+                      <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-1 text-xs font-medium text-slate-700">
+                        {event.attendees || 0} attending
+                      </span>
+                    </div>
+                  </div>
+                </article>
+              ))
+            ) : (
+              <div className="text-center py-8">
+                <p className="text-slate-500">No upcoming events found</p>
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* Recent Department Activities */}
+        <section className="rounded-3xl border border-slate-100 bg-white p-6 shadow-soft">
+          <div className="mb-6 flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-slate-900">Recent Department Activities</h2>
+            <button className="text-sm text-blue-600 hover:text-blue-700 font-medium">View All</button>
+          </div>
+          <div className="space-y-4">
+            {recentActivities.length > 0 ? (
+              recentActivities.slice(0, 5).map((activity) => (
+                <article
+                  key={activity._id || activity.id}
+                  className="flex items-start gap-3 rounded-2xl border border-slate-100 bg-white p-4 shadow-soft transition hover:shadow-lg"
+                >
+                  <span className="text-2xl">{getActivityIcon(activity.type)}</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-slate-900">{activity.title}</p>
+                    <div className="mt-1 flex items-center gap-2">
+                      <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${getActivityColor(activity.type)}`}>
+                        {activity.type}
+                      </span>
+                      <span className="text-xs text-slate-500">{activity.time}</span>
+                    </div>
+                  </div>
+                </article>
+              ))
+            ) : (
+              <div className="text-center py-8">
+                <p className="text-slate-500">No recent activities found</p>
+              </div>
+            )}
+          </div>
+        </section>
       </div>
     </div>
   )

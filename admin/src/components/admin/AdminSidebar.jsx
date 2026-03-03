@@ -151,21 +151,45 @@ const AdminSidebar = ({ isMobile = false, onClose }) => {
 
     return (
       <div className="mb-1">
-        <div 
-          onClick={() => hasSub && !isAccessBlocked ? toggleMenu(label) : null}
-          className={`flex items-center justify-between px-4 py-2.5 rounded-lg transition-all cursor-pointer group ${
-            isAccessBlocked 
-              ? 'opacity-50 cursor-not-allowed text-slate-400' 
-              : isActive(path) && !hasSub 
-                ? 'bg-blue-50 text-blue-600 font-medium' 
+        {hasSub ? (
+          // Menu with sub-options
+          <div 
+            onClick={() => !isAccessBlocked && toggleMenu(label)}
+            className={`flex items-center justify-between px-4 py-2.5 rounded-lg transition-all cursor-pointer group ${
+              isAccessBlocked 
+                ? 'opacity-50 cursor-not-allowed text-slate-400' 
                 : 'text-slate-600 hover:bg-slate-100'
-          }`}
-        >
-          <NavLink to={hasSub || isAccessBlocked ? '#' : path} className="flex items-center flex-1" onClick={(e) => isAccessBlocked && e.preventDefault()}>
+            }`}
+          >
             <span className={`mr-3 ${
               isAccessBlocked 
                 ? 'text-slate-400' 
-                : isActive(path) && !hasSub 
+                : 'text-slate-400 group-hover:text-slate-600'
+            }`}>
+              {icon}
+            </span>
+            <span className="text-sm">{label}</span>
+            <span className={`text-slate-400 ${isAccessBlocked ? 'opacity-50' : ''}`}>
+              {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+            </span>
+          </div>
+        ) : (
+          // Simple navigation link
+          <NavLink
+            to={isAccessBlocked ? '#' : path}
+            onClick={(e) => isAccessBlocked && e.preventDefault()}
+            className={`flex items-center px-4 py-2.5 rounded-lg transition-all group ${
+              isAccessBlocked 
+                ? 'opacity-50 cursor-not-allowed text-slate-400' 
+                : isActive(path)
+                  ? 'bg-blue-50 text-blue-600 font-medium' 
+                  : 'text-slate-600 hover:bg-slate-100'
+            }`}
+          >
+            <span className={`mr-3 ${
+              isAccessBlocked 
+                ? 'text-slate-400' 
+                : isActive(path)
                   ? 'text-blue-600' 
                   : 'text-slate-400 group-hover:text-slate-600'
             }`}>
@@ -173,12 +197,7 @@ const AdminSidebar = ({ isMobile = false, onClose }) => {
             </span>
             <span className="text-sm">{label}</span>
           </NavLink>
-          {hasSub && (
-            <span className={`text-slate-400 ${isAccessBlocked ? 'opacity-50' : ''}`}>
-              {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-            </span>
-          )}
-        </div>
+        )}
         
         {hasSub && isExpanded && !isAccessBlocked && (
           <div className="ml-9 mt-1 space-y-1 border-l border-slate-200">
