@@ -1,6 +1,16 @@
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import PublicLayout from './layouts/PublicLayout'
+import AppRoutes from './routes/AppRoutes'
 import Home from './pages/Home'
+import About from './pages/About'
+import AlumniDirectory from './pages/AlumniDirectory'
+import PublicStudentDirectory from './pages/PublicStudentDirectory'
+import PublicAlumniDirectory from './pages/PublicAlumniDirectory'
+import PublicContact from './pages/PublicContact'
+import PublicCareerOpportunities from './pages/PublicCareerOpportunities'
+import PublicMentorAStudent from './pages/PublicMentorAStudent'
+import PublicUpcomingEvents from './pages/PublicUpcomingEvents'
+import PublicCampaigns from './pages/PublicCampaigns'
 import Events from './pages/Events'
 import Mentorship from './pages/Mentorship'
 import Gallery from './pages/Gallery'
@@ -37,7 +47,6 @@ import CampaignDetail from './pages/user/CampaignDetailNew'
 import Settings from './pages/user/Settings'
 import UserGallery from './pages/user/Gallery'
 import StudentsDirectory from './pages/StudentsDirectory'
-import AlumniDirectory from './pages/AlumniDirectory'
 import FacultyDirectory from './pages/FacultyDirectory'
 import CoordinatorsDirectory from './pages/CoordinatorsDirectory'
 import Opportunities from './pages/user/Opportunities'
@@ -148,9 +157,16 @@ function App() {
         <Routes>
           <Route element={<PublicLayout />}>
             <Route index element={<Home />} />
+            <Route path="about" element={<About />} />
+            <Route path="student-directory" element={<PublicStudentDirectory />} />
+            <Route path="alumni-directory" element={<PublicAlumniDirectory />} />
+            <Route path="contact" element={<PublicContact />} />
+            <Route path="opportunities" element={<PublicCareerOpportunities />} />
+            <Route path="mentor-student" element={<PublicMentorAStudent />} />
+            <Route path="events" element={<PublicUpcomingEvents />} />
+            <Route path="campaigns" element={<PublicCampaigns />} />
             <Route path="directory" element={<Navigate to="/dashboard/directory/students" replace />} />
             <Route path="directory/:profileId" element={<DirectoryProfile />} />
-            <Route path="events" element={<Events />} />
             <Route path="mentorship" element={<Mentorship />} />
             <Route path="gallery" element={<Gallery />} />
             <Route path="gallery/:department" element={<Gallery />} />

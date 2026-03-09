@@ -7,34 +7,34 @@ import heroFour from '../../assets/104.webp'
 const slides = [
   {
     image: heroOne,
-    badge: 'Practice',
-    title: 'Crack challenges with confidence',
-    description: 'Mock interviews, coding sprints, and intensive prep to sharpen your skills.',
-    accent: 'from peer champions',
+    badge: 'Connect',
+    title: 'Build your alumni network',
+    description: 'Connect with fellow graduates, expand your professional network, and create lasting relationships.',
+    accent: 'from alumni community',
     background: 'linear-gradient(180deg, #F8C531 0%, #F5951D 100%)',
   },
   {
     image: heroTwo,
     badge: 'Mentorship',
-    title: 'Grow with expert mentors',
-    description: '1:1 sessions, tailored roadmaps, and milestone tracking to keep you on course.',
-    accent: 'guided by alumni',
+    title: 'Guide the next generation',
+    description: 'Share your experience, mentor current students, and help shape future leaders in your field.',
+    accent: 'guided by experience',
     background: 'linear-gradient(180deg, #2969FF 0%, #1A47C6 100%)',
   },
   {
     image: heroThree,
-    badge: 'Assessments',
-    title: 'Hire and evaluate with ease',
-    description: 'Advanced proctoring, video prompts, and real-time scoring for streamlined hiring.',
-    accent: 'trusted by recruiters',
+    badge: 'Opportunities',
+    title: 'Discover career opportunities',
+    description: 'Access exclusive job postings, career resources, and professional development opportunities.',
+    accent: 'trusted by professionals',
     background: 'linear-gradient(180deg, #0B1F3A 0%, #102E5B 100%)',
   },
   {
     image: heroFour,
-    badge: 'Opportunities',
-    title: 'Unlock internships & jobs',
-    description: 'Curated openings, referral programs, and event invites tailored to your goals.',
-    accent: 'handpicked for you',
+    badge: 'Events',
+    title: 'Join alumni events',
+    description: 'Attend reunions, networking events, workshops, and stay connected with your alma mater.',
+    accent: 'crafted for you',
     background: 'linear-gradient(180deg, #21B573 0%, #0D8B5E 100%)',
   },
 ]
@@ -66,11 +66,8 @@ const AuthCarousel = ({ variant = 'desktop', className = '' }) => {
     ? 'hidden lg:flex lg:w-[45%]'
     : 'flex w-full lg:hidden'
 
-  const containerPadding = isDesktop ? 'px-7 py-8' : 'px-4 py-6 sm:px-6 sm:py-7'
-  const cardPadding = isDesktop ? 'px-6 py-7' : 'px-4 py-5 sm:px-5 sm:py-6'
-  const cardMinHeight = isDesktop ? 'min-h-[320px]' : 'min-h-[260px]'
-  const imageHeight = isDesktop ? 'h-36' : 'h-32 sm:h-40'
-  const progressSpacing = isDesktop ? 'pt-5' : 'pt-4'
+  const containerPadding = isDesktop ? 'px-7 py-4' : 'px-4 py-3 sm:px-6 sm:py-4'
+  const imageHeight = isDesktop ? 'h-80' : 'h-56 sm:h-64'
 
   return (
     <aside
@@ -81,46 +78,44 @@ const AuthCarousel = ({ variant = 'desktop', className = '' }) => {
         className="absolute inset-0 opacity-[0.12]"
         style={{ backgroundImage: 'radial-gradient(circle at top, rgba(255,255,255,0.9) 0%, transparent 60%)' }}
       />
-      <div className="relative z-20 flex items-center gap-3 pb-8">
-        <span className="grid h-12 w-12 place-items-center rounded-2xl bg-white text-lg font-semibold uppercase text-slate-900 shadow-lg">
+      <div className="relative z-20 flex items-center gap-3 pb-2">
+        <span className="grid h-8 w-8 place-items-center rounded-lg bg-white text-xs font-semibold uppercase text-slate-900 shadow-lg">
           AC
         </span>
         <div className="leading-tight">
-          <p className="text-xs uppercase tracking-[0.35em] text-white/70">AlumConnect</p>
-          <p className="text-lg font-semibold">Community</p>
+          <p className="text-xs uppercase tracking-[0.35em] text-white/70">APCOER Alumni</p>
+          <p className="text-sm font-semibold">Community</p>
         </div>
       </div>
-      <div
-        className={`relative z-10 flex flex-col justify-between rounded-3xl bg-white/10 ${cardPadding} backdrop-blur ${cardMinHeight} transition-opacity duration-700 ${
-          isVisible ? 'opacity-100' : 'opacity-0'
-        }`}
-      >
-        <div className="inline-flex items-center gap-2 self-start rounded-full bg-white/20 px-4 py-1 text-xs font-semibold uppercase tracking-[0.2em]">
-          {activeSlide.badge}
-        </div>
-        <div className="space-y-4">
-          <h2 className="text-3xl font-semibold leading-snug">
-            {activeSlide.title}
-          </h2>
-          <p className="text-sm text-white/80">{activeSlide.description}</p>
-          <span className="inline-flex items-center gap-2 text-sm font-semibold text-[#FFD166]">
-            <span className="h-1 w-8 rounded-full bg-[#FFD166]" />
-            {activeSlide.accent}
-          </span>
-        </div>
-        <div className="mt-10 rounded-3xl bg-white/20 p-4 shadow-lg">
-          <img src={activeSlide.image} alt={activeSlide.badge} className={`${imageHeight} w-full rounded-2xl object-cover`} />
-        </div>
+      
+      {/* Title at Very Top */}
+      <div className="relative z-10 text-center mt-8">
+        <h2 className="text-lg font-semibold leading-snug transition-opacity duration-700">
+          {activeSlide.title}
+        </h2>
       </div>
-      <div className={`relative z-10 flex items-center gap-2 ${progressSpacing}`}>
-        {slides.map((_, slideIndex) => (
-          <span
-            key={slideIndex}
-            className={`h-1 w-full rounded-full transition ${slideIndex === index ? 'bg-[#FFD166]' : 'bg-white/30'}`}
-            aria-hidden="true"
+      
+      {/* Image in Center - Much Larger */}
+      <div className="relative z-10 flex-1 flex items-center justify-center">
+        <div className="w-full rounded-2xl bg-white/20 p-3 shadow-lg transition-opacity duration-700">
+          <img 
+            src={activeSlide.image} 
+            alt={activeSlide.badge} 
+            className={`${imageHeight} w-full rounded-xl object-cover`}
+            onError={(e) => {
+              e.target.style.display = 'none';
+              e.target.nextSibling.style.display = 'flex';
+            }}
           />
-        ))}
+          <div className={`${imageHeight} w-full rounded-xl bg-white/10 flex items-center justify-center`} style={{display: 'none'}}>
+            <svg className="w-12 h-12 text-white/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+          </div>
+        </div>
       </div>
+
+      {/* Progress indicators removed to save space */}
     </aside>
   )
 }

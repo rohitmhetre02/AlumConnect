@@ -7,7 +7,7 @@ const PublicLayout = () => {
     <div className="min-h-screen bg-background">
       <PublicNavbar />
 
-      <main className="mx-auto flex w-full max-w-7xl flex-1 flex-col px-6 py-12 lg:px-8">
+      <main>
         <Outlet />
       </main>
 

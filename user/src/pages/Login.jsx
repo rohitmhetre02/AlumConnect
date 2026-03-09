@@ -115,7 +115,7 @@ const Login = () => {
 
           try {
             const loginResponse = await login({ token, role, email, name })
-            
+
             // Show success message for all OAuth logins
             addToast({ type: 'success', message: 'Logged in successfully via social account.' })
           } catch (error) {
@@ -212,14 +212,14 @@ const Login = () => {
       }
 
       // Check if user registration is pending approval
-      if (response.user?.profileApprovalStatus === 'IN_REVIEW' || 
-          response.user?.profileApprovalStatus === 'pending' ||
-          response.user?.profileApprovalStatus === 'in_review') {
+      if (response.user?.profileApprovalStatus === 'IN_REVIEW' ||
+        response.user?.profileApprovalStatus === 'pending' ||
+        response.user?.profileApprovalStatus === 'in_review') {
         addToast({ type: 'success', message: 'Login successful!' })
       } else {
         addToast({ type: 'success', message: 'Welcome back!' })
       }
-      
+
       login({ ...response.user, token: response.token })
     } catch (error) {
       const message = error?.message ?? 'Unable to login. Please try again.'
@@ -234,15 +234,15 @@ const Login = () => {
   return (
     <AuthTemplate
       header={
-        <div className="space-y-3">
-          <h1 className="text-3xl font-semibold text-slate-900 md:text-[34px]">Welcome to AlumConnect</h1>
+        <div className="space-y-1">
+          <h1 className="text-3xl font-semibold text-slate-900 md:text-[27px]">Welcome to AlumConnect</h1>
           <p className="text-sm text-slate-500 md:text-base">Use your email or another service to continue with the network.</p>
         </div>
       }
       footer={
         <p>
           Don’t have an account?{' '}
-          <Link to="/signup" className="font-semibold text-[#2563EB] hover:text-[#1d4ed8]">
+          <Link to="/signup" className="font-semibold h-2 w-2 text-[#2563EB] hover:text-[#1d4ed8]">
             Sign Up
           </Link>
         </p>
@@ -267,32 +267,32 @@ const Login = () => {
               type="button"
               onClick={() => handleSocialLogin(provider.id)}
               disabled={isDisabled}
-              className={`flex w-full items-center justify-between rounded-2xl border border-slate-200 px-6 py-4 text-base font-medium transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2563EB] ${
-                isDisabled
+              className={`flex w-full items-center justify-between rounded-2xl border border-slate-200 px-3 py-3 text-sm font-medium transition 
+  focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2563EB] ${isDisabled
                   ? 'cursor-not-allowed bg-white text-slate-400 opacity-70'
-                  : 'bg-white text-slate-700 shadow-sm hover:-translate-y-0.5 hover:shadow-[0_16px_40px_rgba(15,23,42,0.12)]'
-              }`}
+                  : 'bg-white text-slate-700 shadow-sm hover:-translate-y-0.5 hover:shadow-[0_12px_30px_rgba(15,23,42,0.12)]'
+                }`}
             >
               <span className="flex items-center gap-3">
                 <span
-                  className={`grid h-10 w-10 place-items-center rounded-full font-semibold ${
-                    isDisabled ? `${provider.accent} opacity-70` : provider.accent
-                  }`}
+                  className={`grid h-2 w-2 place-items-center rounded-lg ${isDisabled ? `${provider.accent} opacity-70` : provider.accent
+                    }`}
                 >
                   {provider.icon}
                 </span>
+
                 {buttonLabel}
               </span>
+
               {isActive ? (
-                <span className="h-5 w-5 animate-spin rounded-full border-2 border-current border-r-transparent" aria-hidden="true" />
+                <span className="h-2 w-2 animate-spin rounded-full border-2 border-current border-r-transparent" />
               ) : (
                 <svg
-                  className="h-5 w-5 text-slate-400"
+                  className="h-4 w-4 text-slate-400"
                   viewBox="0 0 20 20"
                   fill="none"
                   stroke="currentColor"
                   strokeWidth="1.5"
-                  aria-hidden="true"
                 >
                   <path d="M7.5 4.5 12.5 10 7.5 15.5" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
@@ -301,17 +301,17 @@ const Login = () => {
           )
         })}
         {oauthProviders && Object.values(oauthProviders).every((entry) => entry?.enabled === false) ? (
-          <p className="text-center text-sm text-slate-500">Social login is currently unavailable.</p>
+          <p className="text-center text-sm text-slate-00">Social login is currently unavailable.</p>
         ) : null}
         {!oauthProviders && isFetchingProviders ? (
           <p className="text-center text-sm text-slate-400">Loading social login options…</p>
         ) : null}
       </div>
-      <div className="relative py-6">
+      <div className="relative">
         <span className="absolute inset-x-0 top-1/2 h-px -translate-y-1/2 bg-slate-200" aria-hidden="true" />
-        <span className="relative mx-auto block w-max bg-white px-4 text-sm font-medium text-slate-400">or continue with email</span>
+        <span className="relative mx-auto block w-max bg-white px-1 text-sm font-medium text-slate-400">or continue with email</span>
       </div>
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-2">
         <div className="space-y-2">
           <label htmlFor="email" className="text-sm font-semibold text-slate-700">
             Email
@@ -323,7 +323,7 @@ const Login = () => {
             value={form.email}
             onChange={handleChange}
             placeholder="you@domain.com"
-            className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-sm text-slate-900 shadow-[0_12px_30px_rgba(15,23,42,0.05)] outline-none transition focus:border-[#2563EB] focus:shadow-[0_18px_40px_rgba(37,99,235,0.15)]"
+            className="w-full rounded-2xl border border-slate-200 bg-white px-2 py-2 text-sm text-slate-900 shadow-[0_12px_30px_rgba(15,23,42,0.05)] outline-none transition focus:border-[#2563EB] focus:shadow-[0_18px_40px_rgba(37,99,235,0.15)]"
             required
           />
         </div>
@@ -338,7 +338,7 @@ const Login = () => {
             value={form.password}
             onChange={handleChange}
             placeholder="Enter your password"
-            className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-sm text-slate-900 shadow-[0_12px_30px_rgba(15,23,42,0.05)] outline-none transition focus:border-[#2563EB] focus:shadow-[0_18px_40px_rgba(37,99,235,0.15)]"
+            className="w-full rounded-2xl border border-slate-200 bg-white px-2 py-2 text-sm text-slate-900 shadow-[0_12px_30px_rgba(15,23,42,0.05)] outline-none transition focus:border-[#2563EB] focus:shadow-[0_18px_40px_rgba(37,99,235,0.15)]"
             required
           />
           <div className="text-right text-sm">
@@ -350,11 +350,10 @@ const Login = () => {
         <button
           type="submit"
           disabled={!isValid || isSubmitting}
-          className={`inline-flex w-full items-center justify-center gap-2 rounded-full px-6 py-3 text-sm font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#93C5FD] ${
-            isValid && !isSubmitting
-              ? 'bg-[#2563EB] text-white shadow-[0_16px_40px_rgba(37,99,235,0.35)] hover:bg-[#1d4ed8]'
-              : 'cursor-not-allowed bg-slate-200 text-slate-500'
-          }`}
+          className={`inline-flex w-full items-center justify-center gap-2 rounded-full px-6 py-3 text-sm font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#93C5FD] ${isValid && !isSubmitting
+            ? 'bg-[#2563EB] text-white shadow-[0_16px_40px_rgba(37,99,235,0.35)] hover:bg-[#1d4ed8]'
+            : 'cursor-not-allowed bg-slate-200 text-slate-500'
+            }`}
         >
           {isSubmitting ? 'Signing in…' : 'Login'}
           <svg viewBox="0 0 20 20" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">

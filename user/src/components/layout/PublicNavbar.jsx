@@ -1,117 +1,193 @@
-import { useState } from 'react'
-import { Link, NavLink } from 'react-router-dom'
-
-const navLinks = [
-  { label: 'Home', path: '/' },
-  { label: 'Directory', path: '/directory' },
-  { label: 'Events', path: '/events' },
-  { label: 'Mentorship', path: '/mentorship' },
-  { label: 'Gallery', path: '/gallery' },
-]
-
-const NavLinks = ({ onNavigate }) => (
-  <>
-    {navLinks.map((link) => (
-      <NavLink
-        key={link.path}
-        to={link.path}
-        onClick={onNavigate}
-        className={({ isActive }) =>
-          `text-sm font-medium tracking-tight transition duration-150 ${
-            isActive
-              ? 'text-primary underline decoration-2 underline-offset-8'
-              : 'text-slate-500 hover:text-slate-900'
-          }`
-        }
-        aria-label={link.label}
-      >
-        {link.label}
-      </NavLink>
-    ))}
-  </>
-)
+import { Link, NavLink } from "react-router-dom";
+import { useState } from "react";
 
 const PublicNavbar = () => {
-  const [isOpen, setIsOpen] = useState(false)
 
-  const toggleMenu = () => setIsOpen((prev) => !prev)
-  const closeMenu = () => setIsOpen(false)
+  const [directoryOpen, setDirectoryOpen] = useState(false);
+  const [engageOpen, setEngageOpen] = useState(false);
 
   return (
-    <header className="sticky top-0 z-30 border-b border-slate-100 bg-white/95 shadow-sm backdrop-blur">
-      <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4 lg:px-8" role="navigation" aria-label="Primary">
-        <Link to="/" className="flex items-center gap-3" aria-label="AlumConnect home">
-          <span className="grid h-10 w-10 place-items-center rounded-2xl bg-primary text-lg font-bold text-white">A</span>
-          <span className="text-lg font-semibold text-slate-900">AlumConnect</span>
-        </Link>
+    <>
+      {/* TOP ADDRESS BAR */}
+      <div className="bg-gray-100 text-sm text-gray-700">
+        <div className="max-w-7xl mx-auto px-6 py-2 flex justify-between items-center">
 
-        <nav className="hidden items-center gap-6 md:flex">
-          <NavLinks />
-        </nav>
+          <div>
+            S. No. 103, Shahu College Road, Parvati, Pune - 411009
+          </div>
 
-        <div className="hidden items-center gap-3 md:flex">
-          <Link
-            to="/login"
-            className="rounded-full border border-slate-200 px-5 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-          >
-            Login
-          </Link>
-          <Link
-            to="/signup"
-            className="rounded-full bg-primary px-5 py-2 text-sm font-semibold text-white transition hover:bg-primary-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-          >
-            Sign Up
-          </Link>
+          <div className="flex gap-6 font-medium">
+            <Link to="/" className="text-orange-500">Home</Link>
+            <Link to="/login" className="hover:text-orange-500">Login</Link>
+            <Link to="/signup" className="hover:text-orange-500">Register</Link>
+          </div>
+
         </div>
-
-        <button
-          type="button"
-          className="md:hidden"
-          onClick={toggleMenu}
-          aria-label="Toggle navigation menu"
-          aria-expanded={isOpen}
-        >
-          <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 text-slate-900">
-            <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              {isOpen ? (
-                <path d="M18 6L6 18M6 6l12 12" />
-              ) : (
-                <>
-                  <path d="M4 6h16" />
-                  <path d="M4 12h16" />
-                  <path d="M4 18h16" />
-                </>
-              )}
-            </svg>
-          </span>
-        </button>
       </div>
 
-      {isOpen && (
-        <div className="border-t border-slate-100 bg-white/95 px-6 py-4 shadow-sm md:hidden">
-          <nav className="flex flex-col gap-4" role="navigation" aria-label="Mobile primary">
-            <NavLinks onNavigate={closeMenu} />
-            <div className="mt-4 flex flex-col gap-3">
-              <Link
-                to="/login"
-                onClick={closeMenu}
-                className="rounded-full border border-slate-200 px-5 py-2 text-center text-sm font-semibold text-slate-700 transition hover:border-slate-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-              >
-                Login
-              </Link>
-              <Link
-                to="/signup"
-                onClick={closeMenu}
-                className="rounded-full bg-primary px-5 py-2 text-center text-sm font-semibold text-white transition hover:bg-primary-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-              >
-                Sign Up
-              </Link>
-            </div>
-          </nav>
-        </div>
-      )}
-    </header>
-  )
-}
+      {/* COLLEGE HEADER */}
+      <div className="bg-white border-b">
+        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
 
-export default PublicNavbar
+          <img src="/images/apcoer-logo.webp" alt="College Logo" className="h-20" />
+
+          <div className="text-center">
+            <p className="text-sm text-red-700 font-semibold">
+              AKHIL BHARATIYA MARATHA SHIKSHAN PARISHAD'S
+            </p>
+
+            <h1 className="text-xl font-bold text-gray-900">
+              ANANTRAO PAWAR COLLEGE OF ENGINEERING & RESEARCH
+            </h1>
+
+            <p className="text-xs text-gray-600">
+              (Approved by AICTE & Govt. of Maharashtra | Affiliated to Savitribai Phule Pune University)
+            </p>
+
+            <p className="text-red-600 text-sm font-semibold">
+              Accredited by NAAC with "A" Grade | NBA - Mechanical and Civil
+            </p>
+          </div>
+
+          <img src="/images/founder.png" alt="Founder" className="h-20" />
+
+        </div>
+      </div>
+
+      {/* MAIN NAVIGATION */}
+      <nav className="bg-blue-900 text-white">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="flex justify-center gap-10 py-4 font-medium text-sm">
+
+            {/* HOME */}
+            <NavLink to="/" className={({isActive}) =>
+              isActive ? "text-orange-400" : "hover:text-orange-400"
+            }>
+              Home
+            </NavLink>
+
+            {/* ABOUT */}
+            <NavLink to="/about" className={({isActive}) =>
+              isActive ? "text-orange-400" : "hover:text-orange-400"
+            }>
+              About
+            </NavLink>
+
+            {/* DIRECTORY DROPDOWN */}
+            <div className="relative">
+
+              <button
+                onClick={() => {
+                  setDirectoryOpen(!directoryOpen);
+                  setEngageOpen(false);
+                }}
+                className="flex items-center gap-1 hover:text-orange-400"
+              >
+                Directory
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7"/>
+                </svg>
+              </button>
+
+              {directoryOpen && (
+                <div className="absolute top-full left-0 bg-white text-gray-900 shadow-lg rounded-lg border min-w-[200px] mt-2 z-50">
+
+                  <Link
+                    to="/student-directory"
+                    onClick={() => setDirectoryOpen(false)}
+                    className="block px-4 py-2 hover:bg-blue-50 hover:text-blue-600"
+                  >
+                    Student Directory
+                  </Link>
+
+                  <Link
+                    to="/alumni-directory"
+                    onClick={() => setDirectoryOpen(false)}
+                    className="block px-4 py-2 hover:bg-blue-50 hover:text-blue-600"
+                  >
+                    Alumni Directory
+                  </Link>
+
+                </div>
+              )}
+
+            </div>
+
+            {/* MEMORIES */}
+            <NavLink to="/gallery" className={({isActive}) =>
+              isActive ? "text-orange-400" : "hover:text-orange-400"
+            }>
+              Memories
+            </NavLink>
+
+            {/* ENGAGE DROPDOWN */}
+            <div className="relative">
+
+              <button
+                onClick={() => {
+                  setEngageOpen(!engageOpen);
+                  setDirectoryOpen(false);
+                }}
+                className="flex items-center gap-1 hover:text-orange-400"
+              >
+                Engage
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7"/>
+                </svg>
+              </button>
+
+              {engageOpen && (
+                <div className="absolute top-full left-0 bg-white text-gray-900 shadow-lg rounded-lg border min-w-[220px] mt-2 z-50">
+
+                  <Link
+                    to="/opportunities"
+                    onClick={() => setEngageOpen(false)}
+                    className="block px-4 py-2 hover:bg-blue-50 hover:text-blue-600"
+                  >
+                    Career Opportunities
+                  </Link>
+
+                  <Link
+                    to="/mentor-student"
+                    onClick={() => setEngageOpen(false)}
+                    className="block px-4 py-2 hover:bg-blue-50 hover:text-blue-600"
+                  >
+                    Mentor a Student
+                  </Link>
+
+                  <Link
+                    to="/events"
+                    onClick={() => setEngageOpen(false)}
+                    className="block px-4 py-2 hover:bg-blue-50 hover:text-blue-600"
+                  >
+                    Events
+                  </Link>
+
+                  <Link
+                    to="/campaigns"
+                    onClick={() => setEngageOpen(false)}
+                    className="block px-4 py-2 hover:bg-blue-50 hover:text-blue-600"
+                  >
+                    Campaigns
+                  </Link>
+
+                </div>
+              )}
+
+            </div>
+
+            {/* CONTACT */}
+            <NavLink to="/contact" className={({isActive}) =>
+              isActive ? "text-orange-400" : "hover:text-orange-400"
+            }>
+              Contact Us
+            </NavLink>
+
+          </div>
+        </div>
+      </nav>
+    </>
+  );
+};
+
+export default PublicNavbar;
