@@ -77,6 +77,10 @@ const adminUserRoutes = require('./routes/adminUserRoutes')
 
 const adminDashboardRoutes = require('./routes/adminDashboardRoutes')
 
+const contactRoutes = require('./routes/contactRoutes')
+
+const publicRoutes = require('./routes/publicRoutes')
+
 const profileApprovalRoutes = require('./routes/profileApprovalRoutes')
 
 const registrationApprovalRoutes = require('./routes/registrationApprovalRoutes')
@@ -185,6 +189,10 @@ app.use('/api', stripeRoutes)
     app.use('/api/admin/users', adminUserRoutes)
 
     app.use('/api/admin/dashboard', adminDashboardRoutes)
+
+app.use('/api/contact', contactRoutes)
+
+app.use('/api/public', publicRoutes)
 
     app.use('/api/admin/profile-approval', profileApprovalRoutes)
 

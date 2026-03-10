@@ -2,11 +2,56 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const nodemailer = require('nodemailer');
 const crypto = require('crypto');
-const User = require('../models/User');
+const { getModelByRole } = require('../utils/roleModels');
 
 // Generate 6-digit OTP
 const generateOTP = () => {
   return Math.floor(100000 + Math.random() * 900000).toString();
+};
+
+// Helper function to get user by ID using role-based approach
+const getUserById = async (userId) => {
+  const roles = ['student', 'alumni', 'faculty', 'admin', 'coordinator'];
+  for (const role of roles) {
+    const Model = getModelByRole(role);
+    try {
+      const user = await Model.findById(userId);
+      if (user) return user;
+    } catch (error) {
+      // Continue to next role
+    }
+  }
+  return null;
+};
+
+// Helper function to find user by email using role-based approach
+const getUserByEmail = async (email) => {
+  const roles = ['student', 'alumni', 'faculty', 'admin', 'coordinator'];
+  for (const role of roles) {
+    const Model = getModelByRole(role);
+    try {
+      const user = await Model.findOne({ email });
+      if (user) return user;
+    } catch (error) {
+      // Continue to next role
+    }
+  }
+  return null;
+};
+
+// Helper function to update user by ID using role-based approach
+const updateUserById = async (userId, updateData) => {
+  const roles = ['student', 'alumni', 'faculty', 'admin', 'coordinator'];
+  for (const role of roles) {
+    const Model = getModelByRole(role);
+    try {
+      const user = await Model.findByIdAndUpdate(userId, updateData, { new: true });
+      if (user) return user;
+    } catch (error) {
+      // Continue to next role
+    }
+  }
+  return null;
 };
 
 // Store OTP attempts (in production, use Redis or database)
@@ -86,7 +131,7 @@ const validatePassword = (password) => {
 const updateEmail = async (req, res) => {
   try {
     const { currentPassword, newEmail } = req.body;
-    const user = await User.findById(req.user.id);
+    const user = await getUserById(req.user.id);
 
     if (!user) {
       return res.status(404).json({ success: false, error: 'User not found' });
@@ -99,10 +144,7 @@ const updateEmail = async (req, res) => {
     }
 
     // Check if email is already in use by another user
-    const existingUser = await User.findOne({ 
-      email: newEmail,
-      _id: { $ne: user._id }
-    });
+    const existingUser = await getUserByEmail(newEmail);
 
     if (existingUser) {
       return res.status(400).json({ success: false, error: 'Email address already in use' });
@@ -183,13 +225,13 @@ const verifyEmailOTP = async (req, res) => {
     }
 
     // Get user and update email
-    const user = await User.findById(decoded.userId);
+    const user = await getUserById(decoded.userId);
     if (!user) {
       return res.status(404).json({ success: false, error: 'User not found' });
     }
 
     // Update email and mark as verified
-    await User.findByIdAndUpdate(user._id, { 
+    await updateUserById(user._id, { 
       email: decoded.email,
       emailVerified: true,
       emailVerifiedAt: new Date()
@@ -265,7 +307,7 @@ const resendEmailOTP = async (req, res) => {
 const updatePassword = async (req, res) => {
   try {
     const { currentPassword, newPassword } = req.body;
-    const user = await User.findById(req.user.id);
+    const user = await getUserById(req.user.id);
 
     if (!user) {
       return res.status(404).json({ success: false, error: 'User not found' });
@@ -288,7 +330,7 @@ const updatePassword = async (req, res) => {
     const hashedNewPassword = await bcrypt.hash(newPassword, salt);
 
     // Update password
-    await User.findByIdAndUpdate(user._id, { password: hashedNewPassword });
+    await updateUserById(user._id, { password: hashedNewPassword });
 
     res.json({ success: true, message: 'Password updated successfully' });
 
@@ -304,7 +346,7 @@ const forgotPassword = async (req, res) => {
     const { email } = req.body;
 
     // Find user by email
-    const user = await User.findOne({ email });
+    const user = await getUserByEmail(email);
     if (!user) {
       return res.status(400).json({ success: false, error: 'No account found with this email address' });
     }
@@ -390,7 +432,7 @@ const verifyForgotPasswordOTP = async (req, res) => {
     }
 
     // Get user and update password
-    const user = await User.findById(decoded.userId);
+    const user = await getUserById(decoded.userId);
     if (!user) {
       return res.status(404).json({ success: false, error: 'User not found' });
     }
@@ -400,7 +442,7 @@ const verifyForgotPasswordOTP = async (req, res) => {
     const hashedNewPassword = await bcrypt.hash(newPassword, salt);
 
     // Update password
-    await User.findByIdAndUpdate(user._id, { password: hashedNewPassword });
+    await updateUserById(user._id, { password: hashedNewPassword });
 
     // Clear attempts
     otpAttempts.delete(emailKey);

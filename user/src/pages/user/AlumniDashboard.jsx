@@ -4,343 +4,463 @@ import useAlumniDashboard from '../../hooks/useAlumniDashboard'
 import InteractiveCalendar from '../../components/shared/InteractiveCalendar'
 import useCalendarNotes from '../../hooks/useCalendarNotes'
 
+const CATEGORY_COLORS = {
+  mentorship: { bg: 'bg-blue-100', dot: 'bg-blue-500', text: 'Mentorship', colorName: 'Blue' },
+  event: { bg: 'bg-purple-100', dot: 'bg-purple-500', text: 'Event', colorName: 'Purple' },
+  opportunity: { bg: 'bg-green-100', dot: 'bg-green-500', text: 'Opportunity', colorName: 'Green' }
+}
+
 const AlumniDashboard = () => {
+
   const { user } = useAuth()
+
   const [selectedDate, setSelectedDate] = useState(null)
-  const { overviewStats, opportunities, events, mentorshipRequests, recentActivity, calendarData, loading, error, refresh } = useAlumniDashboard(user)
-  const { notes, addNote, deleteNote, loading: notesLoading } = useCalendarNotes()
+  const [showNoteModal, setShowNoteModal] = useState(false)
+  const [noteCategory, setNoteCategory] = useState('mentorship')
+  const [noteText, setNoteText] = useState('')
+  const [editingNote, setEditingNote] = useState(null)
 
-  const colorClasses = {
-    blue: "bg-blue-50 text-blue-600 border-blue-200",
-    green: "bg-green-50 text-green-600 border-green-200",
-    purple: "bg-purple-50 text-purple-600 border-purple-200",
-    orange: "bg-orange-50 text-orange-600 border-orange-200",
-  }
+  const {
+    overviewStats,
+    opportunities,
+    events,
+    mentorshipRequests,
+    recentActivity,
+    calendarData,
+    loading,
+    error,
+    refresh
+  } = useAlumniDashboard(user)
 
-  const statusColorClasses = {
-    pending: "bg-yellow-100 text-yellow-700",
-    accepted: "bg-green-100 text-green-700",
-    declined: "bg-red-100 text-red-700",
-  }
+  const { notes, addNote, updateNote, deleteNote } = useCalendarNotes()
 
-  const getEventColor = (type) => {
-    switch(type) {
-      case 'event': return 'bg-blue-500'
-      case 'job': return 'bg-green-500'
-      case 'mentorship': return 'bg-purple-500'
-      default: return 'bg-gray-500'
-    }
-  }
-
-  const getDaysInMonth = () => {
-    const now = new Date()
-    const year = now.getFullYear()
-    const month = now.getMonth()
-    const firstDay = new Date(year, month, 1)
-    const lastDay = new Date(year, month + 1, 0)
-    const daysInMonth = lastDay.getDate()
-    const startingDayOfWeek = firstDay.getDay()
+  const handleDateClick = (date) => {
+    setSelectedDate(date)
     
-    const days = []
-    for (let i = 0; i < startingDayOfWeek; i++) {
-      days.push(null)
+    // Check if note exists for this date
+    const existingNote = getNote(date)
+    if (existingNote) {
+      // Edit mode
+      setNoteCategory(existingNote.category)
+      setNoteText(existingNote.noteText)
+      setEditingNote(existingNote)
+    } else {
+      // Add mode
+      setNoteCategory('mentorship')
+      setNoteText('')
+      setEditingNote(null)
     }
-    for (let i = 1; i <= daysInMonth; i++) {
-      days.push(i)
-    }
-    return days
+    
+    setShowNoteModal(true)
   }
 
-  const days = getDaysInMonth()
-  const currentMonth = new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+  const handleSaveNote = async () => {
+    if (!noteText.trim()) return
+
+    try {
+      if (editingNote) {
+        // Update existing note
+        await updateNote(editingNote._id, {
+          category: noteCategory,
+          noteText: noteText.trim()
+        })
+      } else {
+        // Add new note
+        await addNote({
+          date: selectedDate,
+          category: noteCategory,
+          noteText: noteText.trim()
+        })
+      }
+
+      setShowNoteModal(false)
+      setNoteText('')
+      setEditingNote(null)
+    } catch (error) {
+      console.error('Failed to save note:', error)
+    }
+  }
+
+  const handleDeleteNote = async () => {
+    if (editingNote) {
+      try {
+        await deleteNote(editingNote._id)
+        setShowNoteModal(false)
+        setNoteText('')
+        setEditingNote(null)
+      } catch (error) {
+        console.error('Failed to delete note:', error)
+      }
+    }
+  }
+
+  const getNote = (date) => {
+    return notes.find(n => n.date === date)
+  }
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-slate-600">Loading dashboard...</p>
-        </div>
-      </div>
-    )
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-red-600 mb-4">Error loading dashboard data</p>
-          <button 
-            onClick={refresh}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-          >
-            Try Again
-          </button>
-        </div>
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        Loading Dashboard...
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50">
-      {/* Header - Full Width */}
-      <div className="border-b border-slate-100">
-        <div className="w-full px-4 py-6">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-            <div>
-              <h1 className="text-3xl font-bold text-slate-900">
-                Welcome back, {user?.name?.split(' ')[0] || 'Alumni'}! 👋
-              </h1>
-              <p className="text-slate-600 mt-1">
-                Class of {user?.profile?.graduationYear || '2020'} • {user?.profile?.department || 'Computer Science'}
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
 
-      <div className="w-full px-4 py-8">
-        {/* Overview Cards - Full Width */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <div className={`rounded-2xl border p-6 bg-white shadow-sm hover:shadow-md ${colorClasses.blue}`}>
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-sm font-medium text-slate-600">Opportunities Posted</p>
-                <p className="text-2xl font-bold text-slate-900 mt-1">{overviewStats.jobsPosted}</p>
-                <p className="text-sm text-slate-500 mt-1">{overviewStats.jobsTrend}</p>
-              </div>
-              <div className="p-3 rounded-xl bg-white/50">
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                </svg>
-              </div>
-            </div>
-          </div>
+    <div className="min-h-screen bg-slate-50">
 
-          <div className={`rounded-2xl border p-6 bg-white shadow-sm hover:shadow-md ${colorClasses.purple}`}>
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-sm font-medium text-slate-600">Events Created or Participated</p>
-                <p className="text-2xl font-bold text-slate-900 mt-1">{overviewStats.eventsParticipated}</p>
-                <p className="text-sm text-slate-500 mt-1">{overviewStats.eventsTrend}</p>
-              </div>
-              <div className="p-3 rounded-xl bg-white/50">
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
-              </div>
-            </div>
-          </div>
+      <div className="max-w-7xl mx-auto px-4 py-8">
 
-          <div className={`rounded-2xl border p-6 bg-white shadow-sm hover:shadow-md ${colorClasses.green}`}>
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-sm font-medium text-slate-600">Active Donation Campaigns</p>
-                <p className="text-2xl font-bold text-slate-900 mt-1">{overviewStats.activeDonations}</p>
-                <p className="text-sm text-slate-500 mt-1">{overviewStats.donationsTrend}</p>
-              </div>
-              <div className="p-3 rounded-xl bg-white/50">
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-                </svg>
-              </div>
-            </div>
-          </div>
+        {/* HEADER */}
 
-          <div className={`rounded-2xl border p-6 bg-white shadow-sm hover:shadow-md ${colorClasses.orange}`}>
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-sm font-medium text-slate-600">Mentorship Requests Received</p>
-                <p className="text-2xl font-bold text-slate-900 mt-1">{overviewStats.mentorshipRequests}</p>
-                <p className="text-sm text-slate-500 mt-1">{overviewStats.mentorshipTrend}</p>
-              </div>
-              <div className="p-3 rounded-xl bg-white/50">
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                </svg>
-              </div>
-            </div>
-          </div>
-        </div>
+        <header className="mb-8">
 
-        {/* Main Content Grid - Full Width */}
+  <h1 className="text-3xl font-semibold text-slate-900">
+    Welcome back, {user?.name?.split(' ')[0] || 'User'}
+  </h1>
+
+  <p className="text-sm text-slate-500 mt-1">
+    Batch: {user?.profile?.graduationYear || user?.graduationYear || 'N/A'} • {user?.profile?.department || user?.department || 'Department'}
+  </p>
+
+</header>
+
+
+        {/* STATS */}
+
+        <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+
+          <StatCard
+            title="Opportunities Posted"
+            value={overviewStats.jobsPosted}
+          />
+
+          <StatCard
+            title="Events Created or Participated"
+            value={overviewStats.eventsParticipated}
+          />
+
+          <StatCard
+            title="Active Donation Campaigns"
+            value={overviewStats.activeDonations}
+          />
+
+          <StatCard
+            title="Mentorship Requests Received"
+            value={overviewStats.mentorshipRequests}
+          />
+
+        </section>
+
+
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
-          {/* Left Column - Contribution Panel and Mentorship */}
+
+
+          {/* LEFT SIDE */}
+
           <div className="xl:col-span-2 space-y-8">
-            {/* Contribution Panel */}
-            <div>
-              <h2 className="text-xl font-bold text-slate-900 mb-4">Your Contributions</h2>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="bg-white rounded-xl border border-slate-200 p-5 hover:shadow-md">
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="p-2 bg-blue-100 rounded-lg">
-                      <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
-                      </svg>
-                    </div>
-                    <h3 className="font-semibold text-slate-900">Post a Job or Referral</h3>
-                  </div>
-                  <p className="text-sm text-slate-600 mb-3">Share opportunities with students and fellow alumni</p>
-                  <button 
-                    onClick={() => window.location.href = '/dashboard/opportunities/post'}
-                    className="w-full px-3 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700"
-                  >
-                    Post Opportunity
-                  </button>
-                </div>
 
-                <div className="bg-white rounded-xl border border-slate-200 p-5 hover:shadow-md">
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="p-2 bg-purple-100 rounded-lg">
-                      <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                      </svg>
-                    </div>
-                    <h3 className="font-semibold text-slate-900">Create Alumni Events</h3>
-                  </div>
-                  <p className="text-sm text-slate-600 mb-3">Organize networking and professional events</p>
-                  <button 
-                    onClick={() => window.location.href = '/dashboard/events/post'}
-                    className="w-full px-3 py-2 bg-purple-600 text-white text-sm rounded-lg hover:bg-purple-700"
-                  >
-                    Create Event
-                  </button>
-                </div>
+            {/* CONTRIBUTION ACTIONS */}
 
-                <div className="bg-white rounded-xl border border-slate-200 p-5 hover:shadow-md">
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="p-2 bg-green-100 rounded-lg">
-                      <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-                      </svg>
-                    </div>
-                    <h3 className="font-semibold text-slate-900">Support Campaigns</h3>
-                  </div>
-                  <p className="text-sm text-slate-600 mb-3">Contribute to institutional development</p>
-                  <button 
-                    onClick={() => window.location.href = '/dashboard/donations/create'}
-                    className="w-full px-3 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700"
-                  >
-                    Donate
-                  </button>
-                </div>
+            <section>
+
+              <h2 className="text-xl font-semibold text-slate-900 mb-4">
+                Quick  Actions
+              </h2>
+
+              <div className="grid md:grid-cols-3 gap-4">
+
+                <ActionCard
+                  title="Post Opportunity"
+                  desc="Share job opportunities with students"
+                  btn="Post Opportunity"
+                  color="bg-blue-100 text-blue-700"
+                  link="/dashboard/opportunities/post"
+                />
+
+                <ActionCard
+                  title="Create Event"
+                  desc="Organize networking events"
+                  btn="Create Event"
+                  color="bg-purple-100 text-purple-700"
+                  link="/dashboard/events/post"
+                />
+
+                <ActionCard
+                  title="Support Campaign"
+                  desc="Support institutional development"
+                  btn="Donate"
+                  color="bg-green-100 text-green-700"
+                  link="/dashboard/donations"
+                />
+
               </div>
-            </div>
 
-            {/* Mentorship Requests Section */}
-            <div>
-              <h2 className="text-xl font-bold text-slate-900 mb-4">Mentorship Requests</h2>
-              {mentorshipRequests.length > 0 ? (
-                <div className="space-y-3">
-                  {mentorshipRequests.map((request) => (
-                    <div key={request.id} className="bg-white rounded-xl border border-slate-200 p-5 hover:shadow-md">
-                      <div className="flex items-start justify-between mb-3">
-                        <div>
-                          <h3 className="font-semibold text-slate-900">{request.name}</h3>
-                          <p className="text-sm text-slate-600">{request.department}</p>
-                        </div>
-                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${statusColorClasses[request.status]}`}>
-                          {request.status}
-                        </span>
-                      </div>
-                      <p className="text-sm text-slate-600 mb-3">{request.request}</p>
-                      <div className="flex gap-2">
-                        <button className="px-3 py-1 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700">
-                          Accept
-                        </button>
-                        <button className="px-3 py-1 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700">
-                          Decline
-                        </button>
-                        <button className="px-3 py-1 text-sm border border-slate-200 rounded-lg hover:bg-slate-50">
-                          View Profile
-                        </button>
-                      </div>
+            </section>
+
+
+            {/* UPCOMING EVENTS */}
+
+            <section>
+
+              <h2 className="text-xl font-semibold text-slate-900 mb-4">
+                Upcoming Events
+              </h2>
+
+              {events.length ? (
+
+                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+
+                  {events.slice(0,3).map(e => (
+
+                    <div key={e.id} className="bg-white border rounded-xl p-5">
+
+                      <p className="font-semibold text-slate-900">
+                        {e.title}
+                      </p>
+
+                      <p className="text-sm text-slate-500">
+                        {e.date}
+                      </p>
+
+                      <p className="text-sm text-slate-400">
+                        {e.location}
+                      </p>
+
                     </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="bg-white rounded-xl border border-slate-200 p-8 text-center">
-                  <p className="text-slate-600">No mentorship requests at the moment</p>
-                </div>
-              )}
-            </div>
 
-            {/* Events Section */}
-            <div>
-              <h2 className="text-xl font-bold text-slate-900 mb-4">Your Events</h2>
-              {events.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {events.map((event) => (
-                    <div key={event.id} className="bg-white rounded-xl border border-slate-200 p-5 hover:shadow-md">
-                      <div className="flex items-start justify-between mb-3">
-                        <div>
-                          <h3 className="font-semibold text-slate-900">{event.title}</h3>
-                          <p className="text-sm text-slate-600">{event.date} • {event.time}</p>
-                        </div>
-                        <span className="px-2 py-1 bg-purple-100 text-purple-700 text-xs font-medium rounded-full">
-                          {event.type}
-                        </span>
-                      </div>
-                      <p className="text-sm text-slate-600 mb-3 line-clamp-2">{event.description}</p>
-                      <div className="flex gap-2">
-                        <button className="px-3 py-1 text-sm border border-slate-200 rounded-lg hover:bg-slate-50">
-                          {event.isCreator ? 'Manage' : 'View Details'}
-                        </button>
-                      </div>
+                  ))}
+
+                </div>
+
+              ) : (
+
+                <div className="bg-white border rounded-xl p-6 text-center text-slate-500">
+                  No upcoming events
+                </div>
+
+              )}
+
+            </section>
+
+
+            {/* RECENT ACTIVITY */}
+
+            <section>
+
+              <h2 className="text-xl font-semibold text-slate-900 mb-4">
+                Recent Activity
+              </h2>
+
+              <div className="bg-white border rounded-xl p-6">
+
+                {recentActivity.length ? (
+
+                  recentActivity.slice(0,5).map(a => (
+
+                    <div key={a.id} className="mb-4">
+
+                      <p className="text-sm font-semibold text-slate-900">
+                        {a.title}
+                      </p>
+
+                      <p className="text-xs text-slate-400">
+                        {a.time}
+                      </p>
+
+                      <p className="text-sm text-slate-600">
+                        {a.description}
+                      </p>
+
                     </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="bg-white rounded-xl border border-slate-200 p-8 text-center">
-                  <p className="text-slate-600">No events created yet</p>
-                  <button className="mt-4 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700">
-                    Create Your First Event
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
 
-          {/* Right Column - Interactive Calendar and Activity */}
-          <div className="space-y-6">
-            {/* Interactive Calendar */}
-            <div>
-              <h2 className="text-xl font-bold text-slate-900 mb-4">Interactive Calendar</h2>
-              <InteractiveCalendar 
-                initialNotes={notes}
-                onNotesChange={(updatedNotes) => {
-                  // Handle notes update if needed
-                  console.log('Calendar notes updated:', updatedNotes)
-                }}
-              />
-            </div>
+                  ))
 
-            {/* Recent Activity Feed */}
-            <div>
-              <h3 className="text-lg font-semibold text-slate-900 mb-3">Recent Activity</h3>
-              <div className="bg-white rounded-xl border border-slate-200 p-4">
-                {recentActivity.length > 0 ? (
-                  <div className="space-y-3">
-                    {recentActivity.map((activity) => (
-                      <div key={activity.id} className="flex items-start gap-3">
-                        <span className="text-lg">{activity.icon}</span>
-                        <div className="flex-1">
-                          <p className="text-sm text-slate-600">{activity.title}</p>
-                          <p className="text-xs text-slate-400">{activity.time}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
                 ) : (
-                  <p className="text-sm text-slate-500 text-center">No recent activity</p>
+
+                  <p className="text-slate-500 text-sm">
+                    No recent activity
+                  </p>
+
                 )}
+
               </div>
-            </div>
+
+            </section>
+
           </div>
+
+
+          {/* RIGHT SIDE CALENDAR */}
+
+          <div>
+
+            <h2 className="text-xl font-semibold text-slate-900 mb-4">
+              Calendar
+            </h2>
+
+            <div className="bg-white border rounded-xl p-6">
+
+              <InteractiveCalendar
+                notes={notes}
+                onDateClick={handleDateClick}
+              />
+
+            </div>
+
+          </div>
+
         </div>
+
+
+        {/* NOTE MODAL */}
+
+        {showNoteModal && selectedDate && (
+
+          <div className="fixed inset-0 flex items-center justify-center bg-black/40">
+
+            <div className="bg-white rounded-xl p-6 w-96">
+
+              <h3 className="text-lg font-semibold mb-4">
+                {editingNote ? 'Edit Calendar Note' : 'Add Calendar Note'}
+              </h3>
+
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Date
+                </label>
+                <div className="text-sm text-slate-600">
+                  {selectedDate}
+                </div>
+              </div>
+
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Category
+                </label>
+                <div className="grid grid-cols-3 gap-2">
+                  {Object.keys(CATEGORY_COLORS).map(category => (
+                    <button
+                      key={category}
+                      onClick={() => setNoteCategory(category)}
+                      className={`p-2 text-sm rounded border capitalize ${
+                        noteCategory === category
+                        ? CATEGORY_COLORS[category].bg + ' border-slate-300'
+                        : 'bg-white border-slate-200'
+                      }`}
+                    >
+                      {CATEGORY_COLORS[category].text}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Note
+                </label>
+                <textarea
+                  value={noteText}
+                  onChange={(e) => setNoteText(e.target.value)}
+                  className="w-full border rounded-lg p-3 text-sm resize-none"
+                  rows={3}
+                  placeholder="Write your note here..."
+                />
+              </div>
+
+              <div className="flex justify-between gap-2">
+                <div>
+                  {editingNote && (
+                    <button
+                      onClick={handleDeleteNote}
+                      className="px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg"
+                    >
+                      Delete
+                    </button>
+                  )}
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => {
+                      setShowNoteModal(false)
+                      setEditingNote(null)
+                      setNoteText('')
+                    }}
+                    className="px-3 py-2 text-sm border border-slate-300 rounded-lg hover:bg-slate-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleSaveNote}
+                    disabled={!noteText.trim()}
+                    className="px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {editingNote ? 'Update' : 'Save'}
+                  </button>
+                </div>
+              </div>
+
+            </div>
+
+          </div>
+
+        )}
+
       </div>
+
     </div>
+
   )
+}
+
+
+function StatCard({title,value}){
+
+  return(
+
+    <div className="bg-white border rounded-xl p-6">
+
+      <p className="text-sm text-slate-600">
+        {title}
+      </p>
+
+      <p className="text-2xl font-semibold text-slate-900 mt-2">
+        {value}
+      </p>
+
+    </div>
+
+  )
+
+}
+
+
+function ActionCard({title,desc,btn,color,link}){
+
+  return(
+
+    <div className="bg-white border rounded-xl p-6">
+
+      <h3 className="font-semibold text-slate-900">
+        {title}
+      </h3>
+
+      <p className="text-sm text-slate-600 mt-1">
+        {desc}
+      </p>
+
+      <button
+        onClick={()=>window.location.href=link}
+        className={`mt-4 px-4 py-2 text-sm rounded ${color}`}
+      >
+        {btn}
+      </button>
+
+    </div>
+
+  )
+
 }
 
 export default AlumniDashboard

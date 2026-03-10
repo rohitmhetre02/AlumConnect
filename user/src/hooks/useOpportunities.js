@@ -149,7 +149,7 @@ export const useOpportunity = (id) => {
       setLoading(true)
       setError(null)
       try {
-        const response = await get(`/opportunities/${id}`, { includeAuth: false })
+        const response = await get(`/opportunities/${id}`, { includeAuth: true })
         if (!isMounted) return
         setData(response?.data ?? null)
       } catch (fetchError) {

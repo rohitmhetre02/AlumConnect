@@ -16,6 +16,20 @@ const Avatar = ({ src, name = '', size = 'md', status }) => {
   const initials = getInitials(name)
   const showStatus = Boolean(status && statusColors[status])
 
+  const handleImageError = (e) => {
+    // Hide broken image and show initials
+    e.target.style.display = 'none'
+    const parent = e.target.parentElement
+    if (parent && !parent.dataset.fallbackApplied) {
+      parent.dataset.fallbackApplied = 'true'
+      const fallbackSpan = document.createElement('span')
+      fallbackSpan.className = `grid place-items-center rounded-full bg-primary/10 font-semibold uppercase text-primary ${sizeClasses[normalizedSize]}`
+      fallbackSpan.setAttribute('aria-hidden', !name)
+      fallbackSpan.textContent = initials
+      parent.appendChild(fallbackSpan)
+    }
+  }
+
   return (
     <div className="relative inline-flex">
       {src ? (
@@ -23,6 +37,7 @@ const Avatar = ({ src, name = '', size = 'md', status }) => {
           src={src}
           alt={name ? `${name} avatar` : 'Profile avatar'}
           className={`rounded-full object-cover ${sizeClasses[normalizedSize]}`}
+          onError={handleImageError}
         />
       ) : (
         <span

@@ -1,8 +1,7 @@
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 
 import { useAuth } from '../../context/AuthContext'
-import useToast from '../../hooks/useToast'
 import useCampaigns from '../../hooks/useCampaigns'
 
 const DEFAULT_IMAGE =
@@ -11,7 +10,11 @@ const DEFAULT_IMAGE =
 const formatCurrency = (value) => {
   const numeric = Number(value)
   if (Number.isNaN(numeric)) return '₹0'
-  return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(numeric)
+  return new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    maximumFractionDigits: 0
+  }).format(numeric)
 }
 
 const calculateProgress = (raised, goal) => {
@@ -19,65 +22,35 @@ const calculateProgress = (raised, goal) => {
   return Math.min(100, Math.round((Number(raised ?? 0) / Number(goal)) * 100))
 }
 
-const daysRemaining = (deadline) => {
-  if (!deadline) return null
-  const end = new Date(deadline)
-  if (Number.isNaN(end.getTime())) return null
-  const now = new Date()
-  const diff = Math.ceil((end - now) / (1000 * 60 * 60 * 24))
-  return diff < 0 ? 0 : diff
-}
-
-const getCategoryColor = (category) => {
-  const colors = {
-    scholarship: 'bg-blue-100 text-blue-800',
-    infrastructure: 'bg-green-100 text-green-800',
-    equipment: 'bg-purple-100 text-purple-800',
-    research: 'bg-orange-100 text-orange-800',
-    community: 'bg-pink-100 text-pink-800',
-    emergency: 'bg-red-100 text-red-800',
-    other: 'bg-gray-100 text-gray-800',
-  }
-  return colors[category] || colors.other
-}
-
-const getCategoryLabel = (category) => {
-  const labels = {
-    scholarship: 'Scholarship',
-    infrastructure: 'Infrastructure',
-    equipment: 'Equipment',
-    research: 'Research',
-    community: 'Community',
-    emergency: 'Emergency',
-    other: 'Other',
-  }
-  return labels[category] || 'Other'
-}
-
 const Campaigns = () => {
+
   const { role } = useAuth()
-  const addToast = useToast()
   const navigate = useNavigate()
+
   const normalizedRole = role?.toLowerCase() ?? null
+
   const canCreateCampaign = useMemo(() => {
     return ['alumni', 'admin', 'coordinator'].includes(normalizedRole)
   }, [normalizedRole])
 
   const { items, loading, error, refresh } = useCampaigns()
 
-
   const campaigns = useMemo(() => {
+
     return [...items].sort((a, b) => {
-      // Featured campaigns first
+
       if (a.featured && !b.featured) return -1
       if (!a.featured && b.featured) return 1
-      // Then by priority
+
       if (a.priority !== b.priority) return b.priority - a.priority
-      // Then by deadline (soonest first)
-      if (a.deadline && b.deadline) return new Date(a.deadline) - new Date(b.deadline)
-      // Finally by creation date
+
+      if (a.deadline && b.deadline)
+        return new Date(a.deadline) - new Date(b.deadline)
+
       return new Date(b.createdAt) - new Date(a.createdAt)
+
     })
+
   }, [items])
 
   const handleCreateCampaign = () => {
@@ -85,120 +58,118 @@ const Campaigns = () => {
   }
 
   return (
-    <div className="space-y-8">
-      <div className="rounded-3xl bg-gradient-to-r from-primary to-primary-dark p-10 text-white shadow-soft">
-        <h1 className="text-3xl font-semibold">Support Our Community Campaigns</h1>
-        <p className="mt-3 max-w-2xl text-sm text-white/80">
-          Join us in making a difference through various fundraising initiatives for scholarships, infrastructure, equipment, research, and community service.
-        </p>
-        {campaigns.length > 0 && (
-          <Link
-            to={`/dashboard/campaigns/${campaigns[0].id}`}
-            className="mt-6 inline-flex rounded-full bg-white/10 px-6 py-3 text-sm font-semibold text-white transition hover:bg-white/20"
-          >
-            Donate Now
-          </Link>
+    <div className="space-y-10">
+
+      {/* Header */}
+
+      <header className="text-center py-6">
+
+        <h1 className="text-3xl font-bold text-slate-900">
+          Support Our Community Campaigns
+        </h1>
+
+        {canCreateCampaign && (
+          <div className="mt-6">
+            <button
+              onClick={handleCreateCampaign}
+              className="rounded-full bg-primary px-6 py-2 text-sm font-semibold text-white transition hover:bg-primary-dark"
+            >
+              + Create Campaign
+            </button>
+          </div>
         )}
-      </div>
 
-      {canCreateCampaign && (
-        <button
-          type="button"
-          onClick={handleCreateCampaign}
-          className="rounded-full border border-primary/20 bg-white px-5 py-2 text-sm font-semibold text-primary transition hover:border-primary hover:bg-primary/10"
-        >
-          + Create Campaign
-        </button>
-      )}
-
-      {/* Campaign Approval Process Info */}
-      <div className="rounded-3xl border border-blue-200 bg-blue-50 px-6 py-4">
-        <h3 className="text-sm font-semibold text-blue-900">Campaign Approval Process</h3>
-        <p className="mt-1 text-sm text-blue-700">
-          Your campaign will be submitted for approval to the admin and respective department. Once approved, it will be visible to all users.
-        </p>
-      </div>
+      </header>
 
       {error && (
         <div className="flex items-center justify-between gap-4 rounded-3xl border border-rose-200 bg-rose-50 px-6 py-4 text-sm text-rose-600">
           <p>{error.message ?? 'Unable to load campaigns right now.'}</p>
           <button
-            type="button"
             onClick={refresh}
-            className="rounded-full border border-rose-400 px-4 py-1 text-xs font-semibold uppercase tracking-wide text-rose-600 transition hover:border-rose-500 hover:text-rose-700"
+            className="rounded-full border border-rose-400 px-4 py-1 text-xs font-semibold uppercase tracking-wide text-rose-600"
           >
             Retry
           </button>
         </div>
       )}
 
-      <section>
-        <h2 className="text-lg font-semibold text-slate-900">Campaigns</h2>
-        <div className="mt-4 grid gap-6 lg:grid-cols-3">
-          {loading
-            ? Array.from({ length: 3 }).map((_, index) => <CampaignSkeleton key={index} />)
-            : campaigns.length > 0
-            ? campaigns.map((campaign) => <CampaignCard key={campaign.id} campaign={campaign} />)
-            : (
-              <div className="col-span-full rounded-3xl border border-dashed border-slate-200 bg-white p-12 text-center">
-                <h3 className="text-lg font-semibold text-slate-900">No campaigns yet</h3>
-                <p className="mt-2 text-sm text-slate-500">
-                  When alumni and faculty launch fundraising campaigns, they will appear here. {canCreateCampaign ? 'Start the first campaign!' : ''}
-                </p>
-              </div>
-              )}
-        </div>
+      {/* Campaign Grid */}
+
+      <section className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+
+        {loading
+          ? Array.from({ length: 3 }).map((_, i) => (
+              <CampaignSkeleton key={i} />
+            ))
+          : campaigns.length > 0
+          ? campaigns.map((campaign) => (
+              <CampaignCard key={campaign.id} campaign={campaign} />
+            ))
+          : (
+            <div className="col-span-full rounded-3xl border border-dashed border-slate-200 bg-white p-12 text-center">
+              <h3 className="text-lg font-semibold text-slate-900">
+                No campaigns yet
+              </h3>
+              <p className="mt-2 text-sm text-slate-500">
+                Fundraising campaigns will appear here.
+              </p>
+            </div>
+          )}
+
       </section>
+
     </div>
   )
 }
 
 const CampaignCard = ({ campaign }) => {
+
   const image = campaign.coverImage || DEFAULT_IMAGE
-  const progress = calculateProgress(campaign.raisedAmount, campaign.goalAmount)
-  const remaining = daysRemaining(campaign.deadline)
-  const isPending = campaign.approvalStatus === 'PENDING'
-  const isOwner = campaign.createdBy === campaign.currentUserId // We'll need to pass this
+
+  const progress = calculateProgress(
+    campaign.raisedAmount,
+    campaign.goalAmount
+  )
 
   return (
-    <Link to={`/dashboard/campaigns/${campaign.id}`} className="relative block h-full w-full overflow-hidden">
-      <article className="flex h-full flex-col overflow-hidden rounded-3xl bg-white shadow-sm">
-        <img src={image} alt={campaign.title} className="h-48 w-full object-cover transition duration-500 hover:scale-105" />
-        {campaign.featured && (
-          <span className="absolute left-4 top-4 rounded-full bg-yellow-400 px-3 py-1 text-xs font-semibold uppercase tracking-widest text-yellow-900">
-            Featured
-          </span>
-        )}
-        {isPending && (
-          <span className="absolute right-4 top-4 rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold uppercase tracking-widest text-amber-700">
-            Pending Approval
-          </span>
-        )}
-        <div className="flex-1 flex flex-col p-6">
-          <div className="space-y-4">
-            <div>
-              <h3 className="text-xl font-bold text-slate-900 line-clamp-2">{campaign.title}</h3>
-              <p className="text-sm text-slate-500 line-clamp-2">{getCategoryLabel(campaign.category)}</p>
-            </div>
-            <p className="text-sm text-slate-600 line-clamp-3">{campaign.description}</p>
-            <div className="mt-auto flex items-center justify-between text-sm text-slate-500">
-              <span>{formatCurrency(campaign.goalAmount)}</span>
-              <span>{getCategoryLabel(campaign.category)}</span>
-            </div>
-            <div className="space-y-2 text-sm text-slate-500">
-              <p>{formatCurrency(campaign.raisedAmount)} raised of {formatCurrency(campaign.goalAmount)}</p>
-              <div className="h-2 rounded-full bg-slate-100">
-                <div className="h-full rounded-full bg-emerald-500 transition-all duration-500" style={{ width: `${progress}%` }}></div>
-              </div>
-              <div className="flex items-center justify-between text-xs text-slate-500">
-                <span>{campaign.donorCount || 0} donors</span>
-                <span>{progress}% funded</span>
-              </div>
-            </div>
-          </div>
+
+    <article className="flex h-full flex-col overflow-hidden rounded-3xl bg-white shadow-sm hover:shadow-lg transition">
+
+      <img
+        src={image}
+        alt={campaign.title}
+        className="h-48 w-full object-cover"
+      />
+
+      <div className="flex flex-1 flex-col gap-4 p-6">
+
+        <h3 className="text-lg font-semibold text-slate-900">
+          {campaign.title}
+        </h3>
+
+        <p className="text-sm text-slate-500">
+          {formatCurrency(campaign.raisedAmount)} raised of{' '}
+          {formatCurrency(campaign.goalAmount)}
+        </p>
+
+        <div className="h-2 rounded-full bg-slate-100">
+          <div
+            className="h-full rounded-full bg-emerald-500"
+            style={{ width: `${progress}%` }}
+          />
         </div>
-      </article>
-    </Link>
+
+        <Link
+          to={`/dashboard/campaigns/${campaign.id}`}
+          className="mt-auto inline-flex items-center justify-center rounded-full bg-primary px-4 py-2 text-sm font-semibold text-white transition hover:bg-primary-dark"
+        >
+          Donate Now
+        </Link>
+
+      </div>
+
+    </article>
+
   )
 }
 

@@ -4,14 +4,15 @@ import AppRoutes from './routes/AppRoutes'
 import Home from './pages/Home'
 import About from './pages/About'
 import AlumniDirectory from './pages/AlumniDirectory'
-import PublicStudentDirectory from './pages/PublicStudentDirectory'
 import PublicAlumniDirectory from './pages/PublicAlumniDirectory'
+import PublicStudentDirectory from './pages/PublicStudentDirectory'
 import PublicContact from './pages/PublicContact'
-import PublicCareerOpportunities from './pages/PublicCareerOpportunities'
-import PublicMentorAStudent from './pages/PublicMentorAStudent'
-import PublicUpcomingEvents from './pages/PublicUpcomingEvents'
-import PublicCampaigns from './pages/PublicCampaigns'
-import Events from './pages/Events'
+import PublicCareerOpportunities from "./pages/PublicCareerOpportunities";
+import PublicMentorAStudent from "./pages/PublicMentorAStudent";
+import PublicCampaigns from "./pages/PublicCampaigns";
+import PublicMemories from "./pages/PublicMemories";
+import PublicEvents from './pages/PublicEvents'
+import PublicEventDetail from './pages/PublicEventDetail'
 import Mentorship from './pages/Mentorship'
 import Gallery from './pages/Gallery'
 import Login from './pages/Login'
@@ -23,7 +24,6 @@ import Dashboard from './pages/user/Dashboard'
 import UserLayout from './layouts/UserLayout'
 import { useAuth } from './context/AuthContext'
 import { ToastProvider } from './components/ui/ToastProvider'
-import UserDirectory from './pages/user/Directory'
 import DirectoryProfile from './pages/user/DirectoryProfile'
 import UserMentorship from './pages/user/Mentorship'
 import UserProfile from './pages/user/Profile'
@@ -33,8 +33,6 @@ import NewsCreate from './pages/user/NewsCreate'
 import EventDetail from './pages/user/EventDetail'
 import UserEvents from './pages/user/Events'
 import RegisteredEvents from './pages/user/RegisteredEvents'
-import Donations from './pages/user/Donations'
-import DonationDetail from './pages/user/DonationDetail'
 import MyActivity from './pages/user/MyActivity'
 import MyApplications from './pages/user/MyApplications'
 import ContentPosted from './pages/user/ContentPosted'
@@ -158,13 +156,15 @@ function App() {
           <Route element={<PublicLayout />}>
             <Route index element={<Home />} />
             <Route path="about" element={<About />} />
-            <Route path="student-directory" element={<PublicStudentDirectory />} />
             <Route path="alumni-directory" element={<PublicAlumniDirectory />} />
+            <Route path="student-directory" element={<PublicStudentDirectory />} />
             <Route path="contact" element={<PublicContact />} />
             <Route path="opportunities" element={<PublicCareerOpportunities />} />
             <Route path="mentor-student" element={<PublicMentorAStudent />} />
-            <Route path="events" element={<PublicUpcomingEvents />} />
             <Route path="campaigns" element={<PublicCampaigns />} />
+            <Route path="memories" element={<PublicMemories />} />
+            <Route path="events" element={<PublicEvents />} />
+            <Route path="events/:eventId" element={<PublicEventDetail />} />
             <Route path="directory" element={<Navigate to="/dashboard/directory/students" replace />} />
             <Route path="directory/:profileId" element={<DirectoryProfile />} />
             <Route path="mentorship" element={<Mentorship />} />
@@ -370,18 +370,7 @@ function App() {
                 <OpportunityApplications />
               </ProfilePendingGuardWithFallback>
             } />
-            <Route path="donations/:campaignId/edit" element={
-              <ProfilePendingGuardWithFallback>
-                <RoleRoute allowedRoles={['alumni']}>
-                  <EditDonation />
-                </RoleRoute>
-              </ProfilePendingGuardWithFallback>
-            } />
-            <Route path="donations/:campaignId" element={
-              <ProfilePendingGuardWithFallback>
-                <DonationDetail />
-              </ProfilePendingGuardWithFallback>
-            } />
+           
             <Route path="news" element={
               <ProfilePendingGuardWithFallback>
                 <UserNews />

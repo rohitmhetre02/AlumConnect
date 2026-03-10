@@ -101,6 +101,105 @@ router.get('/events/pending', authMiddleware, async (req, res) => {
   }
 })
 
+// Get upcoming events
+router.get('/events/upcoming', authMiddleware, async (req, res) => {
+  try {
+    const userId = req.user?.id
+    const role = (req.user?.role || '').toLowerCase()
+
+    if (!userId) {
+      return res.status(401).json({ message: 'Authentication required.' })
+    }
+
+    if (role !== 'faculty') {
+      return res.status(403).json({ message: 'Only faculty can view upcoming events.' })
+    }
+
+    // TODO: Implement real upcoming event fetching for faculty
+    // For now, return empty array
+    const events = []
+
+    res.status(200).json({
+      success: true,
+      data: events,
+      count: events.length
+    })
+  } catch (error) {
+    console.error('Error fetching upcoming events:', error)
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch upcoming events',
+      error: error.message
+    })
+  }
+})
+
+// Get opportunities for faculty
+router.get('/opportunities', authMiddleware, async (req, res) => {
+  try {
+    const userId = req.user?.id
+    const role = (req.user?.role || '').toLowerCase()
+
+    if (!userId) {
+      return res.status(401).json({ message: 'Authentication required.' })
+    }
+
+    if (role !== 'faculty') {
+      return res.status(403).json({ message: 'Only faculty can view opportunities.' })
+    }
+
+    // TODO: Implement real opportunity fetching for faculty
+    // For now, return empty array
+    const opportunities = []
+
+    res.status(200).json({
+      success: true,
+      data: opportunities,
+      count: opportunities.length
+    })
+  } catch (error) {
+    console.error('Error fetching opportunities:', error)
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch opportunities',
+      error: error.message
+    })
+  }
+})
+
+// Get campaigns for faculty
+router.get('/campaigns', authMiddleware, async (req, res) => {
+  try {
+    const userId = req.user?.id
+    const role = (req.user?.role || '').toLowerCase()
+
+    if (!userId) {
+      return res.status(401).json({ message: 'Authentication required.' })
+    }
+
+    if (role !== 'faculty') {
+      return res.status(403).json({ message: 'Only faculty can view campaigns.' })
+    }
+
+    // TODO: Implement real campaign fetching for faculty
+    // For now, return empty array
+    const campaigns = []
+
+    res.status(200).json({
+      success: true,
+      data: campaigns,
+      count: campaigns.length
+    })
+  } catch (error) {
+    console.error('Error fetching campaigns:', error)
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch campaigns',
+      error: error.message
+    })
+  }
+})
+
 // Get student activities in faculty's department
 router.get('/student-activities', authMiddleware, async (req, res) => {
   try {

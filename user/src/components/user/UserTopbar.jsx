@@ -333,50 +333,6 @@ const UserTopbar = ({ onToggleSidebar }) => {
 
           </button>
 
-          <label className="relative hidden w-full max-w-lg sm:block">
-
-            <span className="sr-only">Search</span>
-
-            <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
-
-              <SearchIcon className="h-4 w-4" />
-
-            </span>
-
-            <input
-
-              type="search"
-
-              placeholder="Search alumni, jobs, events..."
-
-              className="w-full rounded-full border border-slate-200 bg-slate-50 px-12 py-2.5 text-sm text-slate-700 placeholder:text-slate-400 focus:border-primary focus:bg-white focus:outline-none"
-
-            />
-
-          </label>
-
-          <label className="relative flex-1 sm:hidden">
-
-            <span className="sr-only">Search</span>
-
-            <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
-
-              <SearchIcon className="h-4 w-4" />
-
-            </span>
-
-            <input
-
-              type="search"
-
-              placeholder="Search..."
-
-              className="w-full rounded-full border border-slate-200 bg-slate-50 px-10 py-2 text-sm text-slate-700 placeholder:text-slate-400 focus:border-primary focus:bg-white focus:outline-none"
-
-            />
-
-          </label>
-
         </div>
 
         <div className="flex items-center gap-2 sm:gap-3">
@@ -421,8 +377,6 @@ const UserTopbar = ({ onToggleSidebar }) => {
 
           </div>
 
-
-
           <div className="relative" ref={messageRef}>
 
             <IconButton
@@ -454,66 +408,6 @@ const UserTopbar = ({ onToggleSidebar }) => {
                   onSelectConversation={openMessagesPanel}
 
                 />
-
-              </div>
-
-            )}
-
-          </div>
-
-
-
-          <div className="relative" ref={profileRef}>
-
-            <button
-
-              type="button"
-
-              onClick={() => setOpenDropdown((prev) => (prev === 'profile' ? null : 'profile'))}
-
-              className="flex items-center gap-2 rounded-full border border-slate-100 bg-white px-2 py-1.5 text-left shadow-sm transition hover:border-primary/40 sm:gap-3 sm:px-3"
-
-              aria-haspopup="menu"
-
-              aria-expanded={openDropdown === 'profile'}
-
-            >
-
-              {avatarUrl ? (
-
-                <img
-
-                  src={avatarUrl}
-
-                  alt={displayName || 'Profile avatar'}
-
-                  className="h-9 w-9 rounded-full object-cover sm:h-10 sm:w-10"
-
-                />
-
-              ) : (
-
-                <span className="grid h-9 w-9 place-items-center rounded-full bg-primary/10 text-sm font-bold text-primary sm:h-10 sm:w-10">
-
-                  {avatarInitial}
-
-                </span>
-
-              )}
-
-              <ChevronDownIcon className={`h-4 w-4 text-slate-400 transition ${openDropdown === 'profile' ? 'rotate-180 text-slate-500' : ''}`} />
-
-            </button>
-
-            {openDropdown === 'profile' && (
-
-              <div className="absolute right-0 mt-3 w-60 rounded-2xl border border-slate-100 bg-white py-2 shadow-xl">
-
-                <div className="my-1 border-t border-slate-100" />
-
-                <DropdownItem icon={UserIcon} label="Profile" onClick={handleProfileSelect} />
-
-                <DropdownItem icon={LogoutIcon} label="Logout" onClick={handleLogout} />
 
               </div>
 

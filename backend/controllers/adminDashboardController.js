@@ -447,6 +447,7 @@ const getPendingItems = async (req, res) => {
 // Get recent activity
 const getRecentActivity = async (req, res) => {
   try {
+    const dashboardData = { recentActivities: [] }
     const activities = []
     const limit = 10
 

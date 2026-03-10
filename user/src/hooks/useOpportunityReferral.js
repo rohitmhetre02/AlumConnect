@@ -34,7 +34,7 @@ const useOpportunityReferral = (opportunityId, { autoFetch = true } = {}) => {
     setError(null)
 
     try {
-      const response = await get(`/api/opportunities/${normalizedId}/referrals/me`)
+      const response = await get(`/api/opportunities/${normalizedId}/referrals/me`, { includeAuth: true })
       const payload = response?.data ?? response
       setReferral(payload)
       return payload
@@ -90,7 +90,7 @@ const useOpportunityReferral = (opportunityId, { autoFetch = true } = {}) => {
           formData.append('resume', resumeFile)
         }
 
-        const response = await post(`/api/opportunities/${normalizedId}/referrals`, formData)
+        const response = await post(`/api/opportunities/${normalizedId}/referrals`, formData, { includeAuth: true })
         const payload = response?.data ?? response
         setReferral(payload)
         addToast?.({

@@ -114,7 +114,7 @@ const PublicNavbar = () => {
             </div>
 
             {/* MEMORIES */}
-            <NavLink to="/gallery" className={({isActive}) =>
+            <NavLink to="/memories" className={({isActive}) =>
               isActive ? "text-orange-400" : "hover:text-orange-400"
             }>
               Memories
@@ -160,7 +160,7 @@ const PublicNavbar = () => {
                     onClick={() => setEngageOpen(false)}
                     className="block px-4 py-2 hover:bg-blue-50 hover:text-blue-600"
                   >
-                    Events
+                    Upcoming Events
                   </Link>
 
                   <Link
@@ -168,7 +168,7 @@ const PublicNavbar = () => {
                     onClick={() => setEngageOpen(false)}
                     className="block px-4 py-2 hover:bg-blue-50 hover:text-blue-600"
                   >
-                    Campaigns
+                    Active Campaigns
                   </Link>
 
                 </div>

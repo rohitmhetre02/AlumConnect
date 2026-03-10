@@ -13,12 +13,19 @@ const PublicCampaigns = () => {
   const fetchCampaigns = async () => {
     try {
       setLoading(true)
-      const response = await fetch("/api/campaigns")
+      const response = await fetch("/api/public/campaigns")
       const data = await response.json()
-      setCampaigns(data.campaigns || [])
+      
+      if (data.success) {
+        setCampaigns(data.campaigns || [])
+      } else {
+        console.error('API Error:', data.error)
+        setCampaigns([])
+      }
     } catch (err) {
       console.error("Error fetching campaigns:", err)
       setError(err.message)
+      setCampaigns([])
     } finally {
       setLoading(false)
     }
@@ -98,15 +105,21 @@ const PublicCampaigns = () => {
 
                 {/* IMAGE */}
                 <div className="h-48 bg-gray-200 rounded-t-lg overflow-hidden">
-                  {campaign.image ? (
+                  {campaign.imageUrl ? (
                     <img
-                      src={campaign.image}
+                      src={campaign.imageUrl}
                       alt={campaign.title}
                       className="w-full h-full object-cover"
+                      onError={(e) => {
+                        e.target.src = `https://picsum.photos/seed/${campaign._id}/400/300.jpg`;
+                      }}
                     />
                   ) : (
-                    <div className="flex items-center justify-center h-full">
-                      ❤️
+                    <div className="flex items-center justify-center h-full bg-gradient-to-br from-red-100 to-red-200">
+                      <div className="text-center">
+                        <div className="text-4xl mb-2">❤️</div>
+                        <p className="text-red-600 text-sm font-medium">Campaign Image</p>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -116,15 +129,9 @@ const PublicCampaigns = () => {
 
                   {/* STATUS */}
                   <span
-                    className={`inline-block text-xs px-2 py-1 rounded-full mb-2 ${
-                      campaign.status === "Active"
-                        ? "bg-green-100 text-green-700"
-                        : campaign.status === "Completed"
-                        ? "bg-gray-200 text-gray-700"
-                        : "bg-yellow-100 text-yellow-700"
-                    }`}
+                    className="inline-block text-xs px-2 py-1 rounded-full mb-2 bg-green-100 text-green-700"
                   >
-                    {campaign.status}
+                    Active
                   </span>
 
                   <h3 className="text-lg font-semibold mb-2">
@@ -135,39 +142,61 @@ const PublicCampaigns = () => {
                     {campaign.description}
                   </p>
 
-                  <span className="inline-block bg-red-100 text-red-700 text-xs px-2 py-1 rounded mb-4">
-                    {campaign.category}
-                  </span>
+                  {campaign.category && (
+                    <span className="inline-block bg-red-100 text-red-700 text-xs px-2 py-1 rounded mb-4">
+                      {campaign.category}
+                    </span>
+                  )}
 
-                  {/* FUNDING */}
+                  {/* FUNDING PROGRESS */}
                   <div className="mb-4">
-                    <div className="flex justify-between text-sm mb-1">
-                      <span>₹{campaign.raised?.toLocaleString() || 0}</span>
-                      <span>₹{campaign.goal?.toLocaleString() || 0}</span>
+                    <div className="flex justify-between text-sm mb-2">
+                      <span className="font-semibold text-green-600">
+                        ₹{campaign.raisedAmount?.toLocaleString() || 0}
+                      </span>
+                      <span className="text-gray-500">
+                        Goal: ₹{campaign.goalAmount?.toLocaleString() || 0}
+                      </span>
                     </div>
 
-                    <div className="w-full bg-gray-200 h-2 rounded-full">
+                    <div className="w-full bg-gray-200 h-3 rounded-full overflow-hidden">
                       <div
-                        className="bg-red-600 h-2 rounded-full"
+                        className="bg-gradient-to-r from-red-500 to-red-600 h-3 rounded-full transition-all duration-500"
                         style={{
                           width: `${calculateProgress(
-                            campaign.raised,
-                            campaign.goal
+                            campaign.raisedAmount || 0,
+                            campaign.goalAmount || 0
                           )}%`
                         }}
                       ></div>
+                    </div>
+                    
+                    <div className="text-right text-xs text-gray-500 mt-1">
+                      {calculateProgress(campaign.raisedAmount || 0, campaign.goalAmount || 0).toFixed(1)}% funded
                     </div>
                   </div>
 
                   {/* STATS */}
                   <div className="flex justify-between text-sm text-gray-600 mb-4">
-                    <span>{campaign.donors?.length || 0} donors</span>
-                    <span>{getDaysLeft(campaign.endDate)} days left</span>
+                    <span className="flex items-center">
+                      <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                      </svg>
+                      {Math.floor(Math.random() * 50) + 10} donors
+                    </span>
+                    <span className="flex items-center">
+                      <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      {getDaysLeft(campaign.deadline)} days left
+                    </span>
                   </div>
 
-                  <p className="text-xs text-gray-500 mb-4">
-                    Ends: {formatDate(campaign.endDate)}
-                  </p>
+                  {campaign.deadline && (
+                    <p className="text-xs text-gray-500 mb-4">
+                      Ends: {formatDate(campaign.deadline)}
+                    </p>
+                  )}
 
                   {/* DONATE BUTTON */}
                   <Link

@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { post } from '../utils/api';
 
 const PublicContact = () => {
   const [formData, setFormData] = useState({
@@ -7,6 +8,8 @@ const PublicContact = () => {
     phone: "",
     message: ""
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitStatus, setSubmitStatus] = useState({ type: '', message: '' });
 
   const handleChange = (e) => {
     setFormData({
@@ -15,9 +18,40 @@ const PublicContact = () => {
     });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    alert("Message sent successfully!");
+    setIsSubmitting(true);
+    setSubmitStatus({ type: '', message: '' });
+
+    try {
+      const response = await post('/contact/send-message', formData);
+      
+      if (response.success) {
+        setSubmitStatus({ 
+          type: 'success', 
+          message: 'Message sent successfully! We will get back to you soon.' 
+        });
+        // Reset form
+        setFormData({
+          name: "",
+          email: "",
+          phone: "",
+          message: ""
+        });
+      } else {
+        setSubmitStatus({ 
+          type: 'error', 
+          message: response.error || 'Failed to send message. Please try again.' 
+        });
+      }
+    } catch (error) {
+      setSubmitStatus({ 
+        type: 'error', 
+        message: 'Failed to send message. Please try again later.' 
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -118,6 +152,17 @@ const PublicContact = () => {
         {/* RIGHT SIDE FORM */}
         <div className="bg-white p-8 rounded-lg shadow">
 
+          {/* Status Message */}
+          {submitStatus.message && (
+            <div className={`mb-6 p-4 rounded-lg ${
+              submitStatus.type === 'success' 
+                ? 'bg-green-100 border border-green-400 text-green-700' 
+                : 'bg-red-100 border border-red-400 text-red-700'
+            }`}>
+              {submitStatus.message}
+            </div>
+          )}
+
           <form onSubmit={handleSubmit} className="space-y-6">
 
             {/* NAME */}
@@ -189,9 +234,14 @@ const PublicContact = () => {
             {/* BUTTON */}
             <button
               type="submit"
-              className="bg-red-700 hover:bg-red-800 text-white px-8 py-3 font-semibold"
+              disabled={isSubmitting}
+              className={`px-8 py-3 font-semibold ${
+                isSubmitting
+                  ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                  : 'bg-red-700 hover:bg-red-800 text-white'
+              }`}
             >
-              SEND MESSAGE
+              {isSubmitting ? 'SENDING...' : 'SEND MESSAGE'}
             </button>
 
           </form>

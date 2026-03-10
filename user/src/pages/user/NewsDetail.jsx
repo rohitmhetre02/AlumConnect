@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 
 import { useNewsArticle } from '../../hooks/useNews'
@@ -13,14 +13,48 @@ const formatDate = (isoString) => {
   return new Intl.DateTimeFormat('en-US', { month: 'long', day: 'numeric', year: 'numeric' }).format(date)
 }
 
+// Validate and sanitize image URL
+const getValidImageUrl = (imageUrl) => {
+  if (!imageUrl) return FALLBACK_IMAGE
+  
+  // Handle blob URLs
+  if (imageUrl.startsWith('blob:')) {
+    return FALLBACK_IMAGE
+  }
+  
+  // Handle data URLs
+  if (imageUrl.startsWith('data:')) {
+    return FALLBACK_IMAGE
+  }
+  
+  // Handle relative URLs
+  if (imageUrl.startsWith('/')) {
+    return `${window.location.origin}${imageUrl}`
+  }
+  
+  try {
+    const url = new URL(imageUrl)
+    // Only allow http and https protocols
+    if (url.protocol === 'http:' || url.protocol === 'https:') {
+      return imageUrl
+    }
+  } catch (e) {
+    // Invalid URL
+    console.warn('Invalid image URL:', imageUrl)
+  }
+  
+  return FALLBACK_IMAGE
+}
+
 const NewsDetail = () => {
   const { articleId } = useParams()
   const navigate = useNavigate()
   const { data, loading, error } = useNewsArticle(articleId)
+  const [imageError, setImageError] = useState(false)
 
   const publishedLabel = useMemo(() => formatDate(data?.publishedAt ?? data?.createdAt), [data?.publishedAt, data?.createdAt])
   const readingLabel = data?.readingTimeMinutes ? `${data.readingTimeMinutes} min read` : ''
-  const coverImage = data?.coverImage || FALLBACK_IMAGE
+  const coverImage = imageError ? FALLBACK_IMAGE : getValidImageUrl(data?.coverImage)
 
   const paragraphs = useMemo(() => {
     if (!data?.content) return []
@@ -71,7 +105,13 @@ const NewsDetail = () => {
       {/* Article Content */}
       <article className="overflow-hidden rounded-4xl bg-white shadow-soft">
         <div className="relative">
-          <img src={coverImage} alt={`${data.title} banner`} className="h-80 w-full object-cover sm:h-[28rem]" />
+          <img 
+            src={coverImage} 
+            alt={`${data.title} banner`} 
+            className="h-80 w-full object-cover sm:h-[28rem]"
+            onError={() => setImageError(true)}
+            loading="lazy"
+          />
           <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-slate-900/20 to-transparent" />
           <div className="absolute left-0 right-0 bottom-0 px-6 pb-10 sm:px-12">
             <div className="max-w-4xl space-y-4 text-white">

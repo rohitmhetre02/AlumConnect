@@ -38,7 +38,7 @@ export const useEvents = () => {
     setLoading(true)
     setError(null)
     try {
-      const response = await get('/events', { includeAuth: false })
+      const response = await get('/api/public/events', { includeAuth: false })
       const data = Array.isArray(response?.data) ? response.data : []
       setItems(data.map(formatEvent).filter(Boolean))
     } catch (fetchError) {
@@ -147,13 +147,13 @@ export const useEvents = () => {
       registerForEvent,
       getEventById: async (id) => {
         try {
-          const response = await get(`/events/${id}`, { includeAuth: false })
+          const response = await get(`/api/public/events/${id}`, { includeAuth: false })
           return formatEvent(response?.data)
         } catch (error) {
           console.error('Failed to get event by id:', error)
           throw error
         }
-      }
+      },
     }),
     [items, loading, error, fetchEvents, createEvent, updateEvent, registerForEvent]
   )

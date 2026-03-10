@@ -16,7 +16,7 @@ const useCalendarNotes = () => {
     setError(null)
     
     try {
-      const response = await get(`/calendar/notes/${user.id}`)
+      const response = await get(`/api/calendar/notes/${user.id}`)
       if (response?.data) {
         setNotes(response.data)
       }
@@ -26,7 +26,6 @@ const useCalendarNotes = () => {
         console.error('Failed to fetch calendar notes:', err)
         setError(err.message || 'Failed to load notes')
       }
-      // For development, use mock data if API fails
       setNotes([])
     } finally {
       setLoading(false)
@@ -41,7 +40,7 @@ const useCalendarNotes = () => {
     setError(null)
     
     try {
-      const response = await post('/calendar/notes', {
+      const response = await post('/api/calendar/notes', {
         ...noteData,
         userId: user.id,
       })
@@ -53,16 +52,7 @@ const useCalendarNotes = () => {
     } catch (err) {
       console.error('Failed to add calendar note:', err)
       setError(err.message || 'Failed to add note')
-      
-      // For development, create a mock note
-      const mockNote = {
-        id: Date.now().toString(),
-        ...noteData,
-        userId: user.id,
-        createdAt: new Date().toISOString(),
-      }
-      setNotes(prev => [...prev, mockNote])
-      return mockNote
+      return null
     } finally {
       setLoading(false)
     }
@@ -76,11 +66,11 @@ const useCalendarNotes = () => {
     setError(null)
     
     try {
-      const response = await post(`/calendar/notes/${noteId}`, updateData)
+      const response = await post(`/api/calendar/notes/${noteId}`, updateData)
       
       if (response?.data) {
         setNotes(prev => prev.map(note => 
-          note.id === noteId ? { ...note, ...response.data } : note
+          note._id === noteId ? { ...note, ...response.data } : note
         ))
         return response.data
       }
@@ -101,30 +91,27 @@ const useCalendarNotes = () => {
     setError(null)
     
     try {
-      await del(`/calendar/notes/${noteId}`)
-      setNotes(prev => prev.filter(note => note.id !== noteId))
+      await del(`/api/calendar/notes/${noteId}`)
+      setNotes(prev => prev.filter(note => note._id !== noteId))
       return true
     } catch (err) {
       console.error('Failed to delete calendar note:', err)
       setError(err.message || 'Failed to delete note')
-      
-      // For development, just remove from local state
-      setNotes(prev => prev.filter(note => note.id !== noteId))
-      return true
+      return false
     } finally {
       setLoading(false)
     }
   }, [user?.id])
 
-  // Get notes for a specific date
-  const getNotesForDate = useCallback((dateKey) => {
-    return notes.filter(note => note.dateKey === dateKey)
+  // Get note for a specific date
+  const getNoteForDate = useCallback((date) => {
+    return notes.find(note => note.date === date)
   }, [notes])
 
   // Get notes for a date range
   const getNotesForDateRange = useCallback((startDate, endDate) => {
     return notes.filter(note => {
-      const noteDate = new Date(note.dateKey)
+      const noteDate = new Date(note.date)
       return noteDate >= startDate && noteDate <= endDate
     })
   }, [notes])
@@ -134,18 +121,7 @@ const useCalendarNotes = () => {
     if (user?.id) {
       fetchNotes()
     }
-  }, [user?.id])
-
-  // Auto-refresh notes every 30 seconds for real-time updates
-  useEffect(() => {
-    if (!user?.id) return
-    
-    const interval = setInterval(() => {
-      fetchNotes()
-    }, 30000)
-
-    return () => clearInterval(interval)
-  }, [user?.id])
+  }, [user?.id, fetchNotes])
 
   return {
     notes,
@@ -155,7 +131,7 @@ const useCalendarNotes = () => {
     addNote,
     updateNote,
     deleteNote,
-    getNotesForDate,
+    getNoteForDate,
     getNotesForDateRange,
   }
 }

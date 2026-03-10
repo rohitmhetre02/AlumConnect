@@ -1,4 +1,4 @@
-import { Link, useParams } from 'react-router-dom'
+import { Link, useParams, useNavigate } from 'react-router-dom'
 import { useMemo, useState, useEffect } from 'react'
 
 import { useAuth } from '../../context/AuthContext'
@@ -45,6 +45,7 @@ const getCategoryColor = (category) => {
 
 const CampaignDetail = () => {
   const { campaignId } = useParams()
+  const navigate = useNavigate()
   const addToast = useToast()
   const { user } = useAuth()
   const [showDonationModal, setShowDonationModal] = useState(false)
@@ -61,10 +62,31 @@ const CampaignDetail = () => {
 
   const { data, loading, error, donateToCampaign } = useCampaign(campaignId)
 
-  // Component initialization - no payment handling needed since redirect goes directly to campaign page
+  // Handle payment success/cancelled redirects
   useEffect(() => {
-    // No need to handle payment URL params since we redirect directly to campaign page
-  }, [])
+    const urlParams = new URLSearchParams(window.location.search)
+    const paymentStatus = urlParams.get('payment')
+    
+    if (paymentStatus === 'success') {
+      addToast?.({
+        title: 'Payment Successful!',
+        description: 'Thank you for your generous donation. Your contribution has been recorded.',
+        tone: 'success',
+      })
+      
+      // Clean URL parameters
+      navigate(`/dashboard/campaigns/${campaignId}`, { replace: true })
+    } else if (paymentStatus === 'cancelled') {
+      addToast?.({
+        title: 'Payment Cancelled',
+        description: 'Your donation was cancelled. You can try again anytime.',
+        tone: 'info',
+      })
+      
+      // Clean URL parameters
+      navigate(`/dashboard/campaigns/${campaignId}`, { replace: true })
+    }
+  }, [campaignId, navigate, addToast])
 
   const progress = useMemo(() => {
     if (!data || !data.goalAmount) return 0
@@ -158,6 +180,8 @@ const CampaignDetail = () => {
           donorEmail: donorEmail.trim(),
           message: donorMessage.trim(),
           anonymous,
+          success_url: `${window.location.origin}/dashboard/campaigns/${campaignId}?payment=success`,
+          cancel_url: `${window.location.origin}/dashboard/campaigns/${campaignId}?payment=cancelled`,
         }),
       })
 
@@ -215,15 +239,7 @@ const CampaignDetail = () => {
           </div>
           <h1 className="text-2xl font-bold text-slate-900 mb-2">Campaign Not Found</h1>
           <p className="text-slate-600 mb-6">The campaign you're looking for doesn't exist or has been removed.</p>
-          <Link
-            to="/dashboard/campaigns"
-            className="inline-flex items-center gap-2 rounded-full bg-primary px-6 py-3 text-sm font-semibold text-white transition hover:bg-primary-dark"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
-              <path d="M15 18l-6-6 6-6" />
-            </svg>
-            Back to Campaigns
-          </Link>
+          
         </div>
       </div>
     )
@@ -231,6 +247,12 @@ const CampaignDetail = () => {
 
   return (
     <div className="min-h-screen bg-slate-50">
+      <Link to="/dashboard/campaigns" className="inline-flex items-center gap-2 rounded-full bg-black/20 px-4 py-2 text-sm font-semibold text-white transition mb-4">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
+              <path d="M15 18l-6-6 6-6" />
+            </svg>
+            Back to Campaigns
+          </Link>
       {/* Hero Section */}
       <div className="relative h-64 w-full overflow-hidden">
         <img 
@@ -242,12 +264,7 @@ const CampaignDetail = () => {
         />
         <div className="absolute inset-0 bg-gradient-to-t from-slate-900/60 to-transparent"></div>
         <div className="absolute bottom-0 left-0 right-0 p-8 text-white">
-          <Link to="/dashboard/campaigns" className="inline-flex items-center gap-2 rounded-full bg-white/20 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/30 mb-4">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
-              <path d="M15 18l-6-6 6-6" />
-            </svg>
-            Back to Campaigns
-          </Link>
+          
           <h1 className="text-3xl font-bold">{data.title || 'Untitled Campaign'}</h1>
           <div className="flex items-center gap-4 mt-2">
             <span className={`rounded-full px-3 py-1 text-xs font-semibold ${getCategoryColor(data.category || 'other')}`}>

@@ -12,11 +12,25 @@ const roleLabels = {
 
 const FILTER_OPTIONS = {
   students: {
-    departments: ['Computer Science', 'Engineering', 'Business', 'Medicine', 'Arts', 'Science'],
+    departments: [
+      'Computer Engineering',
+      'Information Technology', 
+      'Mechanical Engineering',
+      'Electronics & Telecommunication Engineering',
+      'Civil Engineering',
+      'Electrical Engineering'
+    ],
     currentYears: ['1st Year', '2nd Year', '3rd Year', '4th Year', 'Final Year']
   },
   alumni: {
-    departments: ['Computer Science', 'Engineering', 'Business', 'Medicine', 'Arts', 'Science'],
+    departments: [
+      'Computer Engineering',
+      'Information Technology', 
+      'Mechanical Engineering',
+      'Electronics & Telecommunication Engineering',
+      'Civil Engineering',
+      'Electrical Engineering'
+    ],
     passoutYears: ['2020', '2021', '2022', '2023', '2024']
   },
   faculty: {
@@ -103,18 +117,18 @@ const ImprovedDirectory = ({ role }) => {
       {/* Main Content */}
       <div className="container mx-auto px-4 py-6 max-w-7xl">
         {/* Header */}
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold text-slate-900 mb-2">
+        <div className="text-center mb-8">
+          <h1 className="text-4xl font-bold text-slate-900 mb-3">
             {roleLabels[role]} Directory
           </h1>
-          <p className="text-slate-600">
+          <p className="text-lg text-slate-600 max-w-2xl mx-auto">
             Connect with {roleLabels[role].toLowerCase()} from our community
           </p>
         </div>
 
         {/* Search Bar with Filter Button */}
-        <div className="mb-6">
-          <div className="flex gap-4 items-center">
+        <div className="mb-8">
+          <div className="max-w-2xl mx-auto flex gap-4 items-center">
             <div className="flex-1">
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">

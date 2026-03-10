@@ -10,6 +10,30 @@ const StudentDashboard = () => {
   const { overviewStats, events, applications, calendarData, loading, error, refresh } = useStudentDashboard()
   const { notes, addNote, deleteNote, loading: notesLoading } = useCalendarNotes()
 
+  // Helper function to determine current year
+  const getCurrentYear = () => {
+    const currentYear = new Date().getFullYear()
+    const graduationYear = user?.profile?.graduationYear
+    
+    // Debug logging (remove in production)
+    console.log('Current Year:', currentYear)
+    console.log('Graduation Year:', graduationYear)
+    
+    // If no graduation year, default to 1st Year
+    if (!graduationYear) return '1st Year'
+    
+    const yearDifference = graduationYear - currentYear
+    console.log('Year Difference:', yearDifference)
+    
+    // More robust logic for academic year calculation
+    if (yearDifference > 3.5) return '1st Year'
+    if (yearDifference > 2.5) return '2nd Year'  
+    if (yearDifference > 1.5) return '3rd Year'
+    if (yearDifference > 0.5) return 'Final Year'
+    if (yearDifference > 0) return 'Final Year'
+    return 'Alumni'
+  }
+
   const colorClasses = {
     blue: "bg-blue-50 text-blue-600 border-blue-200",
     green: "bg-green-50 text-green-600 border-green-200",
@@ -83,31 +107,20 @@ const StudentDashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+    <div className="min-h-screen ">
       {/* Header - Full Width */}
-      <div className="bg-white shadow-sm border-b border-slate-100">
-        <div className="w-full px-4 py-6">
+      <div className="">
+        <div className="w-full px-2 py-2">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
             <div>
               <h1 className="text-3xl font-bold text-slate-900">
                 Welcome back, {user?.name?.split(' ')[0] || 'Student'}! 👋
               </h1>
               <p className="text-slate-600 mt-1">
-                Department: {user?.profile?.department || 'Computer Science'} • Class of {user?.profile?.graduationYear || '2025'}
+                Department: {user?.profile?.department || 'Computer Science'} • {getCurrentYear()}
               </p>
             </div>
-            <div className="w-full lg:w-96">
-              <div className="relative">
-                <input
-                  type="text"
-                  placeholder="Search jobs and events..."
-                  className="w-full px-4 py-3 pl-12 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-                <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
-              </div>
-            </div>
+           
           </div>
         </div>
       </div>
@@ -180,12 +193,12 @@ const StudentDashboard = () => {
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
           {/* Left Column - Events and Applications */}
           <div className="xl:col-span-2 space-y-8">
-            {/* Events Section */}
+            {/* Upcoming Events Section */}
             <div>
-              <h2 className="text-xl font-bold text-slate-900 mb-4">Events & Activities</h2>
+              <h2 className="text-xl font-bold text-slate-900 mb-4">Upcoming Events</h2>
               {events.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {events.map((event) => (
+                  {events.slice(0, 4).map((event) => (
                     <div key={event.id} className="bg-white rounded-xl border border-slate-200 p-5 hover:shadow-md">
                       <div className="flex items-start justify-between mb-3">
                         <div>
@@ -221,9 +234,9 @@ const StudentDashboard = () => {
               )}
             </div>
 
-            {/* Applications Applied Section */}
+            {/* Latest Activity Section */}
             <div>
-              <h2 className="text-xl font-bold text-slate-900 mb-4">Applications Applied</h2>
+              <h2 className="text-xl font-bold text-slate-900 mb-4">Latest Activity</h2>
               {applications.length > 0 ? (
                 <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
                   <table className="w-full">
@@ -236,7 +249,7 @@ const StudentDashboard = () => {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-200">
-                      {applications.map((app) => (
+                      {applications.slice(0, 5).map((app) => (
                         <tr key={app.id} className="hover:bg-slate-50">
                           <td className="px-6 py-4 text-sm font-medium text-slate-900">{app.title}</td>
                           <td className="px-6 py-4 text-sm text-slate-600">{app.company}</td>
@@ -253,7 +266,7 @@ const StudentDashboard = () => {
                 </div>
               ) : (
                 <div className="bg-white rounded-xl border border-slate-200 p-8 text-center">
-                  <p className="text-slate-600">No applications submitted yet</p>
+                  <p className="text-slate-600">No recent activity</p>
                   <button className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
                     Browse Opportunities
                   </button>
