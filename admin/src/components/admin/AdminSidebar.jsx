@@ -252,7 +252,7 @@ const AdminSidebar = ({ isMobile = false, onClose }) => {
           </div>
 
           {/* Navigation Scrollable Area */}
-          <div className="flex-1 overflow-y-auto px-4 pb-10">
+          <div className="flex-1 overflow-y-auto px-4 pb-10 scrollbar-hide">
             <div className="mb-6">
               <p className="px-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4">Admin Dashboard</p>
               <NavItem icon={<LayoutDashboard size={18} />} label="My Dashboard" path="/admin/dashboard" />

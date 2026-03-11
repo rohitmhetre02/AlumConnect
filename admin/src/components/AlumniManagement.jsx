@@ -53,7 +53,7 @@ const AlumniManagement = () => {
         name: name || email || 'Alumni Member',
         email,
         phone,
-        avatar: member.avatar || (name ? name.charAt(0).toUpperCase() : 'A'),
+        avatar: member.avatar || '', // Keep the raw URL string
         department: department || '—',
         graduationYear: passoutYear ? String(passoutYear) : '—',
         joinDate: createdAt ? createdAt.toLocaleDateString() : '—',
@@ -316,8 +316,22 @@ const AlumniManagement = () => {
                   <tr key={alumnus.id} className="hover:bg-slate-50">
                     <td className="px-4 py-4">
                       <div className="flex items-center gap-3">
-                        <span className="grid h-10 w-10 flex-shrink-0 place-items-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
-                          {alumnus.avatar}
+                        {alumnus.avatar && alumnus.avatar.startsWith('http') ? (
+                          <img 
+                            src={alumnus.avatar} 
+                            alt={alumnus.name || 'Alumni'}
+                            className="h-10 w-10 rounded-full object-cover border border-gray-200"
+                            onError={(e) => {
+                              e.target.style.display = 'none';
+                              e.target.nextSibling.style.display = 'flex';
+                            }}
+                          />
+                        ) : null}
+                        <span 
+                          className="grid h-10 w-10 flex-shrink-0 place-items-center rounded-full bg-primary/10 text-sm font-semibold text-primary"
+                          style={{ display: alumnus.avatar && alumnus.avatar.startsWith('http') ? 'none' : 'flex' }}
+                        >
+                          {alumnus.name ? alumnus.name.charAt(0).toUpperCase() : 'A'}
                         </span>
                         <div>
                           <button

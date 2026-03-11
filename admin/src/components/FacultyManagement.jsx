@@ -54,7 +54,7 @@ const FacultyManagement = () => {
         name: name || email || 'Faculty Member',
         email,
         phone,
-        avatar: member.avatar || (name ? name.charAt(0).toUpperCase() : 'F'),
+        avatar: member.avatar || '', // Keep the raw URL string
         title,
         department: department || '—',
         joinDate: createdAt ? createdAt.toLocaleDateString() : '—',
@@ -340,9 +340,28 @@ const FacultyManagement = () => {
                   <tr key={member.id} className="hover:bg-slate-50">
                     <td className="px-4 py-4">
                       <div className="flex items-center gap-3">
-                        <span className="grid h-10 w-10 flex-shrink-0 place-items-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
-                          {member.avatar}
+                        {/* Profile Image - Shows actual image if URL is valid */}
+                        {member.avatar && member.avatar.startsWith('http') ? (
+                          <img 
+                            src={member.avatar} 
+                            alt={member.name || 'Faculty'}
+                            className="h-10 w-10 rounded-full object-cover border border-gray-200"
+                            onError={(e) => {
+                              e.target.style.display = 'none';
+                              e.target.nextSibling.style.display = 'flex';
+                            }}
+                          />
+                        ) : null}
+                        
+                        {/* Fallback Initials - Shows when no image or image fails */}
+                        <span 
+                          className="grid h-10 w-10 flex-shrink-0 place-items-center rounded-full bg-primary/10 text-sm font-semibold text-primary"
+                          style={{ display: member.avatar && member.avatar.startsWith('http') ? 'none' : 'flex' }}
+                        >
+                          {member.name ? member.name.charAt(0).toUpperCase() : 'F'}
                         </span>
+                        
+                        {/* Name and Email */}
                         <div>
                           <button
                             onClick={() => handleFacultyClick(member)}

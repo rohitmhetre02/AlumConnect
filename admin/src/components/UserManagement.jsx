@@ -72,7 +72,7 @@ const UserManagement = () => {
         name,
         email,
         phone,
-        avatar: student.avatar || (name ? name.charAt(0).toUpperCase() : 'S'),
+        avatar: student.avatar || '', // Keep the raw URL string
         department: department || '—',
         year: yearValue ? String(yearValue) : '—',
         joinDate: createdAt ? createdAt.toLocaleDateString() : '—',
@@ -348,8 +348,22 @@ const UserManagement = () => {
                   <tr key={student.id} className="hover:bg-slate-50">
                     <td className="px-4 py-4">
                       <div className="flex items-center gap-3">
-                        <span className="grid h-10 w-10 flex-shrink-0 place-items-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
-                          {student.avatar}
+                        {student.avatar && student.avatar.startsWith('http') ? (
+                          <img 
+                            src={student.avatar} 
+                            alt={student.name || 'Student'}
+                            className="h-10 w-10 rounded-full object-cover border border-gray-200"
+                            onError={(e) => {
+                              e.target.style.display = 'none';
+                              e.target.nextSibling.style.display = 'flex';
+                            }}
+                          />
+                        ) : null}
+                        <span 
+                          className="grid h-10 w-10 flex-shrink-0 place-items-center rounded-full bg-primary/10 text-sm font-semibold text-primary"
+                          style={{ display: student.avatar && student.avatar.startsWith('http') ? 'none' : 'flex' }}
+                        >
+                          {student.name ? student.name.charAt(0).toUpperCase() : 'S'}
                         </span>
                         <div>
                           <button

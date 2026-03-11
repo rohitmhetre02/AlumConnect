@@ -12,6 +12,20 @@ const authenticateAdmin = (req, res, next) => {
   })
 }
 
+// Helper function to ensure user is a student
+const ensureStudent = (req) => {
+  if (!req.user) {
+    return { error: 'Authentication required' }
+  }
+  
+  if (req.user.role !== 'student') {
+    return { error: 'Access denied. Student role required.' }
+  }
+  
+  return { userId: req.user.id }
+}
+
 module.exports = {
-  authenticateAdmin
+  authenticateAdmin,
+  ensureStudent
 }

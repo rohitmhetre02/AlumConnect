@@ -454,16 +454,15 @@ const getRecentActivity = async (req, res) => {
     // Get recent job postings
     try {
       const recentJobs = await Opportunity.find()
-        .populate('createdBy', 'name')
         .sort({ createdAt: -1 })
         .limit(limit)
-        .select('title createdBy createdAt')
+        .select('title createdByName createdAt')
         .lean()
 
       recentJobs.forEach(job => {
         activities.push({
           id: `job-${job._id}`,
-          user: job.createdBy?.name || 'Unknown',
+          user: job.createdByName || 'Unknown',
           action: 'posted a new job',
           entity: job.title,
           timestamp: formatTimeAgo(job.createdAt),
@@ -477,16 +476,15 @@ const getRecentActivity = async (req, res) => {
     // Get recent events
     try {
       const recentEvents = await Event.find()
-        .populate('organizer', 'name')
         .sort({ createdAt: -1 })
         .limit(limit)
-        .select('title organizer createdAt')
+        .select('title createdByName createdAt')
         .lean()
 
       recentEvents.forEach(event => {
         activities.push({
           id: `event-${event._id}`,
-          user: event.organizer?.name || 'Unknown',
+          user: event.createdByName || 'Unknown',
           action: 'created an event',
           entity: event.title,
           timestamp: formatTimeAgo(event.createdAt),

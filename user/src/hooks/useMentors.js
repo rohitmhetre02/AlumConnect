@@ -96,20 +96,35 @@ export const useMentors = () => {
   const apply = useCallback(
     async (payload) => {
       try {
-        const response = await post('/api/mentors/applications', payload)
+        let response
+        
+        // Handle FormData (for file uploads) vs JSON
+        if (payload instanceof FormData) {
+          response = await post('/api/mentors/applications', payload)
+        } else {
+          response = await post('/api/mentors/applications', payload)
+        }
+        
         const raw = response?.data ?? response
         const mentor = formatMentor(raw)
+        
         if (mentor) {
           setItems((prev) => {
-            const withoutExisting = prev.filter((item) => item.profileId !== mentor.profileId && item.applicationId !== mentor.applicationId)
+            const withoutExisting = prev.filter((item) => 
+              item.profileId !== mentor.profileId && 
+              item.applicationId !== mentor.applicationId &&
+              item.id !== mentor.id
+            )
             return [mentor, ...withoutExisting]
           })
         }
+        
         addToast?.({
           title: 'Application submitted',
-          description: 'You are now listed as a mentor.',
+          description: 'Your mentor application has been submitted successfully. You will be notified once approved.',
           tone: 'success',
         })
+        
         return mentor
       } catch (applyError) {
         addToast?.({
@@ -144,16 +159,30 @@ export const useMentors = () => {
     async (payload) => {
       try {
         setError(null)
-        const response = await put('/api/mentors/me', payload)
-        const mentor = response?.data
-        if (mentor) {
-          setItems((prev) => prev.map((m) => (m.id === mentor.id ? mentor : m)))
+        let response
+        
+        // Handle FormData (for file uploads) vs JSON
+        if (payload instanceof FormData) {
+          response = await put('/api/mentors/me', payload)
+        } else {
+          response = await put('/api/mentors/me', payload)
         }
+        
+        const mentor = response?.data ?? response
+        
+        if (mentor) {
+          // Update mentor in the items list
+          setItems((prev) => prev.map((m) => 
+            (m.id === mentor.id || m.profileId === mentor.profileId) ? mentor : m
+          ))
+        }
+        
         addToast?.({
           title: 'Profile updated',
-          description: 'Your mentor profile has been updated.',
+          description: 'Your mentor profile has been updated successfully.',
           tone: 'success',
         })
+        
         return response
       } catch (err) {
         const message = err?.message ?? 'Failed to update profile.'

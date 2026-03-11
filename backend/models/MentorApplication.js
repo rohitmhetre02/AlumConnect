@@ -63,6 +63,16 @@ const mentorApplicationSchema = new mongoose.Schema(
       trim: true,
       required: true,
     },
+    yearsOfExperience: {
+      type: String,
+      trim: true,
+      required: true,
+    },
+    experience: {
+      type: String,
+      trim: true,
+      required: true,
+    },
     mentorshipAreas: [
       {
         type: String,

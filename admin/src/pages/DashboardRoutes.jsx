@@ -76,6 +76,7 @@ const DashboardRoutes = () => {
         <Route path="campaigns/create" element={<AdminPostCampaign />} />
         <Route path="campaigns/:campaignId" element={<AdminCampaignDetail />} />
         <Route path="campaigns/:campaignId/edit" element={<AdminPostCampaign />} />
+        <Route path="campaigns/:campaignId/donations" element={<AdminCampaignDetail />} />
         <Route path="donations" element={<DonationsManagement />} />
         <Route path="news" element={<NewsManagement />} />
         <Route path="news/review" element={<CoordinatorNewsReview />} />

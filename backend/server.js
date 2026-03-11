@@ -89,6 +89,8 @@ const contentApprovalRoutes = require('./routes/contentApprovalRoutes')
 
 const calendarRoutes = require('./routes/calendarRoutes')
 
+const studentRoutes = require('./routes/studentRoutes')
+
 
 
 const app = express()
@@ -201,6 +203,8 @@ app.use('/api/public', publicRoutes)
     app.use('/api/admin/content-approval', contentApprovalRoutes)
 
 app.use('/api/calendar', calendarRoutes)
+
+app.use('/api/students', studentRoutes)
 
 
 

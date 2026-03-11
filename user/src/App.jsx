@@ -13,7 +13,6 @@ import PublicCampaigns from "./pages/PublicCampaigns";
 import PublicMemories from "./pages/PublicMemories";
 import PublicEvents from './pages/PublicEvents'
 import PublicEventDetail from './pages/PublicEventDetail'
-import Mentorship from './pages/Mentorship'
 import Gallery from './pages/Gallery'
 import Login from './pages/Login'
 import Signup from './pages/Signup'
@@ -65,6 +64,14 @@ import CoordinatorRegistrationApprovals from './pages/user/CoordinatorRegistrati
 import AdminRegistrationApprovals from './pages/user/AdminRegistrationApprovals'
 import { normalizeRegistrationStatus, REGISTRATION_STATUS } from './utils/registrationStatus'
 import BecomeMentor from './pages/user/BecomeMentor'
+// New mentorship components
+import MentorshipDashboard from './pages/user/mentorship/MentorshipDashboard'
+import MentorshipProfile from './pages/user/mentorship/MentorshipProfile'
+import MentorshipMentees from './pages/user/mentorship/MentorshipMentees'
+import MentorshipServices from './pages/user/mentorship/MentorshipServices'
+import MentorshipSessions from './pages/user/mentorship/MentorshipSessions'
+import MentorshipResources from './pages/user/mentorship/MentorshipResources'
+import MentorshipHistory from './pages/user/mentorship/MentorshipHistory'
 
 const PrivateRoute = ({ children }) => {
   const { user } = useAuth()
@@ -167,7 +174,6 @@ function App() {
             <Route path="events/:eventId" element={<PublicEventDetail />} />
             <Route path="directory" element={<Navigate to="/dashboard/directory/students" replace />} />
             <Route path="directory/:profileId" element={<DirectoryProfile />} />
-            <Route path="mentorship" element={<Mentorship />} />
             <Route path="gallery" element={<Gallery />} />
             <Route path="gallery/:department" element={<Gallery />} />
             <Route path="gallery/:department/:folder" element={<Gallery />} />
@@ -254,6 +260,43 @@ function App() {
                 <AIMentorMatch />
               </ProfilePendingGuardWithFallback>
             } />
+            {/* New individual mentorship routes */}
+            <Route path="mentorship/dashboard" element={
+              <ProfilePendingGuardWithFallback>
+                <MentorshipDashboard />
+              </ProfilePendingGuardWithFallback>
+            } />
+            <Route path="mentorship/profile" element={
+              <ProfilePendingGuardWithFallback>
+                <MentorshipProfile />
+              </ProfilePendingGuardWithFallback>
+            } />
+            <Route path="mentorship/mentees" element={
+              <ProfilePendingGuardWithFallback>
+                <MentorshipMentees />
+              </ProfilePendingGuardWithFallback>
+            } />
+            <Route path="mentorship/services" element={
+              <ProfilePendingGuardWithFallback>
+                <MentorshipServices />
+              </ProfilePendingGuardWithFallback>
+            } />
+            <Route path="mentorship/sessions" element={
+              <ProfilePendingGuardWithFallback>
+                <MentorshipSessions />
+              </ProfilePendingGuardWithFallback>
+            } />
+            <Route path="mentorship/resources" element={
+              <ProfilePendingGuardWithFallback>
+                <MentorshipResources />
+              </ProfilePendingGuardWithFallback>
+            } />
+            <Route path="mentorship/history" element={
+              <ProfilePendingGuardWithFallback>
+                <MentorshipHistory />
+              </ProfilePendingGuardWithFallback>
+            } />
+            {/* Keep the catch-all route for backward compatibility */}
             <Route path="mentorship/:panelSection" element={
               <ProfilePendingGuardWithFallback>
                 <UserMentorship />

@@ -139,6 +139,27 @@ const studentSchema = new mongoose.Schema(
       of: String,
       default: {},
     },
+    mentorPreferences: {
+      careerInterest: {
+        type: String,
+        trim: true,
+        default: '',
+      },
+      skills: {
+        type: [String],
+        default: [],
+      },
+      preferredIndustry: {
+        type: String,
+        trim: true,
+        default: '',
+      },
+      preferredExperience: {
+        type: String,
+        trim: true,
+        default: '',
+      },
+    },
     avatar: {
       type: String,
       trim: true,

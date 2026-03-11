@@ -55,7 +55,7 @@ const CoordinatorManagement = () => {
         name: name || email || 'Coordinator',
         email,
         phone,
-        avatar: coordinator.avatar || (name ? name.charAt(0).toUpperCase() : 'C'),
+        avatar: coordinator.avatar || '', // Keep the raw URL string
         department: department || '—',
         role: role.charAt(0).toUpperCase() + role.slice(1),
         status,
@@ -272,9 +272,28 @@ const CoordinatorManagement = () => {
                   <tr key={coordinator.id} className="hover:bg-slate-50 transition-colors">
                     <td className="px-4 py-4">
                       <div className="flex items-center gap-3">
-                        <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-sm font-semibold text-primary">
-                          {coordinator.avatar}
+                        {/* Show actual profile image if available */}
+                        {coordinator.avatar && coordinator.avatar.startsWith('http') ? (
+                          <img 
+                            src={coordinator.avatar} 
+                            alt={coordinator.name || 'Coordinator'}
+                            className="h-10 w-10 rounded-full object-cover border border-gray-200"
+                            onError={(e) => {
+                              // Hide image and show initials if image fails to load
+                              e.target.style.display = 'none';
+                              e.target.nextSibling.style.display = 'flex';
+                            }}
+                          />
+                        ) : null}
+                        
+                        {/* Fallback to initials */}
+                        <div 
+                          className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-sm font-semibold text-primary"
+                          style={{ display: coordinator.avatar && coordinator.avatar.startsWith('http') ? 'none' : 'flex' }}
+                        >
+                          {coordinator.name ? coordinator.name.charAt(0).toUpperCase() : 'C'}
                         </div>
+                        
                         <div>
                           <p className="font-medium text-slate-900">{coordinator.name}</p>
                           <p className="text-xs text-slate-500">{coordinator.role}</p>

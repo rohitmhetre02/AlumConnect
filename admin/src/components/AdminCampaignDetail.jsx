@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useLocation } from 'react-router-dom'
 
 import useToast from '../hooks/useToast'
 import useCampaigns from '../hooks/useCampaigns'
@@ -53,9 +53,13 @@ const getCategoryLabel = (category) => {
 const AdminCampaignDetail = () => {
   const { campaignId } = useParams()
   const navigate = useNavigate()
+  const location = useLocation()
   const addToast = useToast()
 
   const { data, loading, error } = useCampaigns(campaignId)
+  
+  // Check if we're on the donations tab
+  const isDonationsTab = location.pathname.endsWith('/donations')
 
   const progress = useMemo(() => {
     if (!data || !data.goalAmount) return 0
@@ -220,6 +224,100 @@ const AdminCampaignDetail = () => {
               </div>
             </div>
           </section>
+
+          {/* Donors Section - Only show on donations tab */}
+          {isDonationsTab && (
+            <section className="rounded-4xl border border-slate-200 bg-white shadow-soft p-8">
+              <div className="mb-6">
+                <h2 className="text-2xl font-bold text-slate-900">Campaign Donors</h2>
+                <p className="text-slate-600 mt-1">
+                  List of all donors who contributed to "{data.title}"
+                </p>
+              </div>
+
+              {/* Donor Stats */}
+              <div className="grid gap-6 rounded-2xl border border-slate-100 p-6 sm:grid-cols-3 mb-8">
+                <div>
+                  <h3 className="text-xs font-semibold uppercase tracking-[0.35em] text-slate-400">Total Donors</h3>
+                  <p className="mt-1 text-2xl font-bold text-slate-900">{data.contributionCount ?? 0}</p>
+                </div>
+                <div>
+                  <h3 className="text-xs font-semibold uppercase tracking-[0.35em] text-slate-400">Total Raised</h3>
+                  <p className="mt-1 text-2xl font-bold text-emerald-600">{formatCurrency(data.raisedAmount)}</p>
+                </div>
+                <div>
+                  <h3 className="text-xs font-semibold uppercase tracking-[0.35em] text-slate-400">Average Donation</h3>
+                  <p className="mt-1 text-2xl font-bold text-slate-900">
+                    {data.contributionCount > 0 
+                      ? formatCurrency(Number(data.raisedAmount) / data.contributionCount)
+                      : '$0'
+                    }
+                  </p>
+                </div>
+              </div>
+
+              {/* Donors List */}
+              <div className="space-y-4">
+                {data.contributions && data.contributions.length > 0 ? (
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b border-slate-200">
+                          <th className="text-left py-3 px-4 text-sm font-semibold text-slate-700">Donor Name</th>
+                          <th className="text-left py-3 px-4 text-sm font-semibold text-slate-700">Email</th>
+                          <th className="text-left py-3 px-4 text-sm font-semibold text-slate-700">Amount</th>
+                          <th className="text-left py-3 px-4 text-sm font-semibold text-slate-700">Date</th>
+                          <th className="text-left py-3 px-4 text-sm font-semibold text-slate-700">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {data.contributions.map((contribution, index) => (
+                          <tr key={index} className="border-b border-slate-100 hover:bg-slate-50">
+                            <td className="py-3 px-4">
+                              <div className="flex items-center gap-3">
+                                <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-xs font-semibold text-primary">
+                                  {contribution.donorName ? contribution.donorName.charAt(0).toUpperCase() : 'D'}
+                                </div>
+                                <span className="font-medium text-slate-900">
+                                  {contribution.donorName || 'Anonymous'}
+                                </span>
+                              </div>
+                            </td>
+                            <td className="py-3 px-4 text-sm text-slate-600">
+                              {contribution.donorEmail || '—'}
+                            </td>
+                            <td className="py-3 px-4">
+                              <span className="font-semibold text-emerald-600">
+                                {formatCurrency(contribution.amount)}
+                              </span>
+                            </td>
+                            <td className="py-3 px-4 text-sm text-slate-600">
+                              {formatDate(contribution.date)}
+                            </td>
+                            <td className="py-3 px-4">
+                              <span className="inline-flex rounded-full px-2 py-1 text-xs font-semibold bg-emerald-100 text-emerald-800">
+                                Completed
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div className="text-center py-12">
+                    <div className="mx-auto h-12 w-12 rounded-full bg-slate-100 flex items-center justify-center mb-4">
+                      <svg className="h-6 w-6 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a5 5 0 00-10 0v2a2 2 0 00-2 2v5a5 5 0 005 5h4a5 5 0 005-5v-5a2 2 0 00-2-2z" />
+                      </svg>
+                    </div>
+                    <h3 className="text-lg font-medium text-slate-900 mb-1">No donors yet</h3>
+                    <p className="text-slate-500">This campaign hasn't received any donations yet.</p>
+                  </div>
+                )}
+              </div>
+            </section>
+          )}
         </article>
       </div>
     </div>
