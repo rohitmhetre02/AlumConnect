@@ -317,56 +317,15 @@ const AdminTopbar = ({ onToggleSidebar }) => {
         {/* Logo */}
 
         <div className="flex items-center gap-3">
-
           <button
-
             type="button"
-
             onClick={onToggleSidebar}
-
             className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 text-slate-600 transition hover:border-primary/40 hover:text-primary lg:hidden"
-
             aria-label="Open navigation"
-
           >
-
             <MenuIcon className="h-5 w-5" />
-
           </button>
-
-          <div className="flex items-center">
-
-            <h1 className="text-2xl font-bold text-primary">APCORE Alumni</h1>
-
-          </div>
-
         </div>
-
-
-
-        {/* Search Bar */}
-
-        <div className="flex-1 max-w-lg">
-
-          <div className="relative">
-
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-
-            <input
-
-              type="text"
-
-              placeholder="Search alumni, jobs, events..."
-
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-
-            />
-
-          </div>
-
-        </div>
-
-
 
         {/* Right Side Actions */}
 

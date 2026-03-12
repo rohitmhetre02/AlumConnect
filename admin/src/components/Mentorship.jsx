@@ -201,11 +201,32 @@ const Mentorship = () => {
             </div>
 
           ) : filteredMentors.length === 0 ? (
-
-            <div className="col-span-full text-center py-12 text-sm text-slate-500">
-
-              No mentors match the filters.
-
+            <div className="col-span-full text-center py-12">
+              <svg className="mx-auto h-12 w-12 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              </svg>
+              <h3 className="mt-2 text-sm font-medium text-slate-900">
+                {normalizedMentors.length === 0 ? 'No mentors found' : 'No mentors match the filters'}
+              </h3>
+              <p className="mt-1 text-sm text-slate-500">
+                {normalizedMentors.length === 0 
+                  ? 'There are no approved mentor applications in the system yet. Please check back later or contact an administrator to add mentors.'
+                  : 'Try adjusting your search or filter criteria.'
+                }
+              </p>
+              {normalizedMentors.length === 0 && (
+                <div className="mt-4 space-y-2">
+                  <p className="text-xs text-slate-400">
+                    To add mentors, ensure mentor applications are submitted and approved through the mentorship application process.
+                  </p>
+                  <button 
+                    onClick={() => window.location.reload()}
+                    className="inline-flex items-center px-3 py-2 border border-slate-300 shadow-sm text-xs font-medium rounded text-slate-700 bg-white hover:bg-slate-50"
+                  >
+                    Refresh
+                  </button>
+                </div>
+              )}
             </div>
 
           ) : (

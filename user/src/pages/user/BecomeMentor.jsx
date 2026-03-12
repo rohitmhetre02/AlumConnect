@@ -33,6 +33,8 @@ const BecomeMentor = () => {
     company: '',
     industry: '',
     yearsOfExperience: '',
+    experienceDescription: '',
+    bio: '',
     mentorshipAreas: [],
     expertise: [],
     
@@ -321,6 +323,8 @@ const BecomeMentor = () => {
         industry: formData.industry,
         yearsOfExperience: formData.yearsOfExperience,
         experience: formData.yearsOfExperience, // For compatibility
+        experienceDescription: formData.experienceDescription,
+        bio: formData.bio,
         
         // Mentorship Details
         mentorshipAreas: formData.mentorshipAreas,

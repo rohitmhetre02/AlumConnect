@@ -178,7 +178,7 @@ const signup = async (req, res) => {
   }
 }
 
-const createUsers = async (payloads = [], role) => {
+const createUsers = async (payloads = [], role, adminCreated = false) => {
   const normalizedRole = role?.toLowerCase()
   const Model = getModelByRole(normalizedRole)
 
@@ -203,18 +203,28 @@ const createUsers = async (payloads = [], role) => {
     const salt = await bcrypt.genSalt(10)
     const hashedPassword = await bcrypt.hash(password, salt)
 
+    // Auto-approve users created by admin
+    const isAutoApproved = adminCreated && (
+      normalizedRole === 'student' || 
+      normalizedRole === 'alumni' || 
+      normalizedRole === 'coordinator' || 
+      normalizedRole === 'faculty'
+    )
+    
     const user = await Model.create({
       email: normalizedEmail,
       firstName: String(firstName).trim(),
       lastName: String(lastName).trim(),
       password: hashedPassword,
-      isProfileApproved: false,
-      profileApprovalStatus: PROFILE_STATUS.IN_REVIEW,
-      registrationStatus:
-        normalizedRole === 'student' || normalizedRole === 'alumni'
+      isProfileApproved: isAutoApproved,
+      profileApprovalStatus: isAutoApproved ? PROFILE_STATUS.APPROVED : PROFILE_STATUS.IN_REVIEW,
+      registrationStatus: isAutoApproved ? REGISTRATION_STATUS.APPROVED : 
+        (normalizedRole === 'student' || normalizedRole === 'alumni' || normalizedRole === 'coordinator' || normalizedRole === 'faculty'
           ? REGISTRATION_STATUS.PENDING
-          : REGISTRATION_STATUS.APPROVED,
-      registrationDecisionByRole: '',
+          : REGISTRATION_STATUS.APPROVED),
+      registrationDecisionByRole: isAutoApproved ? 'admin' : '',
+      registrationReviewedAt: isAutoApproved ? new Date() : null,
+      registrationReviewedBy: isAutoApproved ? 'admin' : '',
     })
 
     createdUsers.push({

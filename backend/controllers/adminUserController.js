@@ -55,7 +55,7 @@ const splitName = (name = '') => {
 }
 
 const provisionUsers = async ({ payloads, role }) => {
-  const users = await createUsers(payloads, role)
+  const users = await createUsers(payloads, role, true) // Pass adminCreated = true
 
   const emailConfigured = isEmailConfigured()
 
@@ -81,35 +81,76 @@ const provisionUsers = async ({ payloads, role }) => {
 
 const createSingleUser = async (req, res) => {
   try {
-    const normalizedRole = ensureRoleSupported(req.params.role)
-    const { email, name, department } = req.body ?? {}
-
+    // Handle specific routes for students, alumni, coordinators, and faculty
+    let normalizedRole
+    if (req.path.includes('/students/add')) {
+      normalizedRole = 'student'
+    } else if (req.path.includes('/alumni/add')) {
+      normalizedRole = 'alumni'
+    } else if (req.path.includes('/coordinators/add')) {
+      normalizedRole = 'coordinator'
+    } else if (req.path.includes('/faculty/add')) {
+      normalizedRole = 'faculty'
+    } else {
+      normalizedRole = ensureRoleSupported(req.params.role)
+    }
+    
+    const { email, name, department, prn, year, passoutYear } = req.body ?? {}
+    
     if (!email) {
       return res.status(400).json({ message: 'email is required.' })
+    }
+
+    // Role-specific validation
+    if (normalizedRole === 'student' && !prn) {
+      return res.status(400).json({ message: 'PRN is required for students.' })
+    }
+    if (normalizedRole === 'student' && !department) {
+      return res.status(400).json({ message: 'Department is required for students.' })
+    }
+    if (normalizedRole === 'student' && !year) {
+      return res.status(400).json({ message: 'Year is required for students.' })
+    }
+    if (normalizedRole === 'alumni' && !department) {
+      return res.status(400).json({ message: 'Department is required for alumni.' })
+    }
+    if (normalizedRole === 'alumni' && !passoutYear) {
+      return res.status(400).json({ message: 'Passout year is required for alumni.' })
+    }
+    if (normalizedRole === 'coordinator' && !department) {
+      return res.status(400).json({ message: 'Department is required for coordinators.' })
     }
 
     const { firstName, lastName } = splitName(name)
     const password = generateTemporaryPassword()
 
+    // Build payload with role-specific fields
+    const userPayload = {
+      email,
+      firstName,
+      lastName,
+      password,
+      department,
+    }
+
+    // Add role-specific fields
+    if (normalizedRole === 'student') {
+      userPayload.prnNumber = prn
+      userPayload.year = year
+    } else if (normalizedRole === 'alumni') {
+      userPayload.prnNumber = prn || ''
+      userPayload.passoutYear = passoutYear
+    }
+
     const { results, emailConfigured } = await provisionUsers({
       role: normalizedRole,
-      payloads: [
-        {
-          email,
-          firstName,
-          lastName,
-          department,
-          password,
-        },
-      ],
+      payloads: [userPayload],
     })
-
-    const [created] = results
 
     return res.status(201).json({
       message: 'User created successfully.',
-      user: created.user,
-      temporaryPassword: created.password,
+      user: results[0].user,
+      temporaryPassword: results[0].password,
       emailSent: emailConfigured,
     })
   } catch (error) {
@@ -133,7 +174,7 @@ const parseRowsFromWorkbook = (buffer) => {
   return rows
 }
 
-const extractUsersFromRows = (rows = []) => {
+const extractUsersFromRows = (rows = [], normalizedRole = '') => {
   const userPayloads = []
   const errors = []
 
@@ -142,24 +183,62 @@ const extractUsersFromRows = (rows = []) => {
       acc[key.trim().toLowerCase()] = row[key]
       return acc
     }, {})
-
+    
     const email = String(normalized.email || '').trim()
-    const name = normalized.name ?? ''
-
+    const name = normalized.name || normalized['full name'] || ''
+    
     if (!email) {
       errors.push({ row: index + 2, message: 'Missing email.' })
+      return
+    }
+
+    // Role-specific validation
+    if (normalizedRole === 'student' && !normalized.prn) {
+      errors.push({ row: index + 2, message: 'Missing PRN for student.' })
+      return
+    }
+    if (normalizedRole === 'student' && !normalized.department) {
+      errors.push({ row: index + 2, message: 'Missing Department for student.' })
+      return
+    }
+    if (normalizedRole === 'student' && !normalized.year) {
+      errors.push({ row: index + 2, message: 'Missing Year for student.' })
+      return
+    }
+    if (normalizedRole === 'alumni' && !normalized.department) {
+      errors.push({ row: index + 2, message: 'Missing Department for alumni.' })
+      return
+    }
+    if (normalizedRole === 'alumni' && !normalized.passoutyear && !normalized['passout year']) {
+      errors.push({ row: index + 2, message: 'Missing Passout Year for alumni.' })
+      return
+    }
+    if (normalizedRole === 'coordinator' && !normalized.department) {
+      errors.push({ row: index + 2, message: 'Missing Department for coordinator.' })
       return
     }
 
     const { firstName, lastName } = splitName(name)
     const password = generateTemporaryPassword()
 
-    userPayloads.push({
+    const userPayload = {
       email,
       firstName,
       lastName,
       password,
-    })
+      department: normalized.department || '',
+    }
+
+    // Add role-specific fields
+    if (normalizedRole === 'student') {
+      userPayload.prnNumber = normalized.prn || ''
+      userPayload.year = normalized.year || ''
+    } else if (normalizedRole === 'alumni') {
+      userPayload.prnNumber = normalized.prn || ''
+      userPayload.passoutYear = normalized.passoutyear || normalized['passout year'] || ''
+    }
+
+    userPayloads.push(userPayload)
   })
 
   return { userPayloads, errors }
@@ -167,7 +246,19 @@ const extractUsersFromRows = (rows = []) => {
 
 const createBulkUsers = async (req, res) => {
   try {
-    const normalizedRole = ensureRoleSupported(req.params.role)
+    // Handle specific routes for students, alumni, coordinators, and faculty
+    let normalizedRole
+    if (req.path.includes('/students/bulk-upload')) {
+      normalizedRole = 'student'
+    } else if (req.path.includes('/alumni/bulk-upload')) {
+      normalizedRole = 'alumni'
+    } else if (req.path.includes('/coordinators/bulk-upload')) {
+      normalizedRole = 'coordinator'
+    } else if (req.path.includes('/faculty/bulk-upload')) {
+      normalizedRole = 'faculty'
+    } else {
+      normalizedRole = ensureRoleSupported(req.params.role)
+    }
 
     if (!req.file) {
       return res.status(400).json({ message: 'Please upload an Excel file.' })
@@ -178,7 +269,7 @@ const createBulkUsers = async (req, res) => {
       return res.status(400).json({ message: 'The uploaded file does not contain any data.' })
     }
 
-    const { userPayloads, errors } = extractUsersFromRows(rows)
+    const { userPayloads, errors } = extractUsersFromRows(rows, normalizedRole)
 
     if (!userPayloads.length) {
       return res.status(400).json({ message: 'No valid user rows found in file.', errors })
@@ -188,6 +279,7 @@ const createBulkUsers = async (req, res) => {
 
     return res.status(201).json({
       message: 'Users created successfully.',
+      count: results.length,
       created: results.map(({ user }) => user),
       temporaryPasswords: results.map(({ user, password }) => ({ email: user.email, password })),
       errors,

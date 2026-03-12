@@ -149,7 +149,7 @@ const MentorPreferences = ({ onPreferencesChange }) => {
     <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
       <div className="mb-6">
         <h2 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
-          <span className="w-2 h-8 bg-blue-600 rounded-full"></span>
+          <span className="w- h-8 bg-blue-600 rounded-full"></span>
           Your Mentor Preferences
         </h2>
         <p className="text-slate-600 mt-2">Tell us what you're looking for in a mentor to get personalized recommendations</p>

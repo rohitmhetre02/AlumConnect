@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, useRef } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import useDirectoryMembers from '../hooks/useDirectoryMembers'
 import getStatusBadgeClass from '../utils/status'
@@ -8,13 +8,18 @@ import UserProvisionModal from './UserProvisionModal'
 import ActionMenu from './ActionMenu'
 import StatusChangeModal from './StatusChangeModal'
 import ConfirmDeleteModal from './ConfirmDeleteModal'
-import { del, put } from '../utils/api'
+import { del, put, post } from '../utils/api'
 
 const FacultyManagement = () => {
   const [searchTerm, setSearchTerm] = useState('')
   const [filterDepartment, setFilterDepartment] = useState('all')
   const [filterStatus, setFilterStatus] = useState('all')
+  const [uploading, setUploading] = useState(false)
+  const [selectedFile, setSelectedFile] = useState(null)
+  const [previewData, setPreviewData] = useState([])
+  const [showPreview, setShowPreview] = useState(false)
   const provisionModal = useModal(false)
+  const fileInputRef = useRef(null)
   const { data: faculty, isLoading, error, refetch } = useDirectoryMembers('faculty')
   const navigate = useNavigate()
   const { memberId: memberIdParam } = useParams()
@@ -180,6 +185,94 @@ const FacultyManagement = () => {
     }
   }
 
+  // Handle file selection for bulk upload
+  const handleFileSelect = (event) => {
+    const file = event.target.files[0]
+    if (file) {
+      if (file.type !== 'text/csv' && !file.name.endsWith('.csv')) {
+        alert('Please upload a CSV file')
+        return
+      }
+      setSelectedFile(file)
+      parseCSV(file)
+    }
+  }
+
+  // Parse CSV file
+  const parseCSV = (file) => {
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      const text = e.target.result
+      const lines = text.split('\n').filter(line => line.trim())
+      const headers = lines[0].split(',').map(h => h.trim())
+      
+      const data = []
+      for (let i = 1; i < lines.length; i++) {
+        const values = lines[i].split(',').map(v => v.trim())
+        const row = {}
+        headers.forEach((header, index) => {
+          row[header] = values[index] || ''
+        })
+        data.push(row)
+      }
+      
+      setPreviewData(data.slice(0, 5)) // Show first 5 for preview
+      setShowPreview(true)
+    }
+    reader.readAsText(file)
+  }
+
+  // Upload faculty data
+  const handleBulkUpload = async () => {
+    if (!selectedFile) return
+
+    try {
+      setUploading(true)
+      const formData = new FormData()
+      formData.append('file', selectedFile)
+
+      const response = await post('/directory/faculty/bulk-upload', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      })
+
+      alert(`${response.data.count} faculty members uploaded successfully!`)
+
+      // Reset form
+      setSelectedFile(null)
+      setPreviewData([])
+      setShowPreview(false)
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''
+      }
+
+      // Refresh faculty list
+      refetch()
+
+    } catch (error) {
+      alert('Upload failed: ' + (error.response?.data?.message || 'Please try again'))
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  // Download sample CSV template
+  const downloadTemplate = () => {
+    const csvContent = `firstName,lastName,email,phoneNumber,department,title,specialization
+John,Doe,john.doe@faculty.test,+1234567890,Computer Engineering,Professor,Artificial Intelligence
+Jane,Smith,jane.smith@faculty.test,+1234567891,Information Technology,Associate Professor,Data Science
+Bob,Johnson,bob.johnson@faculty.test,+1234567892,Electronics,Assistant Professor,Embedded Systems`
+
+    const blob = new Blob([csvContent], { type: 'text/csv' })
+    const url = window.URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'faculty_template.csv'
+    a.click()
+    window.URL.revokeObjectURL(url)
+  }
+
   const handleBackToManagement = () => {
     setPendingSelection(null)
     navigate('/admin/faculty')
@@ -250,6 +343,112 @@ const FacultyManagement = () => {
         )}
       </header>
 
+      {/* Bulk Upload Section */}
+      <section className="rounded-3xl border border-slate-100 bg-white p-6 shadow-soft">
+        <h2 className="text-lg font-semibold text-slate-900 mb-4">Bulk Upload Faculty</h2>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <div className="border-2 border-dashed border-slate-300 rounded-lg p-6 text-center">
+              <svg className="h-12 w-12 text-slate-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              </svg>
+              <p className="text-sm text-slate-600 mb-4">
+                Upload CSV file with faculty data
+              </p>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".csv"
+                onChange={handleFileSelect}
+                className="hidden"
+                id="csv-upload-faculty"
+              />
+              <label
+                htmlFor="csv-upload-faculty"
+                className="inline-flex items-center px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark cursor-pointer"
+              >
+                <svg className="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                Choose CSV File
+              </label>
+            </div>
+            
+            {selectedFile && (
+              <div className="mt-4 p-3 bg-slate-50 rounded-lg">
+                <p className="text-sm text-slate-600">Selected: {selectedFile.name}</p>
+              </div>
+            )}
+
+            <div className="mt-4 flex gap-3">
+              <button
+                onClick={downloadTemplate}
+                className="flex items-center px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50"
+              >
+                <svg className="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                Download Template
+              </button>
+              
+              {selectedFile && (
+                <button
+                  onClick={handleBulkUpload}
+                  disabled={uploading}
+                  className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
+                >
+                  {uploading ? 'Uploading...' : 'Upload Faculty'}
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div>
+            <h3 className="text-sm font-semibold text-slate-900 mb-3">Required CSV Columns:</h3>
+            <div className="bg-slate-50 rounded-lg p-4">
+              <code className="text-xs text-slate-600">
+                firstName, lastName, email, phoneNumber, department, title, specialization
+              </code>
+            </div>
+            <p className="text-xs text-slate-500 mt-2">
+              Note: All faculty members added by admin are automatically approved
+            </p>
+          </div>
+        </div>
+
+        {/* Preview Section */}
+        {showPreview && previewData.length > 0 && (
+          <div className="mt-6">
+            <h3 className="text-sm font-semibold text-slate-900 mb-3">Preview (First 5 records):</h3>
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-slate-200">
+                <thead className="bg-slate-50">
+                  <tr>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-slate-500 uppercase">Name</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-slate-500 uppercase">Email</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-slate-500 uppercase">Department</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-slate-500 uppercase">Title</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-slate-200">
+                  {previewData.map((row, index) => (
+                    <tr key={index}>
+                      <td className="px-3 py-2 text-sm text-slate-900">
+                        {row.firstName} {row.lastName}
+                      </td>
+                      <td className="px-3 py-2 text-sm text-slate-600">{row.email}</td>
+                      <td className="px-3 py-2 text-sm text-slate-600">{row.department}</td>
+                      <td className="px-3 py-2 text-sm text-slate-600">{row.title}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+      </section>
+
       <section className="rounded-3xl border border-slate-100 bg-white p-6 shadow-soft">
         <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex flex-1 flex-col gap-4 sm:flex-row sm:items-center sm:gap-3">
@@ -303,13 +502,10 @@ const FacultyManagement = () => {
             </button>
             <button
               type="button"
-              onClick={() => {
-                console.log('Faculty add button clicked')
-                provisionModal.openModal()
-              }}
+              onClick={provisionModal.openModal}
               className="rounded-2xl bg-primary px-4 py-2.5 text-sm font-semibold text-white shadow-[0_14px_30px_rgba(37,99,235,0.25)] transition hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
             >
-              Add Faculty
+              Add Faculty Member
             </button>
           </div>
         </div>

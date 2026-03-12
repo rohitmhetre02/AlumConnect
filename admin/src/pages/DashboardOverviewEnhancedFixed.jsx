@@ -268,7 +268,7 @@ const DashboardOverviewEnhanced = () => {
               ) : (
                 <TrendingDown className="w-4 h-4 mr-1" />
               )}
-              {change}% from last 30 days
+              {change}%
             </div>
           </div>
           <div className={`p-3 rounded-xl ${isPriority ? 'bg-red-100' : classes.bg} ${isPriority ? '' : classes.hoverBg} group-hover:scale-105 transition-transform`}>
@@ -404,23 +404,6 @@ const DashboardOverviewEnhanced = () => {
           <div className="mb-4 lg:mb-6 px-2">
             <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">Dashboard Overview</h1>
             <p className="text-sm lg:text-base text-gray-600 mt-1">Welcome back, {adminUser.name}! Here's what's happening in your alumni network.</p>
-          </div>
-
-          {/* Date Filter */}
-          <div className="mb-4 lg:mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 px-2">
-            <div className="flex items-center space-x-4">
-              <label className="text-sm font-medium text-gray-700">Time Period:</label>
-              <select
-                value={dateFilter}
-                onChange={(e) => setDateFilter(e.target.value)}
-                className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="7days">Last 7 days</option>
-                <option value="30days">Last 30 days</option>
-                <option value="90days">Last 90 days</option>
-                <option value="1year">Last year</option>
-              </select>
-            </div>
           </div>
 
           {/* Enhanced Stats Cards - Optimized for full width */}

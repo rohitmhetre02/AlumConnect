@@ -182,6 +182,8 @@ const CoordinatorManagement = () => {
         )}
       </header>
 
+      
+      
       <section className="rounded-3xl border border-slate-100 bg-white p-6 shadow-soft">
         <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex flex-1 flex-col gap-4 sm:flex-row sm:items-center sm:gap-3">
@@ -223,13 +225,13 @@ const CoordinatorManagement = () => {
 
           {!isCoordinator && (
             <button 
-              onClick={() => {
-                console.log('Coordinator add button clicked')
-                provisionModal.openModal()
-              }}
-              className="rounded-2xl bg-primary px-4 py-2.5 text-sm font-semibold text-white shadow-[0_14px_30px_rgba(37,99,235,0.25)] transition hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
+              onClick={provisionModal.openModal}
+              className="rounded-2xl bg-primary px-4 py-2.5 text-sm font-semibold text-white shadow-[0_14px_30px_rgba(37,99,235,0.25)] transition hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-primary/50 flex items-center gap-2"
             >
               Add Coordinator
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4m8 0l8 8-8-8z" />
+              </svg>
             </button>
           )}
         </div>

@@ -25,6 +25,7 @@ import { useAuth } from './context/AuthContext'
 import { ToastProvider } from './components/ui/ToastProvider'
 import DirectoryProfile from './pages/user/DirectoryProfile'
 import UserMentorship from './pages/user/Mentorship'
+import MentorProfileView from './pages/user/MentorProfileView'
 import UserProfile from './pages/user/Profile'
 import UserNews from './pages/user/News'
 import NewsDetail from './pages/user/NewsDetail'
@@ -284,6 +285,11 @@ function App() {
             <Route path="mentorship/sessions" element={
               <ProfilePendingGuardWithFallback>
                 <MentorshipSessions />
+              </ProfilePendingGuardWithFallback>
+            } />
+            <Route path="mentors/:mentorId" element={
+              <ProfilePendingGuardWithFallback>
+                <MentorProfileView />
               </ProfilePendingGuardWithFallback>
             } />
             <Route path="mentorship/resources" element={

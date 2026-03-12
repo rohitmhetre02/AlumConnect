@@ -127,6 +127,17 @@ const EventsManagement = () => {
     }
   }
 
+  const handleClose = async (id) => {
+    try {
+      await api.put(`/events/${id}`, { status: 'Completed' })
+      alert('Event closed successfully')
+      refetch()
+    } catch (error) {
+      console.error('Failed to close event:', error)
+      alert('Failed to close event. Please try again.')
+    }
+  }
+
   const handleDelete = async (id) => {
     if (window.confirm('Are you sure you want to delete this event? This action cannot be undone.')) {
       setIsLoading(true)
@@ -352,16 +363,16 @@ const EventsManagement = () => {
                                 Edit
                               </button>
                               
-                              {event.status !== 'Paused' && event.status !== 'Completed' && (
+                              {event.status !== 'Completed' && (
                                 <button
-                                  onClick={() => handlePause(event.id)}
+                                  onClick={() => handleClose(event.id)}
                                   disabled={isLoading}
-                                  className="flex w-full items-center gap-2 px-3 py-2 text-sm text-slate-700 hover:bg-amber-50 hover:text-amber-700 transition-colors disabled:opacity-50"
+                                  className="flex w-full items-center gap-2 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition-colors disabled:opacity-50"
                                 >
                                   <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
                                   </svg>
-                                  Pause
+                                  Close
                                 </button>
                               )}
                               

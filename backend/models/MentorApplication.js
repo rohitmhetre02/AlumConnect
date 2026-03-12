@@ -73,6 +73,27 @@ const mentorApplicationSchema = new mongoose.Schema(
       trim: true,
       required: true,
     },
+    experienceDescription: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+    bio: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+    rating: {
+      type: Number,
+      min: 0,
+      max: 5,
+      default: 0,
+    },
+    feedbackCount: {
+      type: Number,
+      min: 0,
+      default: 0,
+    },
     mentorshipAreas: [
       {
         type: String,

@@ -1,6 +1,7 @@
 const Student = require('../models/Student')
 const Alumni = require('../models/Alumni')
 const MentorApplication = require('../models/MentorApplication')
+const natural = require('natural')
 
 // Helper function to get user model based on role
 const getUserModel = (role) => {
@@ -11,6 +12,134 @@ const getUserModel = (role) => {
 const getUserById = async (userId, role) => {
   const UserModel = getUserModel(role)
   return await UserModel.findById(userId)
+}
+
+// TF-IDF Similarity Calculation
+const calculateTFIDFSimilarity = (studentText, mentorText) => {
+  try {
+    const tfidf = new natural.TfIdf()
+    
+    // Add documents to TF-IDF
+    tfidf.addDocument(studentText)
+    tfidf.addDocument(mentorText)
+    
+    // Calculate similarity using cosine similarity
+    const studentVector = []
+    const mentorVector = []
+    
+    // Get all terms from both documents
+    const terms = new Set()
+    const studentTerms = studentText.toLowerCase().split(/\s+/).filter(term => term.length > 2)
+    const mentorTerms = mentorText.toLowerCase().split(/\s+/).filter(term => term.length > 2)
+    
+    studentTerms.forEach(term => terms.add(term))
+    mentorTerms.forEach(term => terms.add(term))
+    
+    // Create vectors
+    terms.forEach(term => {
+      const studentTfidf = tfidf.tfidf(term, 0) // Document 0 is student
+      const mentorTfidf = tfidf.tfidf(term, 1)  // Document 1 is mentor
+      studentVector.push(studentTfidf)
+      mentorVector.push(mentorTfidf)
+    })
+    
+    // Calculate cosine similarity
+    let dotProduct = 0
+    let studentMagnitude = 0
+    let mentorMagnitude = 0
+    
+    for (let i = 0; i < studentVector.length; i++) {
+      dotProduct += studentVector[i] * mentorVector[i]
+      studentMagnitude += studentVector[i] * studentVector[i]
+      mentorMagnitude += mentorVector[i] * mentorVector[i]
+    }
+    
+    studentMagnitude = Math.sqrt(studentMagnitude)
+    mentorMagnitude = Math.sqrt(mentorMagnitude)
+    
+    if (studentMagnitude === 0 || mentorMagnitude === 0) {
+      return 0
+    }
+    
+    return dotProduct / (studentMagnitude * mentorMagnitude)
+  } catch (error) {
+    console.error('Error calculating TF-IDF similarity:', error)
+    return 0
+  }
+}
+
+// Normalize skills for better matching
+const normalizeSkill = (skill) => {
+  return skill
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "")
+    .trim()
+}
+
+// Normalize array of skills
+const normalizeSkills = (skills) => {
+  if (!skills || !Array.isArray(skills)) return []
+  return skills.map(skill => normalizeSkill(skill)).filter(Boolean)
+}
+
+// Prepare enhanced student text for TF-IDF
+const prepareStudentText = (user, preferences) => {
+  const textParts = []
+  
+  // Add career goals and interests
+  if (user.careerGoals) textParts.push(user.careerGoals)
+  if (user.interests) {
+    if (Array.isArray(user.interests)) {
+      textParts.push(user.interests.join(' '))
+    } else {
+      textParts.push(user.interests)
+    }
+  }
+  
+  // Add user skills
+  if (user.skills && Array.isArray(user.skills)) {
+    textParts.push(user.skills.join(' '))
+  }
+  
+  // Add preferences (skills they want to learn)
+  if (preferences.skills && Array.isArray(preferences.skills)) {
+    textParts.push(preferences.skills.join(' '))
+  }
+  
+  // Add career interest and industry
+  if (preferences.careerInterest) textParts.push(preferences.careerInterest)
+  if (preferences.preferredIndustry) textParts.push(preferences.preferredIndustry)
+  
+  return textParts.filter(Boolean).join(' ').toLowerCase()
+}
+
+// Prepare mentor text for TF-IDF
+const prepareMentorText = (mentor) => {
+  const textParts = []
+  
+  // Add expertise areas
+  if (mentor.expertise && Array.isArray(mentor.expertise)) {
+    textParts.push(mentor.expertise.join(' '))
+  }
+  
+  // Add mentorship areas
+  if (mentor.mentorshipAreas && Array.isArray(mentor.mentorshipAreas)) {
+    textParts.push(mentor.mentorshipAreas.join(' '))
+  }
+  
+  // Add bio/about
+  if (mentor.bio) textParts.push(mentor.bio)
+  if (mentor.aboutMentor) textParts.push(mentor.aboutMentor)
+  
+  // Add experience description
+  if (mentor.experienceDescription) textParts.push(mentor.experienceDescription)
+  if (mentor.experience) textParts.push(mentor.experience)
+  
+  // Add industry and department
+  if (mentor.industry) textParts.push(mentor.industry)
+  if (mentor.department) textParts.push(mentor.department)
+  
+  return textParts.join(' ').toLowerCase()
 }
 
 // Save user preferences (for both students and alumni)
@@ -89,30 +218,57 @@ const getRecommendedMentors = async (req, res) => {
       return res.status(200).json({ mentors: [] })
     }
 
+    // Prepare text for TF-IDF analysis
+    const studentText = prepareStudentText(user, preferences)
+    
     // Calculate scores for each mentor
     const mentorScores = mentors.map(mentor => {
-      let score = 0
+      let ruleBasedScore = 0
       const reasons = []
+
+      // Normalize skills for better matching
+      const normalizedUserSkills = normalizeSkills(user.skills || [])
+      const normalizedPreferredSkills = normalizeSkills(preferences.skills || [])
+      const normalizedMentorExpertise = normalizeSkills(mentor.expertise || [])
 
       // Rule 1: Same department = +5
       if (user.department && mentor.department && 
           user.department.toLowerCase() === mentor.department.toLowerCase()) {
-        score += 5
+        ruleBasedScore += 5
         reasons.push('Same department')
       }
 
-      // Rule 2: Matching skills = +3 per match
-      const userSkills = [...(user.skills || []), ...(preferences.skills || [])]
-      const mentorExpertise = mentor.expertise || []
-      const skillMatches = userSkills.filter(skill => 
-        mentorExpertise.some(expertise => 
-          expertise.toLowerCase().includes(skill.toLowerCase()) || 
-          skill.toLowerCase().includes(expertise.toLowerCase())
-        )
-      )
-      if (skillMatches.length > 0) {
-        score += skillMatches.length * 3
-        reasons.push(`${skillMatches.length} skill match(es): ${skillMatches.join(', ')}`)
+      // Rule 2: Enhanced skill matching with different weights
+      let existingSkillMatches = []
+      let learningSkillMatches = []
+
+      // Check existing skills (lower weight +3)
+      normalizedUserSkills.forEach(userSkill => {
+        if (normalizedMentorExpertise.some(mentorSkill => 
+          mentorSkill === userSkill || mentorSkill.includes(userSkill) || userSkill.includes(mentorSkill)
+        )) {
+          existingSkillMatches.push(userSkill)
+        }
+      })
+
+      // Check skills to learn (higher weight +6)
+      normalizedPreferredSkills.forEach(preferredSkill => {
+        if (normalizedMentorExpertise.some(mentorSkill => 
+          mentorSkill === preferredSkill || mentorSkill.includes(preferredSkill) || preferredSkill.includes(mentorSkill)
+        )) {
+          learningSkillMatches.push(preferredSkill)
+        }
+      })
+
+      // Add scores for skill matches
+      if (existingSkillMatches.length > 0) {
+        ruleBasedScore += existingSkillMatches.length * 3
+        reasons.push(`${existingSkillMatches.length} existing skill match(es): ${existingSkillMatches.join(', ')}`)
+      }
+
+      if (learningSkillMatches.length > 0) {
+        ruleBasedScore += learningSkillMatches.length * 6
+        reasons.push(`${learningSkillMatches.length} skill(s) you want to learn: ${learningSkillMatches.join(', ')}`)
       }
 
       // Rule 3: Matching mentorshipAreas with careerInterest = +4
@@ -122,7 +278,7 @@ const getRecommendedMentors = async (req, res) => {
           preferences.careerInterest.toLowerCase().includes(area.toLowerCase())
         )
         if (careerMatch) {
-          score += 4
+          ruleBasedScore += 4
           reasons.push('Career interest match')
         }
       }
@@ -131,25 +287,39 @@ const getRecommendedMentors = async (req, res) => {
       if (preferences.preferredIndustry && mentor.industry &&
           mentor.industry.toLowerCase().includes(preferences.preferredIndustry.toLowerCase()) ||
           preferences.preferredIndustry.toLowerCase().includes(mentor.industry.toLowerCase())) {
-        score += 2
+        ruleBasedScore += 2
         reasons.push('Industry match')
       }
 
       // Rule 5: Mentor experience >= preferredExperience = +2
       if (preferences.preferredExperience && mentor.yearsOfExperience) {
-        // Extract numbers from experience strings
         const mentorExpNum = parseInt(mentor.yearsOfExperience.replace(/\D/g, '')) || 0
         const preferredExpNum = parseInt(preferences.preferredExperience.replace(/\D/g, '')) || 0
         
         if (mentorExpNum >= preferredExpNum) {
-          score += 2
+          ruleBasedScore += 2
           reasons.push('Experience requirement met')
         }
       }
 
-      // Calculate match percentage (max score is around 20-30, normalize to 100)
-      const maxPossibleScore = 25 // Approximate max score
-      const matchPercentage = Math.min(Math.round((score / maxPossibleScore) * 100), 100)
+      // Rule 6: Mentor rating support (future-ready)
+      let ratingScore = 0
+      if (mentor.rating && typeof mentor.rating === 'number' && mentor.rating > 0) {
+        ratingScore = Math.round(mentor.rating * 2)
+        reasons.push(`Highly rated mentor (${mentor.rating}⭐)`)
+      }
+
+      // TF-IDF Similarity Calculation
+      const mentorText = prepareMentorText(mentor)
+      const tfidfSimilarity = calculateTFIDFSimilarity(studentText, mentorText)
+      
+      // Add TF-IDF reason if similarity is significant (> 0.1)
+      if (tfidfSimilarity > 0.1) {
+        reasons.push('High similarity with your career goals')
+      }
+      
+      // Calculate final score with increased TF-IDF weight (x15 instead of x10)
+      const finalScore = ruleBasedScore + (tfidfSimilarity * 15) + ratingScore
 
       return {
         mentorId: mentor._id,
@@ -164,17 +334,28 @@ const getRecommendedMentors = async (req, res) => {
         mentorshipMode: mentor.mentorshipMode,
         maxMentees: mentor.maxMentees,
         profilePhoto: mentor.profilePhoto,
+        rating: mentor.rating,
+        feedbackCount: mentor.feedbackCount,
         user: mentor.user,
-        score,
-        matchPercentage,
+        score: finalScore,
+        ruleBasedScore,
+        tfidfSimilarity: Math.round(tfidfSimilarity * 100) / 100,
+        ratingScore,
+        matchPercentage: 0, // Will be calculated dynamically below
         recommendationReasons: reasons
       }
     })
 
-    // Sort by score descending and return top 5
-    const recommendedMentors = mentorScores
-      .sort((a, b) => b.score - a.score)
-      .slice(0, 5)
+    // Sort by score descending and calculate dynamic match percentages
+    const sortedMentors = mentorScores.sort((a, b) => b.score - a.score)
+    
+    // Calculate dynamic match percentage based on highest score
+    const highestScore = sortedMentors.length > 0 ? sortedMentors[0].score : 1
+    
+    const recommendedMentors = sortedMentors.slice(0, 5).map(mentor => ({
+      ...mentor,
+      matchPercentage: Math.round((mentor.score / highestScore) * 100)
+    }))
 
     res.status(200).json({ mentors: recommendedMentors })
   } catch (error) {
