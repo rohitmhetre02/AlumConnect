@@ -130,6 +130,16 @@ const listOpportunities = async (_req, res) => {
 
 const listAllOpportunitiesForAdmin = async (req, res) => {
   try {
+    const { error, userId, role } = ensureAuthenticatedUser(req)
+
+    if (error) {
+      return res.status(error.status).json({ success: false, message: error.message })
+    }
+
+    if (role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'You do not have permission to access admin opportunities.' })
+    }
+
     const items = await Opportunity.find({ approvalStatus: CONTENT_APPROVAL_STATUS.APPROVED })
       .sort({ createdAt: -1 })
       .lean()

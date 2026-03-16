@@ -22,6 +22,32 @@ const departmentOptions = [
   { value: 'communication', label: 'Electronics & Communication (Advanced Communication Technology)' },
 ]
 
+const currentYearOptions = [
+  { value: '1st', label: '1st Year' },
+  { value: '2nd', label: '2nd Year' },
+  { value: '3rd', label: '3rd Year' },
+  { value: '4th', label: 'Last Year' },
+]
+
+const admissionYearOptions = [
+  { value: '2012', label: '2012' },
+  { value: '2013', label: '2013' },
+  { value: '2014', label: '2014' },
+  { value: '2015', label: '2015' },
+  { value: '2016', label: '2016' },
+  { value: '2017', label: '2017' },
+  { value: '2018', label: '2018' },
+  { value: '2019', label: '2019' },
+  { value: '2020', label: '2020' },
+  { value: '2021', label: '2021' },
+  { value: '2022', label: '2022' },
+  { value: '2023', label: '2023' },
+  { value: '2024', label: '2024' },
+  { value: '2025', label: '2025' },
+  { value: '2026', label: '2026' },
+  { value: '2027', label: '2027' },
+]
+
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const yearPattern = /^\d{4}$/
 
@@ -32,7 +58,8 @@ const initialFormState = {
   program: 'engineering',
   department: '',
   admissionYear: '',
-  expectedPassoutYear: '',
+  currentYear: '',
+  phoneNumber: '',
   passoutYear: '',
   prn: '',
   password: '',
@@ -53,6 +80,8 @@ const SignupForm = () => {
   const [form, setForm] = useState(initialFormState)
   const [touched, setTouched] = useState({})
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
 
   const isStudent = role?.id === 'student'
   const isAlumni = role?.id === 'alumni'
@@ -62,11 +91,12 @@ const SignupForm = () => {
     setForm((prev) => ({
       ...prev,
       admissionYear: isStudent ? prev.admissionYear : '',
-      expectedPassoutYear: isStudent ? prev.expectedPassoutYear : '',
+      currentYear: isStudent ? prev.currentYear : '',
+      phoneNumber: (isStudent || isFaculty) ? prev.phoneNumber : '',
       passoutYear: isAlumni ? prev.passoutYear : '',
     }))
     setTouched({})
-  }, [isStudent, isAlumni])
+  }, [isStudent, isAlumni, isFaculty])
 
   const handleChange = (event) => {
     const { name, value, type, checked } = event.target
@@ -111,13 +141,28 @@ const SignupForm = () => {
       if (!yearPattern.test(form.admissionYear.trim())) {
         next.admissionYear = 'Enter a valid 4-digit year.'
       }
-      if (!yearPattern.test(form.expectedPassoutYear.trim())) {
-        next.expectedPassoutYear = 'Enter a valid 4-digit year.'
+      if (!form.currentYear) {
+        next.currentYear = 'Select your current year.'
+      }
+      if (!form.phoneNumber.trim()) {
+        next.phoneNumber = 'Phone number is required.'
+      } else if (!/^[0-9]{10}$/.test(form.phoneNumber.trim())) {
+        next.phoneNumber = 'Enter a valid 10-digit phone number.'
       }
     }
     if (isAlumni) {
       if (!yearPattern.test(form.passoutYear.trim())) {
         next.passoutYear = 'Enter a valid 4-digit year.'
+      }
+    }
+    if (isFaculty) {
+      if (!form.phoneNumber.trim()) {
+        next.phoneNumber = 'Phone number is required.'
+      } else if (!/^[0-9]{10}$/.test(form.phoneNumber.trim())) {
+        next.phoneNumber = 'Enter a valid 10-digit phone number.'
+      }
+      if (!form.department.trim()) {
+        next.department = 'Department is required.'
       }
     }
     if (!form.prn.trim()) {
@@ -170,7 +215,7 @@ const SignupForm = () => {
       requiredFields.push('department')
     }
     if (isStudent) {
-      requiredFields.push('admissionYear', 'expectedPassoutYear')
+      requiredFields.push('admissionYear', 'currentYear', 'phoneNumber')
     }
     if (isAlumni) {
       requiredFields.push('passoutYear')
@@ -195,10 +240,16 @@ const SignupForm = () => {
     }
     if (isStudent) {
       payload.admissionYear = form.admissionYear
-      payload.expectedPassoutYear = form.expectedPassoutYear
+      payload.currentYear = form.currentYear
+      payload.phoneNumber = form.phoneNumber
     }
     if (isAlumni) {
       payload.passoutYear = form.passoutYear
+      payload.phoneNumber = form.phoneNumber
+    }
+    if (isFaculty) {
+      payload.prnNumber = form.prn.trim()
+      payload.phoneNumber = form.phoneNumber
     }
 
     try {
@@ -252,8 +303,8 @@ const SignupForm = () => {
         </p>
       }
     >
-      <form onSubmit={handleSubmit} className="space-y-7">
-        <div className="space-y-2">
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="space-y-1.5">
           <label htmlFor="email" className="text-sm font-semibold text-slate-700">
             Email*
           </label>
@@ -261,18 +312,18 @@ const SignupForm = () => {
             id="email"
             name="email"
             type="email"
-            placeholder="you@domain.com"
+            placeholder="Enter your Email"
             value={form.email}
             onChange={handleChange}
             onBlur={handleBlur}
-            className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-sm text-slate-900 shadow-[0_12px_30px_rgba(15,23,42,0.05)] outline-none transition focus:border-[#2563EB] focus:shadow-[0_18px_40px_rgba(37,99,235,0.15)]"
+            className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 shadow-[0_12px_30px_rgba(15,23,42,0.05)] outline-none transition focus:border-[#2563EB] focus:shadow-[0_18px_40px_rgba(37,99,235,0.15)]"
             required
           />
           {fieldError('email') && <p className="text-xs font-medium text-red-500">{fieldError('email')}</p>}
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2">
-          <div className="space-y-2">
+        <div className="grid gap-3 md:grid-cols-2">
+          <div className="space-y-1.5">
             <label htmlFor="firstName" className="text-sm font-semibold text-slate-700">
               First Name*
             </label>
@@ -283,12 +334,12 @@ const SignupForm = () => {
               value={form.firstName}
               onChange={handleChange}
               onBlur={handleBlur}
-              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-sm text-slate-900 shadow-[0_12px_30px_rgba(15,23,42,0.05)] outline-none transition focus:border-[#2563EB] focus:shadow-[0_18px_40px_rgba(37,99,235,0.15)]"
+              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 shadow-[0_12px_30px_rgba(15,23,42,0.05)] outline-none transition focus:border-[#2563EB] focus:shadow-[0_18px_40px_rgba(37,99,235,0.15)]"
               required
             />
             {fieldError('firstName') && <p className="text-xs font-medium text-red-500">{fieldError('firstName')}</p>}
           </div>
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             <label htmlFor="lastName" className="text-sm font-semibold text-slate-700">
               Last Name*
             </label>
@@ -299,14 +350,14 @@ const SignupForm = () => {
               value={form.lastName}
               onChange={handleChange}
               onBlur={handleBlur}
-              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-sm text-slate-900 shadow-[0_12px_30px_rgba(15,23,42,0.05)] outline-none transition focus:border-[#2563EB] focus:shadow-[0_18px_40px_rgba(37,99,235,0.15)]"
+              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 shadow-[0_12px_30px_rgba(15,23,42,0.05)] outline-none transition focus:border-[#2563EB] focus:shadow-[0_18px_40px_rgba(37,99,235,0.15)]"
               required
             />
             {fieldError('lastName') && <p className="text-xs font-medium text-red-500">{fieldError('lastName')}</p>}
           </div>
         </div>
 
-        <div className="space-y-2">
+        <div className="space-y-1.5">
           <label htmlFor="program" className="text-sm font-semibold text-slate-700">
             User Program*
           </label>
@@ -316,7 +367,7 @@ const SignupForm = () => {
             value={form.program}
             onChange={handleChange}
             onBlur={handleBlur}
-            className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-sm text-slate-900 shadow-[0_12px_30px_rgba(15,23,42,0.05)] outline-none transition focus:border-[#2563EB] focus:shadow-[0_18px_40px_rgba(37,99,235,0.15)]"
+            className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 shadow-[0_12px_30px_rgba(15,23,42,0.05)] outline-none transition focus:border-[#2563EB] focus:shadow-[0_18px_40px_rgba(37,99,235,0.15)]"
           >
             {programOptions.map((option) => (
               <option key={option.value} value={option.value}>
@@ -327,8 +378,8 @@ const SignupForm = () => {
           {fieldError('program') && <p className="text-xs font-medium text-red-500">{fieldError('program')}</p>}
         </div>
 
-        {form.program === 'engineering' && (
-          <div className="space-y-2">
+        {(form.program === 'engineering' || isFaculty) && (
+          <div className="space-y-1.5">
             <label htmlFor="department" className="text-sm font-semibold text-slate-700">
               Department*
             </label>
@@ -338,7 +389,8 @@ const SignupForm = () => {
               value={form.department}
               onChange={handleChange}
               onBlur={handleBlur}
-              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-sm text-slate-900 shadow-[0_12px_30px_rgba(15,23,42,0.05)] outline-none transition focus:border-[#2563EB] focus:shadow-[0_18px_40px_rgba(37,99,235,0.15)]"
+              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 shadow-[0_12px_30px_rgba(15,23,42,0.05)] outline-none transition focus:border-[#2563EB] focus:shadow-[0_18px_40px_rgba(37,99,235,0.15)]"
+              required
             >
               <option value="">Select department</option>
               {departmentOptions.map((option) => (
@@ -352,71 +404,123 @@ const SignupForm = () => {
         )}
 
         {isStudent && (
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2">
+          <div className="grid gap-3 md:grid-cols-2">
+            <div className="space-y-1.5">
               <label htmlFor="admissionYear" className="text-sm font-semibold text-slate-700">
                 Admission Year*
               </label>
-              <input
+              <select
                 id="admissionYear"
                 name="admissionYear"
                 value={form.admissionYear}
                 onChange={handleChange}
                 onBlur={handleBlur}
-                inputMode="numeric"
-                pattern="\d{4}"
-                maxLength={4}
-                placeholder="2022"
-                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-sm text-slate-900 shadow-[0_12px_30px_rgba(15,23,42,0.05)] outline-none transition focus:border-[#2563EB] focus:shadow-[0_18px_40px_rgba(37,99,235,0.15)]"
+                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 shadow-[0_12px_30px_rgba(15,23,42,0.05)] outline-none transition focus:border-[#2563EB] focus:shadow-[0_18px_40px_rgba(37,99,235,0.15)]"
                 required
-              />
+              >
+                <option value="">Select admission year</option>
+                {admissionYearOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
               {fieldError('admissionYear') && <p className="text-xs font-medium text-red-500">{fieldError('admissionYear')}</p>}
             </div>
-            <div className="space-y-2">
-              <label htmlFor="expectedPassoutYear" className="text-sm font-semibold text-slate-700">
-                Expected Passout Year*
+            <div className="space-y-1.5">
+              <label htmlFor="currentYear" className="text-sm font-semibold text-slate-700">
+                Current Year*
               </label>
-              <input
-                id="expectedPassoutYear"
-                name="expectedPassoutYear"
-                value={form.expectedPassoutYear}
+              <select
+                id="currentYear"
+                name="currentYear"
+                value={form.currentYear}
                 onChange={handleChange}
                 onBlur={handleBlur}
-                inputMode="numeric"
-                pattern="\d{4}"
-                maxLength={4}
-                placeholder="2026"
-                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-sm text-slate-900 shadow-[0_12px_30px_rgba(15,23,42,0.05)] outline-none transition focus:border-[#2563EB] focus:shadow-[0_18px_40px_rgba(37,99,235,0.15)]"
+                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 shadow-[0_12px_30px_rgba(15,23,42,0.05)] outline-none transition focus:border-[#2563EB] focus:shadow-[0_18px_40px_rgba(37,99,235,0.15)]"
                 required
-              />
-              {fieldError('expectedPassoutYear') && <p className="text-xs font-medium text-red-500">{fieldError('expectedPassoutYear')}</p>}
+              >
+                <option value="">Select current year</option>
+                {currentYearOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+              {fieldError('currentYear') && <p className="text-xs font-medium text-red-500">{fieldError('currentYear')}</p>}
             </div>
           </div>
         )}
 
         {isAlumni && (
-          <div className="space-y-2">
-            <label htmlFor="passoutYear" className="text-sm font-semibold text-slate-700">
-              Passout Year*
-            </label>
-            <input
-              id="passoutYear"
-              name="passoutYear"
-              value={form.passoutYear}
-              onChange={handleChange}
-              onBlur={handleBlur}
-              inputMode="numeric"
-              pattern="\d{4}"
-              maxLength={4}
-              placeholder="2018"
-              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-sm text-slate-900 shadow-[0_12px_30px_rgba(15,23,42,0.05)] outline-none transition focus:border-[#2563EB] focus:shadow-[0_18px_40px_rgba(37,99,235,0.15)]"
-              required
-            />
-            {fieldError('passoutYear') && <p className="text-xs font-medium text-red-500">{fieldError('passoutYear')}</p>}
+          <div className="grid gap-3 md:grid-cols-2">
+            <div className="space-y-1.5">
+              <label htmlFor="passoutYear" className="text-sm font-semibold text-slate-700">
+                Passout Year*
+              </label>
+              <select
+                id="passoutYear"
+                name="passoutYear"
+                value={form.passoutYear}
+                onChange={handleChange}
+                onBlur={handleBlur}
+                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 shadow-[0_12px_30px_rgba(15,23,42,0.05)] outline-none transition focus:border-[#2563EB] focus:shadow-[0_18px_40px_rgba(37,99,235,0.15)]"
+                required
+              >
+                <option value="">Select passout year</option>
+                {admissionYearOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+              {fieldError('passoutYear') && <p className="text-xs font-medium text-red-500">{fieldError('passoutYear')}</p>}
+            </div>
+            <div className="space-y-1.5">
+              <label htmlFor="phoneNumber" className="text-sm font-semibold text-slate-700">
+                Phone Number*
+              </label>
+              <input
+                id="phoneNumber"
+                name="phoneNumber"
+                value={form.phoneNumber}
+                onChange={handleChange}
+                onBlur={handleBlur}
+                inputMode="numeric"
+                pattern="[0-9]{10}"
+                maxLength={10}
+                placeholder="write your number"
+                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 shadow-[0_12px_30px_rgba(15,23,42,0.05)] outline-none transition focus:border-[#2563EB] focus:shadow-[0_18px_40px_rgba(37,99,235,0.15)]"
+                required
+              />
+              {fieldError('phoneNumber') && <p className="text-xs font-medium text-red-500">{fieldError('phoneNumber')}</p>}
+            </div>
           </div>
         )}
 
-        <div className="space-y-2">
+        {isStudent && (
+          <div className="space-y-1.5">
+            <label htmlFor="phoneNumber" className="text-sm font-semibold text-slate-700">
+              Phone Number*
+            </label>
+            <input
+              id="phoneNumber"
+              name="phoneNumber"
+              value={form.phoneNumber}
+              onChange={handleChange}
+              onBlur={handleBlur}
+              inputMode="numeric"
+              pattern="[0-9]{10}"
+              maxLength={10}
+              placeholder="write your number"
+              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 shadow-[0_12px_30px_rgba(15,23,42,0.05)] outline-none transition focus:border-[#2563EB] focus:shadow-[0_18px_40px_rgba(37,99,235,0.15)]"
+              required
+            />
+            {fieldError('phoneNumber') && <p className="text-xs font-medium text-red-500">{fieldError('phoneNumber')}</p>}
+          </div>
+        )}
+
+        <div className="space-y-1.5">
           <label htmlFor="prn" className="text-sm font-semibold text-slate-700">
             {isFaculty ? 'Staff ID*' : 'PRN Number*'}
           </label>
@@ -426,51 +530,109 @@ const SignupForm = () => {
             value={form.prn}
             onChange={handleChange}
             onBlur={handleBlur}
-            placeholder={isFaculty ? 'Enter your Staff ID' : 'Enter your PRN'}
-            className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-sm text-slate-900 shadow-[0_12px_30px_rgba(15,23,42,0.05)] outline-none transition focus:border-[#2563EB] focus:shadow-[0_18px_40px_rgba(37,99,235,0.15)]"
+            placeholder={isFaculty ? 'Enter your Staff ID' : 'ex: 72264567G'}
+            className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 shadow-[0_12px_30px_rgba(15,23,42,0.05)] outline-none transition focus:border-[#2563EB] focus:shadow-[0_18px_40px_rgba(37,99,235,0.15)]"
             required
           />
           {fieldError('prn') && <p className="text-xs font-medium text-red-500">{fieldError('prn')}</p>}
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2">
-          <div className="space-y-2">
+        {isFaculty && (
+          <div className="space-y-1.5">
+            <label htmlFor="phoneNumber" className="text-sm font-semibold text-slate-700">
+              Phone Number*
+            </label>
+            <input
+              id="phoneNumber"
+              name="phoneNumber"
+              value={form.phoneNumber}
+              onChange={handleChange}
+              onBlur={handleBlur}
+              inputMode="numeric"
+              pattern="[0-9]{10}"
+              maxLength={10}
+              placeholder="write your number"
+              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 shadow-[0_12px_30px_rgba(15,23,42,0.05)] outline-none transition focus:border-[#2563EB] focus:shadow-[0_18px_40px_rgba(37,99,235,0.15)]"
+              required
+            />
+            {fieldError('phoneNumber') && <p className="text-xs font-medium text-red-500">{fieldError('phoneNumber')}</p>}
+          </div>
+        )}
+
+        <div className="grid gap-3 md:grid-cols-2">
+          <div className="space-y-1.5">
             <label htmlFor="password" className="text-sm font-semibold text-slate-700">
               Password*
             </label>
-            <input
-              id="password"
-              name="password"
-              type="password"
-              value={form.password}
-              onChange={handleChange}
-              onBlur={handleBlur}
-              placeholder="Create a password"
-              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-sm text-slate-900 shadow-[0_12px_30px_rgba(15,23,42,0.05)] outline-none transition focus:border-[#2563EB] focus:shadow-[0_18px_40px_rgba(37,99,235,0.15)]"
-              required
-            />
+            <div className="relative">
+              <input
+                id="password"
+                name="password"
+                type={showPassword ? 'text' : 'password'}
+                value={form.password}
+                onChange={handleChange}
+                onBlur={handleBlur}
+                placeholder="Create a password"
+                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 shadow-[0_12px_30px_rgba(15,23,42,0.05)] outline-none transition focus:border-[#2563EB] focus:shadow-[0_18px_40px_rgba(37,99,235,0.15)]"
+                required
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600"
+              >
+                {showPassword ? (
+                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                  </svg>
+                ) : (
+                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                  </svg>
+                )}
+              </button>
+            </div>
             {fieldError('password') && <p className="text-xs font-medium text-red-500">{fieldError('password')}</p>}
           </div>
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             <label htmlFor="confirmPassword" className="text-sm font-semibold text-slate-700">
               Confirm Password*
             </label>
-            <input
-              id="confirmPassword"
-              name="confirmPassword"
-              type="password"
-              value={form.confirmPassword}
-              onChange={handleChange}
-              onBlur={handleBlur}
-              placeholder="Re-type your password"
-              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-sm text-slate-900 shadow-[0_12px_30px_rgba(15,23,42,0.05)] outline-none transition focus:border-[#2563EB] focus:shadow-[0_18px_40px_rgba(37,99,235,0.15)]"
-              required
-            />
+            <div className="relative">
+              <input
+                id="confirmPassword"
+                name="confirmPassword"
+                type={showConfirmPassword ? 'text' : 'password'}
+                value={form.confirmPassword}
+                onChange={handleChange}
+                onBlur={handleBlur}
+                placeholder="Re-type your password"
+                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 shadow-[0_12px_30px_rgba(15,23,42,0.05)] outline-none transition focus:border-[#2563EB] focus:shadow-[0_18px_40px_rgba(37,99,235,0.15)]"
+                required
+              />
+              <button
+                type="button"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600"
+              >
+                {showConfirmPassword ? (
+                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                  </svg>
+                ) : (
+                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                  </svg>
+                )}
+              </button>
+            </div>
             {fieldError('confirmPassword') && <p className="text-xs font-medium text-red-500">{fieldError('confirmPassword')}</p>}
           </div>
         </div>
 
-        <div className="space-y-3 text-sm text-slate-500">
+        <div className="space-y-2 text-sm text-slate-500">
           <label className="flex items-start gap-3">
             <input
               type="checkbox"
@@ -512,7 +674,7 @@ const SignupForm = () => {
           {fieldError('agreeTerms') && <p className="text-xs font-medium text-red-500">{fieldError('agreeTerms')}</p>}
         </div>
 
-        <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-2 pt-2 sm:flex-row sm:items-center sm:justify-between">
           <button
             type="button"
             onClick={() => navigate(-1)}

@@ -33,16 +33,16 @@ import NewsCreate from './pages/user/NewsCreate'
 import EventDetail from './pages/user/EventDetail'
 import UserEvents from './pages/user/Events'
 import RegisteredEvents from './pages/user/RegisteredEvents'
-import MyActivity from './pages/user/MyActivity'
 import MyApplications from './pages/user/MyApplications'
 import ContentPosted from './pages/user/ContentPosted'
 import MyPosts from './pages/user/MyPosts'
 import EventRegistrations from './pages/user/EventRegistrations'
-import MyRequests from './pages/user/MyRequests'
+import MentorshipRequestsPage from './pages/user/MentorshipRequestsPage'
 import PostDonationCampaign from './pages/user/PostDonationCampaign'
 import Campaigns from './pages/user/Campaigns'
 import CampaignDetail from './pages/user/CampaignDetailNew'
-import Settings from './pages/user/Settings'
+import UserSettings from './pages/UserSettings'
+import Connections from './pages/user/Connections'
 import UserGallery from './pages/user/Gallery'
 import StudentsDirectory from './pages/StudentsDirectory'
 import FacultyDirectory from './pages/FacultyDirectory'
@@ -462,9 +462,10 @@ function App() {
                 <MyApplications />
               </ProfilePendingGuardWithFallback>
             } />
+           
             <Route path="mentorship-requests" element={
               <ProfilePendingGuardWithFallback>
-                <MyRequests />
+                <MentorshipRequestsPage />
               </ProfilePendingGuardWithFallback>
             } />
             <Route path="activity/content" element={
@@ -489,7 +490,12 @@ function App() {
             } />
             <Route path="settings" element={
               <ProfilePendingGuardWithFallback>
-                <Settings />
+                <UserSettings />
+              </ProfilePendingGuardWithFallback>
+            } />
+            <Route path="connections" element={
+              <ProfilePendingGuardWithFallback>
+                <Connections />
               </ProfilePendingGuardWithFallback>
             } />
           </Route>

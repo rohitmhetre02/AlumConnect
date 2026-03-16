@@ -67,8 +67,6 @@ const facultyRoutes = require('./routes/facultyRoutes')
 
 const insightsRoutes = require('./routes/insightsRoutes')
 
-const messageRoutes = require('./routes/messageRoutes')
-
 const galleryRoutes = require('./routes/galleryRoutes')
 
 const settingsRoutes = require('./routes/settingsRoutes')
@@ -90,6 +88,9 @@ const contentApprovalRoutes = require('./routes/contentApprovalRoutes')
 const calendarRoutes = require('./routes/calendarRoutes')
 
 const studentRoutes = require('./routes/studentRoutes')
+
+// Debug helper
+const { debugMentorRequest } = require('./debug-mentorship')
 
 
 
@@ -182,8 +183,6 @@ app.use('/api', stripeRoutes)
 
     app.use('/api/insights', insightsRoutes)
 
-    app.use('/api/messages', messageRoutes)
-
     app.use('/api/gallery', galleryRoutes)
 
     app.use('/api/settings', settingsRoutes)
@@ -191,6 +190,8 @@ app.use('/api', stripeRoutes)
     app.use('/api/admin/users', adminUserRoutes)
 
     app.use('/api/admin/dashboard', adminDashboardRoutes)
+
+    app.use('/api/admin/mentorship', require('./routes/adminRoutes'))
 
 app.use('/api/contact', contactRoutes)
 
@@ -236,12 +237,23 @@ app.use('/api/students', studentRoutes)
 
     }
 
+    // Debug route for mentorship requests
+    app.get('/api/debug/mentorship/:requestId', async (req, res) => {
+      try {
+        const { requestId } = req.params
+        const result = await debugMentorRequest(requestId)
+        if (result) {
+          res.json({ success: true, data: result })
+        } else {
+          res.json({ success: false, message: 'Request not found' })
+        }
+      } catch (error) {
+        console.error('Debug route error:', error)
+        res.status(500).json({ success: false, message: 'Debug error' })
+      }
+    })
 
-
-    // 404 handler
-
-    app.use((req, res) => {
-
+    app.use((req, res, next) => {
       if (process.env.NODE_ENV !== 'production') {
 
         console.log('404 for:', req.method, req.path)

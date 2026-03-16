@@ -9,7 +9,7 @@ const MentorshipServices = () => {
     title: '',
     description: '',
     duration: '',
-    mode: 'video',
+    mode: 'online',
     price: 0,
     status: 'active'
   })
@@ -19,7 +19,7 @@ const MentorshipServices = () => {
       title: '',
       description: '',
       duration: '',
-      mode: 'video',
+      mode: 'online',
       price: 0,
       status: 'active'
     })
@@ -31,7 +31,7 @@ const MentorshipServices = () => {
     e.preventDefault()
     try {
       if (editingService) {
-        await updateService(editingService._id, formData)
+        await updateService(editingService.id, formData)
       } else {
         await createService(formData)
       }
@@ -128,9 +128,9 @@ const MentorshipServices = () => {
                   onChange={(e) => setFormData({...formData, mode: e.target.value})}
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
-                  <option value="video">Video Call</option>
-                  <option value="chat">Chat</option>
-                  <option value="in-person">In Person</option>
+                  <option value="online">Online</option>
+                  <option value="offline">Offline</option>
+                  <option value="hybrid">Hybrid</option>
                 </select>
               </div>
               
@@ -207,7 +207,7 @@ const MentorshipServices = () => {
           ) : (
             <div className="space-y-4">
               {services.map((service) => (
-                <div key={service._id} className="bg-white border border-slate-200 rounded-lg p-6">
+                <div key={service.id} className="bg-white border border-slate-200 rounded-lg p-6">
                   <div className="flex justify-between items-start">
                     <div className="flex-1">
                       <h3 className="text-lg font-medium text-slate-900">{service.title}</h3>
@@ -241,7 +241,7 @@ const MentorshipServices = () => {
                         Edit
                       </button>
                       <button
-                        onClick={() => handleDelete(service._id)}
+                        onClick={() => handleDelete(service.id)}
                         className="px-3 py-1 bg-red-100 text-red-700 text-sm rounded hover:bg-red-200"
                       >
                         Delete

@@ -9,7 +9,7 @@ const Faculty = require('../models/Faculty')
 const Coordinator = require('../models/Coordinator')
 const Admin = require('../models/Admin')
 
-const COORDINATOR_APPROVAL_ROLES = ['student', 'alumni', 'faculty']
+const COORDINATOR_APPROVAL_ROLES = ['student', 'alumni']
 const ADMIN_APPROVAL_ROLES = ['faculty', 'coordinator']
 
 const ensureObjectId = (value) => {
@@ -129,7 +129,7 @@ const getPendingProfiles = async (req, res) => {
     if (actorRole === 'coordinator') {
       const { department } = await getCoordinatorContext(req.user.id)
 
-      const [students, alumni, faculty] = await Promise.all([
+      const [students, alumni] = await Promise.all([
         Student.find({
           department,
           profileApprovalStatus: PROFILE_STATUS.IN_REVIEW,
@@ -142,18 +142,11 @@ const getPendingProfiles = async (req, res) => {
         })
           .sort({ createdAt: -1 })
           .lean(),
-        Faculty.find({
-          department,
-          profileApprovalStatus: PROFILE_STATUS.IN_REVIEW,
-        })
-          .sort({ createdAt: -1 })
-          .lean(),
       ])
 
       const combined = [
         ...students.map((doc) => mapPendingProfile(doc, 'student')),
         ...alumni.map((doc) => mapPendingProfile(doc, 'alumni')),
-        ...faculty.map((doc) => mapPendingProfile(doc, 'faculty')),
       ]
 
       return res.json({
@@ -204,7 +197,7 @@ const getApprovedProfiles = async (req, res) => {
     if (actorRole === 'coordinator') {
       const { department } = await getCoordinatorContext(req.user.id)
 
-      const [students, alumni, faculty] = await Promise.all([
+      const [students, alumni] = await Promise.all([
         Student.find({
           department,
           profileApprovalStatus: PROFILE_STATUS.APPROVED,
@@ -217,18 +210,11 @@ const getApprovedProfiles = async (req, res) => {
         })
           .sort({ createdAt: -1 })
           .lean(),
-        Faculty.find({
-          department,
-          profileApprovalStatus: PROFILE_STATUS.APPROVED,
-        })
-          .sort({ createdAt: -1 })
-          .lean(),
       ])
 
       const combined = [
         ...students.map((doc) => mapPendingProfile(doc, 'student')),
         ...alumni.map((doc) => mapPendingProfile(doc, 'alumni')),
-        ...faculty.map((doc) => mapPendingProfile(doc, 'faculty')),
       ]
 
       return res.json({
@@ -561,10 +547,10 @@ const getProfileApprovalStats = async (req, res) => {
 
     if (actorRole === 'coordinator') {
       const { department } = await getCoordinatorContext(req.user.id)
-      const roles = COORDINATOR_APPROVAL_ROLES
+      const roles = ['student', 'alumni'] // Only student and alumni for coordinator
       const statsTemplate = buildStatsTemplate(roles)
 
-      const [studentStats, alumniStats, facultyStats] = await Promise.all([
+      const [studentStats, alumniStats] = await Promise.all([
         Student.aggregate([
           { $match: { department } },
           { $group: { _id: '$profileApprovalStatus', count: { $sum: 1 } } },
@@ -573,15 +559,10 @@ const getProfileApprovalStats = async (req, res) => {
           { $match: { department } },
           { $group: { _id: '$profileApprovalStatus', count: { $sum: 1 } } },
         ]),
-        Faculty.aggregate([
-          { $match: { department } },
-          { $group: { _id: '$profileApprovalStatus', count: { $sum: 1 } } },
-        ]),
       ])
 
       accumulateStats(studentStats, statsTemplate, 'student')
       accumulateStats(alumniStats, statsTemplate, 'alumni')
-      accumulateStats(facultyStats, statsTemplate, 'faculty')
 
       return res.json({ success: true, data: statsTemplate })
     }

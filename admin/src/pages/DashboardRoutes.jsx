@@ -24,17 +24,16 @@ import OpportunitiesManagement from '../components/OpportunitiesManagement'
 import AdminOpportunityDetail from '../components/AdminOpportunityDetail'
 import OpportunityApplicants from '../components/OpportunityApplicants'
 import CampaignsManagement from '../components/CampaignsManagement'
-import AdminCampaignsManagement from '../components/AdminCampaignsManagement'
-import AdminCampaignDetail from '../components/AdminCampaignDetail'
-import DonationsManagement from '../components/DonationsManagement'
+import CampaignDetails from '../components/CampaignDetails'
 import NewsManagement from '../components/NewsManagement'
 import CoordinatorNewsReview from '../components/CoordinatorNewsReview'
 import AdminNewsDetail from '../components/AdminNewsDetail'
+import MentorDetails from '../components/MentorProfileDetails'
 import Mentorship from '../components/Mentorship'
-import MentorDetails from '../components/MentorDetails'
 import Gallery from '../components/Gallery'
 import AdminAnalyticsDashboard from '../components/AdminAnalyticsDashboard'
 import Settings from '../components/Settings'
+import AdminSettings from './AdminSettings'
 import ProfileApprovalManagement from '../components/ProfileApprovalManagement'
 import PostApprovalManagement from '../components/PostApprovalManagement'
 import AdminProfile from './AdminProfile'
@@ -42,13 +41,14 @@ import AdminProfile from './AdminProfile'
 // Coordinator Dashboard Components
 import CoordinatorDashboardHome from '../components/CoordinatorDashboardHome'
 import AdminLayout from '../layouts/AdminLayout'
+import CoordinatorDashboard from './CoordinatorDashboard'
 // Coordinator components will be added later
 
 const DashboardRoutes = () => {
   return (
     <Routes>
-      {/* Admin Routes */}
-      <Route element={<AdminDashboard />}>
+      {/* Admin Routes with /admin prefix */}
+      <Route path="admin/*" element={<AdminDashboard />}>
         <Route index element={<DashboardOverviewEnhanced />} />
         <Route path="dashboard" element={<DashboardOverviewEnhanced />} />
         <Route path="overview" element={<DashboardOverviewEnhanced />} />
@@ -72,12 +72,11 @@ const DashboardRoutes = () => {
         <Route path="opportunities/:opportunityId" element={<AdminOpportunityDetail />} />
         <Route path="opportunities/:opportunityId/edit" element={<AdminPostOpportunity />} />
         <Route path="opportunities/:opportunityId/applicants" element={<OpportunityApplicants />} />
-        <Route path="campaigns" element={<AdminCampaignsManagement />} />
+        <Route path="campaigns" element={<CampaignsManagement />} />
         <Route path="campaigns/create" element={<AdminPostCampaign />} />
-        <Route path="campaigns/:campaignId" element={<AdminCampaignDetail />} />
+        <Route path="campaigns/:campaignId" element={<CampaignDetails />} />
         <Route path="campaigns/:campaignId/edit" element={<AdminPostCampaign />} />
-        <Route path="campaigns/:campaignId/donations" element={<AdminCampaignDetail />} />
-        <Route path="donations" element={<DonationsManagement />} />
+        <Route path="campaigns/:campaignId/donors" element={<CampaignDetails />} />
         <Route path="news" element={<NewsManagement />} />
         <Route path="news/review" element={<CoordinatorNewsReview />} />
         <Route path="news/create" element={<AdminPostArticle />} />
@@ -85,6 +84,8 @@ const DashboardRoutes = () => {
         <Route path="news/:articleId/edit" element={<AdminPostArticle />} />
         <Route path="mentorship" element={<Mentorship />} />
         <Route path="mentorship/:mentorId" element={<MentorDetails />} />
+        <Route path="mentorship/:mentorId/requests" element={<MentorDetails />} />
+        <Route path="mentorship/:mentorId/reviews" element={<MentorDetails />} />
         <Route path="gallery" element={<Gallery />} />
         <Route path="analytics" element={<AdminAnalyticsDashboard />} />
         <Route path="settings" element={<Settings />} />
@@ -95,16 +96,13 @@ const DashboardRoutes = () => {
         <Route path="post-approval" element={<PostApprovalManagement />} />
         <Route path="post-approval/pending" element={<PostApprovalManagement />} />
         <Route path="post-approval/approved" element={<PostApprovalManagement />} />
-        <Route path="coordinator/post-approval" element={<PostApprovalManagement />} />
-        <Route path="coordinator/post-approval/pending" element={<PostApprovalManagement />} />
-        <Route path="coordinator/post-approval/approved" element={<PostApprovalManagement />} />
         <Route path="profile" element={<AdminProfile />} />
       </Route>
 
-      {/* Coordinator Routes - Use same layout as admin */}
-      <Route element={<AdminLayout />}>
+      {/* Coordinator Routes with /coordinator prefix */}
+      <Route path="coordinator/*" element={<CoordinatorDashboard />}>
         <Route index element={<CoordinatorDashboardHome />} />
-        <Route path="coordinator/dashboard" element={<CoordinatorDashboardHome />} />
+        <Route path="dashboard" element={<CoordinatorDashboardHome />} />
         <Route path="users" element={<UserManagement />} />
         <Route path="users/:memberId" element={<UserManagement />} />
         <Route path="faculty" element={<FacultyManagement />} />
@@ -112,8 +110,6 @@ const DashboardRoutes = () => {
         <Route path="mentors" element={<MentorManagement />} />
         <Route path="alumni" element={<AlumniManagement />} />
         <Route path="alumni/:memberId" element={<AlumniManagement />} />
-        <Route path="coordinators" element={<CoordinatorManagement />} />
-        <Route path="coordinators/:memberId" element={<CoordinatorManagement />} />
         <Route path="events" element={<EventsManagement />} />
         <Route path="events/create" element={<AdminPostEvent />} />
         <Route path="events/:eventId" element={<AdminEventDetail />} />
@@ -124,18 +120,25 @@ const DashboardRoutes = () => {
         <Route path="opportunities/:opportunityId" element={<AdminOpportunityDetail />} />
         <Route path="opportunities/:opportunityId/edit" element={<AdminPostOpportunity />} />
         <Route path="opportunities/:opportunityId/applicants" element={<OpportunityApplicants />} />
-        <Route path="campaigns" element={<AdminCampaignsManagement />} />
+        <Route path="campaigns" element={<CampaignsManagement />} />
         <Route path="campaigns/create" element={<AdminPostCampaign />} />
-        <Route path="campaigns/:campaignId" element={<AdminCampaignDetail />} />
+        <Route path="campaigns/:campaignId" element={<CampaignDetails />} />
         <Route path="campaigns/:campaignId/edit" element={<AdminPostCampaign />} />
+        <Route path="mentorship" element={<Mentorship />} />
+        <Route path="mentorship/:mentorId" element={<MentorDetails />} />
+        <Route path="mentorship/:mentorId/requests" element={<MentorDetails />} />
+        <Route path="mentorship/:mentorId/reviews" element={<MentorDetails />} />
+        <Route path="news" element={<NewsManagement />} />
+        <Route path="news/create" element={<AdminPostArticle />} />
+        <Route path="news/:articleId" element={<AdminNewsDetail />} />
+        <Route path="news/:articleId/edit" element={<AdminPostArticle />} />
+        <Route path="gallery" element={<Gallery />} />
         <Route path="analytics" element={<AdminAnalyticsDashboard />} />
         <Route path="profile-approval" element={<ProfileApprovalManagement />} />
         <Route path="profile-approval/pending" element={<ProfileApprovalManagement />} />
         <Route path="profile-approval/approved" element={<ProfileApprovalManagement />} />
+        <Route path="settings" element={<Settings />} />
         <Route path="profile" element={<Settings />} />
-        <Route path="coordinator/post-approval" element={<PostApprovalManagement />} />
-        <Route path="coordinator/post-approval/pending" element={<PostApprovalManagement />} />
-        <Route path="coordinator/post-approval/approved" element={<PostApprovalManagement />} />
       </Route>
     </Routes>
   )

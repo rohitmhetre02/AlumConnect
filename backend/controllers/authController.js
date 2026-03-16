@@ -81,18 +81,17 @@ const validateSignupPayload = (role, body) => {
   })
 
   if (role === 'student') {
-    const studentFields = ['prnNumber', 'admissionYear', 'expectedPassoutYear', 'department']
+    const studentFields = ['prnNumber', 'admissionYear', 'currentYear', 'phoneNumber', 'department']
     studentFields.forEach((field) => {
       if (!body[field] || String(body[field]).trim() === '') {
         throw new Error(`${field} is required for student role.`)
       }
     })
     ensureNumeric(body.admissionYear, 'admissionYear')
-    ensureNumeric(body.expectedPassoutYear, 'expectedPassoutYear')
   }
 
   if (role === 'alumni') {
-    const alumniFields = ['prnNumber', 'passoutYear', 'department']
+    const alumniFields = ['prnNumber', 'passoutYear', 'phoneNumber', 'department']
     alumniFields.forEach((field) => {
       if (!body[field] || String(body[field]).trim() === '') {
         throw new Error(`${field} is required for alumni role.`)
@@ -105,6 +104,15 @@ const validateSignupPayload = (role, body) => {
     if (!body.department || String(body.department).trim() === '') {
       throw new Error('department is required for coordinator role.')
     }
+  }
+
+  if (role === 'faculty') {
+    const facultyFields = ['department', 'phoneNumber']
+    facultyFields.forEach((field) => {
+      if (!body[field] || String(body[field]).trim() === '') {
+        throw new Error(`${field} is required for faculty role.`)
+      }
+    })
   }
 }
 
@@ -151,12 +159,19 @@ const signup = async (req, res) => {
     if (normalizedRole === 'student') {
       payload.prnNumber = req.body.prnNumber.trim()
       payload.admissionYear = ensureNumeric(req.body.admissionYear, 'admissionYear')
-      payload.expectedPassoutYear = ensureNumeric(req.body.expectedPassoutYear, 'expectedPassoutYear')
+      payload.currentYear = req.body.currentYear
+      payload.phone = req.body.phoneNumber
     }
 
     if (normalizedRole === 'alumni') {
       payload.prnNumber = req.body.prnNumber.trim()
       payload.passoutYear = ensureNumeric(req.body.passoutYear, 'passoutYear')
+      payload.phone = req.body.phoneNumber
+    }
+
+    if (normalizedRole === 'faculty') {
+      payload.department = normalizeDepartment(req.body.department)
+      payload.phone = req.body.phoneNumber
     }
 
     const user = await Model.create(payload)
@@ -169,6 +184,8 @@ const signup = async (req, res) => {
       user: sanitizeUser(user, normalizedRole),
     })
   } catch (error) {
+    console.error('Signup error details:', error)
+    console.error('Request body:', req.body)
     if (error.message.includes('required') || error.message.includes('must be a valid year')) {
       return res.status(400).json({ message: error.message })
     }

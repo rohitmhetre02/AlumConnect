@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react'
-import { NavLink, useLocation } from 'react-router-dom'
+import { useState, useEffect, useRef } from 'react'
+import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 
 // Icons
 const LayoutDashboard = (props) => (
@@ -96,6 +96,21 @@ const Settings = (props) => (
   </svg>
 )
 
+const UserProfile = (props) => (
+  <svg {...props} width={props.size || 16} height={props.size || 16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+    <circle cx="12" cy="7" r="4"/>
+  </svg>
+)
+
+const LogOut = (props) => (
+  <svg {...props} width={props.size || 16} height={props.size || 16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+    <polyline points="16 17 21 12 16 7"/>
+    <line x1="21" y1="12" x2="9" y2="12"/>
+  </svg>
+)
+
 const ChevronDown = (props) => (
   <svg {...props} width={props.size || 14} height={props.size || 14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <polyline points="6 9 12 15 18 9"/>
@@ -114,7 +129,23 @@ const AdminSidebar = ({ isMobile = false, onClose }) => {
   const [userName, setUserName] = useState('Admin User')
   const [userAvatar, setUserAvatar] = useState('A')
   const [profileApprovalStatus, setProfileApprovalStatus] = useState('APPROVED')
+  const [showUserMenu, setShowUserMenu] = useState(false)
+  const [avatarUrl, setAvatarUrl] = useState('')
   const location = useLocation()
+  const navigate = useNavigate()
+  const userMenuRef = useRef(null)
+
+  // Calculate dynamic base path based on user role
+  const basePath = userRole === 'admin' ? '/admin' : '/coordinator'
+
+  // Profile status helpers
+  const isProfileApproved = profileApprovalStatus === 'APPROVED'
+  const isProfileInReview = profileApprovalStatus === 'IN_REVIEW'
+  const isProfileRejected = profileApprovalStatus === 'REJECTED'
+  const normalizedRole = userRole === 'super_admin' ? 'Super Administrator' : 
+                        userRole === 'admin' ? 'Administrator' : 
+                        userRole === 'coordinator' ? 'Coordinator' : 'User'
+  const displayName = userName
 
   useEffect(() => {
     // Get user information from localStorage
@@ -125,10 +156,22 @@ const AdminSidebar = ({ isMobile = false, onClose }) => {
       setUserName(user.name || 'Admin User')
       setUserAvatar(user.name ? user.name.charAt(0).toUpperCase() : 'A')
       setProfileApprovalStatus(user.profileApprovalStatus || 'APPROVED')
+      setAvatarUrl(user.profilePicture || '')
       console.log('Sidebar user data loaded:', { name: user.name, role: user.role, profileApprovalStatus: user.profileApprovalStatus })
     } else {
       console.log('No stored user found in localStorage')
     }
+  }, [])
+
+  // Close user menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target)) {
+        setShowUserMenu(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
   const toggleMenu = (label) => {
@@ -142,6 +185,24 @@ const AdminSidebar = ({ isMobile = false, onClose }) => {
     localStorage.removeItem('adminUser')
     window.location.href = '/login'
     onClose?.()
+  }
+
+  const handleUserMenuClick = () => {
+    setShowUserMenu(!showUserMenu)
+  }
+
+  const handleProfileClick = () => {
+    setShowUserMenu(false)
+    navigate(`${basePath}/profile`)
+  }
+
+  const handleSettingsClick = () => {
+    setShowUserMenu(false)
+    navigate(`${basePath}/settings`)
+  }
+
+  const handleSettingsNavigate = () => {
+    navigate(`${basePath}/settings`)
   }
 
   const NavItem = ({ icon, label, path, subOptions, id, isDisabled = false }) => {
@@ -255,7 +316,7 @@ const AdminSidebar = ({ isMobile = false, onClose }) => {
           <div className="flex-1 overflow-y-auto px-4 pb-10 scrollbar-hide">
             <div className="mb-6">
               <p className="px-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4">Admin Dashboard</p>
-              <NavItem icon={<LayoutDashboard size={18} />} label="My Dashboard" path="/admin/dashboard" />
+              <NavItem icon={<LayoutDashboard size={18} />} label="My Dashboard" path={`${basePath}/dashboard`} />
             </div>
 
             <div className="mb-6">
@@ -263,49 +324,49 @@ const AdminSidebar = ({ isMobile = false, onClose }) => {
               <NavItem 
                 icon={<Users size={18} />} 
                 label="User Management" 
-                path="/users" 
+                path={`${basePath}/users`} 
                 isDisabled={userRole === 'coordinator' && profileApprovalStatus !== 'APPROVED'}
                 subOptions={[
-                  { label: 'Students', path: '/admin/users', icon: <Users size={14} /> },
-                  { label: 'Faculty', path: '/admin/mentors', icon: <UserCheck size={14} /> },
-                  { label: 'Alumni', path: '/admin/alumni', icon: <UserCheck size={14} /> },
-                  { label: 'Coordinators', path: '/admin/coordinators', icon: <UserCheck size={14} /> }
+                  { label: 'Students', path: `${basePath}/users`, icon: <Users size={14} /> },
+                  { label: 'Faculty', path: `${basePath}/mentors`, icon: <UserCheck size={14} /> },
+                  { label: 'Alumni', path: `${basePath}/alumni`, icon: <UserCheck size={14} /> },
+                  { label: 'Coordinators', path: `${basePath}/coordinators`, icon: <UserCheck size={14} /> }
                 ]}
               />
               <NavItem 
                 icon={<Calendar size={18} />} 
                 label="Events" 
-                path="/admin/events" 
+                path={`${basePath}/events`} 
                 isDisabled={userRole === 'coordinator' && profileApprovalStatus !== 'APPROVED'}
               />
               <NavItem 
                 icon={<Briefcase size={18} />} 
                 label="Opportunities" 
-                path="/admin/opportunities" 
+                path={`${basePath}/opportunities`} 
                 isDisabled={userRole === 'coordinator' && profileApprovalStatus !== 'APPROVED'}
               />
               <NavItem 
                 icon={<Heart size={18} />} 
                 label="Campaigns" 
-                path="/admin/campaigns" 
+                path={`${basePath}/campaigns`} 
                 isDisabled={userRole === 'coordinator' && profileApprovalStatus !== 'APPROVED'}
               />
               <NavItem 
                 icon={<GraduationCap size={18} />} 
                 label="Mentorship" 
-                path="/admin/mentorship" 
+                path={`${basePath}/mentorship`} 
                 isDisabled={userRole === 'coordinator' && profileApprovalStatus !== 'APPROVED'}
               />
               <NavItem 
                 icon={<Newspaper size={18} />} 
                 label="News" 
-                path="/admin/news" 
+                path={`${basePath}/news`} 
                 isDisabled={userRole === 'coordinator' && profileApprovalStatus !== 'APPROVED'}
               />
               <NavItem 
                 icon={<Image size={18} />} 
                 label="Gallery" 
-                path="/admin/gallery" 
+                path={`${basePath}/gallery`} 
                 isDisabled={userRole === 'coordinator' && profileApprovalStatus !== 'APPROVED'}
               />
             </div>
@@ -315,54 +376,107 @@ const AdminSidebar = ({ isMobile = false, onClose }) => {
               <NavItem 
                 icon={<Users size={18} />} 
                 label="Profile Approval" 
-                path="/admin/profile-approval"
+                path={`${basePath}/profile-approval`}
                 subOptions={[
-                  { label: 'Pending Profiles', path: '/admin/profile-approval/pending', icon: <Users size={14} /> },
-                  { label: 'Approved Profiles', path: '/admin/profile-approval/approved', icon: <UserCheck size={14} /> }
+                  { label: 'Pending Profiles', path: `${basePath}/profile-approval/pending`, icon: <Users size={14} /> },
+                  { label: 'Approved Profiles', path: `${basePath}/profile-approval/approved`, icon: <UserCheck size={14} /> }
                 ]}
               />
               <NavItem 
                 icon={<Newspaper size={18} />} 
                 label="Post Approval" 
-                path="/admin/post-approval"
+                path={`${basePath}/post-approval`}
                 subOptions={[
-                  { label: 'Pending Posts', path: '/admin/post-approval/pending', icon: <Newspaper size={14} /> },
-                  { label: 'Approved Posts', path: '/admin/post-approval/approved', icon: <UserCheck size={14} /> }
+                  { label: 'Pending Posts', path: `${basePath}/post-approval/pending`, icon: <Newspaper size={14} /> },
+                  { label: 'Approved Posts', path: `${basePath}/post-approval/approved`, icon: <UserCheck size={14} /> }
                 ]}
               />
             </div>
 
             <div className="mb-6">
               <p className="px-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4">Analytics</p>
-              <NavItem icon={<BarChart size={18} />} label="Analytics" path="/admin/analytics" />
+              <NavItem icon={<BarChart size={18} />} label="Analytics" path={`${basePath}/analytics`} />
             </div>
           </div>
 
           {/* User Status/Logout Section */}
           <div className="p-4 bg-slate-50 border-t border-slate-200">
-            <div className="flex items-center space-x-3 px-2 py-2">
-              <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white font-semibold text-sm">
-                {userAvatar}
-              </div>
-              <div className="flex-1 overflow-hidden">
-                <p className="text-xs font-semibold text-slate-900 truncate">{userName}</p>
-                <p className="text-[10px] text-slate-500 capitalize">
-                  {userRole === 'super_admin' ? 'Super Administrator' : 
-                   userRole === 'admin' ? 'Administrator' : 
-                   userRole === 'coordinator' ? `Coordinator • ${
-                     profileApprovalStatus === 'APPROVED' ? 'Approved' :
-                     profileApprovalStatus === 'IN_REVIEW' ? 'Pending' :
-                     profileApprovalStatus === 'REJECTED' ? 'Rejected' : 'Unknown'
-                   }` : 'Administrator'}
-                </p>
-              </div>
-              <button 
-                onClick={handleLogout}
-                className="text-slate-400 hover:text-slate-600"
-                title="Logout"
+            <div className="relative" ref={userMenuRef}>
+              <div
+                className="flex items-center space-x-3 px-2 py-2 cursor-pointer hover:bg-slate-100 rounded-lg transition-colors"
+                onClick={handleUserMenuClick}
               >
-                <Settings size={16} />
-              </button>
+                {avatarUrl ? (
+                  <img src={avatarUrl} className="w-8 h-8 rounded-full border border-white shadow-sm" alt="User" />
+                ) : (
+                  <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white font-semibold text-sm">
+                    {displayName.charAt(0).toUpperCase()}
+                  </div>
+                )}
+                <div className="flex-1 overflow-hidden">
+                  <p className="text-xs font-semibold text-slate-900 truncate">{displayName}</p>
+                  <p className="text-[10px] text-slate-500 capitalize">
+                    {normalizedRole || 'user'} •
+                    <span className={`ml-1 font-medium ${isProfileApproved
+                        ? 'text-green-600'
+                        : isProfileInReview
+                          ? 'text-amber-600'
+                          : isProfileRejected
+                            ? 'text-red-600'
+                            : 'text-slate-500'
+                      }`}>
+                      {isProfileApproved
+                        ? 'Approved'
+                        : isProfileInReview
+                          ? 'Pending'
+                        : isProfileRejected
+                            ? 'Rejected'
+                            : 'Unknown'}
+                    </span>
+                  </p>
+                </div>
+                <div className="relative">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setShowUserMenu(!showUserMenu)
+                    }}
+                    className="p-2 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition"
+                  >
+                    <Settings size={16} />
+                  </button>
+                </div>
+              </div>
+
+              {/* Dropdown Menu */}
+              {showUserMenu && (
+                <div className="absolute bottom-full left-0 right-0 mb-2 bg-white rounded-lg shadow-lg border border-slate-200 overflow-hidden z-50">
+                  <div className="py-1">
+                    <button
+                      onClick={handleProfileClick}
+                      className="flex items-center w-full px-4 py-2 text-sm text-slate-700 hover:bg-slate-100 transition-colors"
+                    >
+                      <UserProfile size={16} className="mr-3 text-slate-400" />
+                      Profile
+                    </button>
+                    <button
+                      onClick={handleSettingsNavigate}
+                      className="flex items-center w-full px-4 py-2 text-sm text-slate-700 hover:bg-slate-100 transition-colors"
+                    >
+                      <Settings size={16} className="mr-3 text-slate-400" />
+                      Settings
+                    </button>
+                    <hr className="my-1 border-slate-200" />
+                    <button
+                      onClick={handleLogout}
+                      className="flex items-center w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                    >
+                      <LogOut size={16} className="mr-3" />
+                      Logout
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>

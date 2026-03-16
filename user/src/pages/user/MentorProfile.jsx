@@ -551,7 +551,7 @@ const RequestMentorshipModal = ({ mentorName, services, onClose, onSubmit, submi
   const [serviceId, setServiceId] = useState(() => services?.[0]?.id || '')
   const [preferredDateTime, setPreferredDateTime] = useState('')
   const [preferredMode, setPreferredMode] = useState(() => services?.[0]?.mode || 'online')
-  const [notes, setNotes] = useState('')
+  const [requestMessage, setRequestMessage] = useState('')
 
   const handleSubmit = (event) => {
     event.preventDefault()
@@ -559,7 +559,7 @@ const RequestMentorshipModal = ({ mentorName, services, onClose, onSubmit, submi
       serviceId: serviceId || undefined,
       preferredDateTime: preferredDateTime ? new Date(preferredDateTime).toISOString() : undefined,
       preferredMode,
-      notes,
+      requestMessage,
     })
   }
 
@@ -636,13 +636,13 @@ const RequestMentorshipModal = ({ mentorName, services, onClose, onSubmit, submi
           </div>
 
           <label className="space-y-2 text-xs font-semibold uppercase tracking-widest text-slate-400">
-            <span className="block text-slate-400">Notes for mentor</span>
+            <span className="block text-slate-400">Request Message</span>
             <textarea
               rows={4}
               className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-700 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
               placeholder="Share your goals, background, or any context to help the mentor prepare."
-              value={notes}
-              onChange={(event) => setNotes(event.target.value)}
+              value={requestMessage}
+              onChange={(event) => setRequestMessage(event.target.value)}
             />
           </label>
         </div>

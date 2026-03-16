@@ -4,15 +4,27 @@ const Event = require('../models/Event')
 const { getModelByRole } = require('../utils/roleModels')
 const { CONTENT_APPROVAL_STATUS } = require('../utils/contentApprovalStatus')
 const { normalizeDepartment } = require('../utils/departments')
+const { uploadToCloudinary, deleteFromCloudinary } = require('../utils/cloudinaryUpload')
 
-const formatEvent = (eventDoc) => {
-  if (!eventDoc) return null
+const ensureAuthenticatedUser = (req) => {
+  const userId = req.user?.id
+  const role = req.user?.role?.toLowerCase()
 
-  const source = typeof eventDoc.toObject === 'function' ? eventDoc.toObject() : eventDoc
-  const registrations = Array.isArray(source.registrations) ? source.registrations : []
+  if (!userId) {
+    return { error: { status: 401, message: 'Authentication required.' } }
+  }
+
+  return { userId, role }
+}
+
+const formatEvent = (doc) => {
+  if (!doc) return null
+
+  const source = typeof doc.toObject === 'function' ? doc.toObject() : doc
+  const id = source._id?.toString?.() ?? source.id ?? null
 
   return {
-    id: source._id ? source._id.toString() : source.id,
+    id,
     legacyId: source.id && !source._id ? source.id : undefined,
     title: source.title,
     mode: source.mode,
@@ -29,7 +41,7 @@ const formatEvent = (eventDoc) => {
     createdBy: source.createdBy,
     createdByRole: source.createdByRole,
     createdByName: source.createdByName,
-    registrationCount: registrations.length,
+    registrationCount: source.registrations?.length ?? 0,
     approvalStatus: source.approvalStatus ?? CONTENT_APPROVAL_STATUS.PENDING,
     approvalDepartment: source.approvalDepartment ?? '',
     approvalDecisions: Array.isArray(source.approvalDecisions) ? source.approvalDecisions : [],
@@ -436,8 +448,18 @@ const updateEvent = async (req, res) => {
   }
 }
 
-const listAllEvents = async (_req, res) => {
+const listAllEvents = async (req, res) => {
   try {
+    const { error, userId, role } = ensureAuthenticatedUser(req)
+
+    if (error) {
+      return res.status(error.status).json({ success: false, message: error.message })
+    }
+
+    if (role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'You do not have permission to access admin events.' })
+    }
+
     // Admin can see all events regardless of approval status
     const events = await Event.find({})
       .sort({ startAt: 1, createdAt: -1 })

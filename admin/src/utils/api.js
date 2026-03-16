@@ -91,6 +91,22 @@ export const put = async (path, body, options = {}) => {
   return handleResponse(response)
 }
 
+export const patch = async (path, body, options = {}) => {
+  const builtOptions = buildOptions('PATCH', body, options.includeAuth !== false)
+
+  const mergedOptions = {
+    ...builtOptions,
+    ...options.fetchOptions,
+    headers: {
+      ...builtOptions.headers,
+      ...options.fetchOptions?.headers,
+    },
+  }
+
+  const response = await fetch(`${API_BASE_URL}${normalizePath(path)}`, mergedOptions)
+  return handleResponse(response)
+}
+
 export const del = async (path, options = {}) => {
   const builtOptions = buildOptions('DELETE', undefined, options.includeAuth !== false)
 
@@ -125,6 +141,7 @@ export const api = {
   get,
   post,
   put,
+  patch,
   del,
   setAuthToken,
   getAuthToken

@@ -47,7 +47,12 @@ const normalizeRequest = (request = {}) => {
     menteeName: request.menteeName || '',
     menteeEmail: request.menteeEmail || '',
     menteeAvatar: request.menteeAvatar || '',
+    menteeDepartment: request.menteeDepartment || '',
+    menteeRole: request.menteeRole || '',
+    currentYear: request.currentYear || '',
+    passoutYear: request.passoutYear || '',
     menteeSkills: Array.isArray(request.menteeSkills) ? request.menteeSkills.filter(Boolean) : [],
+    requestMessage: request.requestMessage || '',
     mentorName: request.mentorName || '',
     mentorEmail: request.mentorEmail || '',
     mentorAvatar: request.mentorAvatar || '',
@@ -60,8 +65,17 @@ const normalizeRequest = (request = {}) => {
     notes: request.notes || '',
     status: (request.status || 'pending').toLowerCase(),
     session: request.session || null,
+    sessionOutcome: request.sessionOutcome || '',
+    remark: request.remark || '',
+    reviewSubmitted: request.reviewSubmitted || false,
+    rating: request.rating || null,
+    feedback: request.feedback || '',
     createdAt,
     updatedAt,
+    // Include populated mentee data if available
+    mentee: request.mentee || null,
+    // Include sessionDetails with new fields
+    sessionDetails: request.sessionDetails || null,
   }
 }
 
@@ -85,20 +99,35 @@ export const useMentorRequests = () => {
   const isMentor = normalizedRole === 'alumni'
   const isStudent = normalizedRole === 'student'
   const isAlumniStudent = normalizedRole === 'alumni-student'
-  const listEndpoint = ['student', 'alumni-student'].includes(normalizedRole)
-    ? MENTEE_REQUESTS_ENDPOINT
-    : MENTOR_REQUESTS_ENDPOINT
+  
+  // IMPORTANT: For MentorshipRequestsPage, we always want requests sent BY the user (as mentee)
+  // So we always use /api/mentors/my-requests regardless of user role
+  const listEndpoint = MENTEE_REQUESTS_ENDPOINT
   const mentorEndpoint = MENTOR_REQUESTS_ENDPOINT
+
+  console.log('useMentorRequests Debug - User Role:', normalizedRole)
+  console.log('useMentorRequests Debug - Is Mentor:', isMentor)
+  console.log('useMentorRequests Debug - Is Student:', isStudent)
+  console.log('useMentorRequests Debug - Is Alumni-Student:', isAlumniStudent)
+  console.log('useMentorRequests Debug - Using Endpoint (always mentee requests):', listEndpoint)
 
   const fetchRequests = useCallback(async () => {
     setLoading(true)
     setError(null)
+    console.log('useMentorRequests Debug - Fetching from:', listEndpoint)
     try {
       const response = await get(listEndpoint)
+      console.log('useMentorRequests Debug - API Response:', response)
+      
       const rawData = Array.isArray(response?.data) ? response.data : Array.isArray(response) ? response : []
+      console.log('useMentorRequests Debug - Raw Data:', rawData)
+      
       const data = rawData.map(normalizeRequest).filter(Boolean)
+      console.log('useMentorRequests Debug - Normalized Data:', data)
+      
       setItems(sortRequests(data))
     } catch (err) {
+      console.error('useMentorRequests Debug - Error:', err)
       setError(err)
       toast?.({
         title: 'Unable to load requests',
@@ -130,7 +159,11 @@ export const useMentorRequests = () => {
   const acceptRequest = useCallback(
     async (requestId, payload = {}) => {
       try {
-        const response = await post(`${mentorEndpoint}/${requestId}/accept`, payload)
+        console.log('acceptRequest called with:', { requestId, payload })
+        const endpoint = `${mentorEndpoint}/${requestId}/accept`
+        console.log('Calling endpoint:', endpoint)
+        const response = await post(endpoint, payload)
+        console.log('Accept response:', response)
         const request = normalizeRequest(response?.data ?? response)
         if (request) {
           setItems((prev) => sortRequests(prev.map((item) => (item.id === request.id ? request : item))))
@@ -142,6 +175,7 @@ export const useMentorRequests = () => {
         })
         return request
       } catch (err) {
+        console.error('Accept request error:', err)
         toast?.({
           title: 'Unable to accept request',
           description: err?.message ?? 'Please try again later.',
@@ -257,6 +291,35 @@ export const useMentorRequests = () => {
     [toast, mentorEndpoint],
   )
 
+  const completeSession = useCallback(
+    async (requestId, outcome, remark = '') => {
+      try {
+        const response = await post(`${mentorEndpoint}/${requestId}/complete`, {
+          outcome,
+          remark
+        })
+        const request = normalizeRequest(response?.data ?? response)
+        if (request) {
+          setItems((prev) => sortRequests(prev.map((item) => (item.id === request.id ? request : item))))
+        }
+        toast?.({
+          title: `Session ${outcome}`,
+          description: outcome === 'completed' ? 'Session marked as completed successfully.' : 'Session marked as missed.',
+          tone: 'success',
+        })
+        return request
+      } catch (err) {
+        toast?.({
+          title: 'Unable to complete session',
+          description: err?.message ?? 'Please try again later.',
+          tone: 'error',
+        })
+        throw err
+      }
+    },
+    [toast, mentorEndpoint],
+  )
+
   const currentUserId = (user?._id || user?.id || user?.profile?._id || user?.profile?.id || '').toString()
 
   return useMemo(
@@ -271,6 +334,7 @@ export const useMentorRequests = () => {
       reviewRequest,
       confirmRequest,
       updateMeetingLink,
+      completeSession,
       selfId: currentUserId,
       role: normalizedRole,
     }),
@@ -284,6 +348,7 @@ export const useMentorRequests = () => {
       rejectRequest,
       reviewRequest,
       confirmRequest,
+      completeSession,
       currentUserId,
       normalizedRole,
     ],

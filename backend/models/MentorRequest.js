@@ -1,149 +1,169 @@
 const mongoose = require('mongoose')
 
-const mentorRequestSchema = new mongoose.Schema(
-  {
-    mentee: {
-      type: mongoose.Schema.Types.ObjectId,
-      required: true,
-      index: true,
-    },
-    mentor: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Alumni',
-      required: true,
-      index: true,
-    },
-    service: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'MentorService',
-    },
-    serviceName: {
-      type: String,
-      required: true,
-      trim: true,
-      maxlength: 160,
-    },
-    serviceDuration: {
-      type: String,
-      trim: true,
-      default: '',
-    },
-    serviceMode: {
-      type: String,
-      trim: true,
-      lowercase: true,
-      default: 'online',
-    },
-    servicePrice: {
-      type: Number,
-      default: 0,
-    },
-    menteeName: {
-      type: String,
-      required: true,
-      trim: true,
-      maxlength: 120,
-    },
-    menteeEmail: {
-      type: String,
-      trim: true,
-      lowercase: true,
-      maxlength: 160,
-      default: '',
-    },
-    menteeAvatar: {
-      type: String,
-      trim: true,
-      default: '',
-    },
-    menteeSkills: {
-      type: [String],
-      default: [],
-    },
-    preferredDateTime: {
+const mentorshipRequestSchema = new mongoose.Schema({
+  mentor: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Alumni',
+    required: true,
+    index: true,
+  },
+  mentee: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Student',
+    required: true,
+    index: true,
+  },
+  service: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'MentorService',
+  },
+  serviceName: {
+    type: String,
+    trim: true,
+    maxlength: 160,
+  },
+  serviceDuration: {
+    type: String,
+    trim: true,
+    default: '',
+  },
+  serviceMode: {
+    type: String,
+    trim: true,
+    lowercase: true,
+    default: 'online',
+  },
+  servicePrice: {
+    type: Number,
+    default: 0,
+  },
+  menteeName: {
+    type: String,
+    required: true,
+    trim: true,
+    maxlength: 120,
+  },
+  menteeEmail: {
+    type: String,
+    trim: true,
+    lowercase: true,
+    maxlength: 160,
+    default: '',
+  },
+  menteeAvatar: {
+    type: String,
+    trim: true,
+    default: '',
+  },
+  menteeSkills: {
+    type: [String],
+    default: [],
+  },
+  menteeDepartment: {
+    type: String,
+    trim: true,
+    default: '',
+  },
+  menteeRole: {
+    type: String,
+    trim: true,
+    default: '',
+  },
+  currentYear: {
+    type: String,
+    trim: true,
+    default: '',
+  },
+  passoutYear: {
+    type: String,
+    trim: true,
+    default: '',
+  },
+  requestMessage: {
+    type: String,
+    trim: true,
+    default: '',
+    maxlength: 500,
+  },
+  preferredDateTime: {
+    type: Date,
+  },
+  preferredMode: {
+    type: String,
+    enum: ['online', 'offline', 'hybrid'],
+    default: 'online',
+    lowercase: true,
+    trim: true,
+  },
+  status: {
+    type: String,
+    enum: ['pending', 'accepted', 'rejected', 'completed'],
+    default: 'pending',
+    lowercase: true,
+    trim: true,
+  },
+  sessionDetails: {
+    sessionDate: {
       type: Date,
     },
-    preferredMode: {
-      type: String,
-      enum: ['online', 'offline', 'hybrid'],
-      default: 'online',
-      lowercase: true,
-      trim: true,
-    },
-    scheduledDateTime: {
+    sessionStartTime: {
       type: Date,
     },
-    scheduledMode: {
+    sessionEndTime: {
+      type: Date,
+    },
+    sessionTime: {
       type: String,
-      trim: true,
-      lowercase: true,
-      default: '',
-    },
-    proposedSlots: {
-      type: [
-        new mongoose.Schema(
-          {
-            slotDate: {
-              type: Date,
-              required: true,
-            },
-            mode: {
-              type: String,
-              enum: ['online', 'offline', 'hybrid'],
-              default: 'online',
-              lowercase: true,
-              trim: true,
-            },
-          },
-          { _id: false },
-        ),
-      ],
-      default: [],
-    },
-    notes: {
-      type: String,
-      trim: true,
-      default: '',
-    },
-    status: {
-      type: String,
-      enum: ['pending', 'review', 'accepted', 'confirmed', 'rejected'],
-      default: 'pending',
-      lowercase: true,
-      trim: true,
-    },
-    session: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'MentorSession',
-    },
-    mentorName: {
-      type: String,
-      trim: true,
-      default: '',
-    },
-    mentorEmail: {
-      type: String,
-      trim: true,
-      lowercase: true,
-      default: '',
-    },
-    mentorAvatar: {
-      type: String,
-      trim: true,
-      default: '',
     },
     meetingLink: {
       type: String,
-      trim: true,
-      default: '',
+    },
+    mentorMessage: {
+      type: String,
     },
   },
-  {
-    timestamps: true,
+  sessionOutcome: {
+    type: String,
+    enum: ['completed', 'missed'],
   },
-)
+  remark: {
+    type: String,
+    trim: true,
+    maxlength: 500,
+  },
+  reviewSubmitted: {
+    type: Boolean,
+    default: false,
+  },
+  rating: {
+    type: Number,
+    min: 1,
+    max: 5,
+  },
+  feedback: {
+    type: String,
+    trim: true,
+    maxlength: 1000,
+  },
+  mentorName: {
+    type: String,
+    trim: true,
+    default: '',
+  },
+  mentorEmail: {
+    type: String,
+    trim: true,
+    lowercase: true,
+    default: '',
+  },
+  mentorAvatar: {
+    type: String,
+    trim: true,
+    default: '',
+  },
+}, { timestamps: true })
 
-mentorRequestSchema.set('toJSON', {
+mentorshipRequestSchema.set('toJSON', {
   virtuals: true,
   versionKey: false,
   transform: (_doc, ret) => {
@@ -153,4 +173,4 @@ mentorRequestSchema.set('toJSON', {
   },
 })
 
-module.exports = mongoose.model('MentorRequest', mentorRequestSchema)
+module.exports = mongoose.model('MentorRequest', mentorshipRequestSchema)

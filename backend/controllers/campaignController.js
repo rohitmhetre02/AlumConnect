@@ -5,6 +5,17 @@ const { getModelByRole } = require('../utils/roleModels')
 const { CONTENT_APPROVAL_STATUS } = require('../utils/contentApprovalStatus')
 const { normalizeDepartment } = require('../utils/departments')
 
+const ensureAuthenticatedUser = (req) => {
+  const userId = req.user?.id
+  const role = req.user?.role?.toLowerCase()
+
+  if (!userId) {
+    return { error: { status: 401, message: 'Authentication required.' } }
+  }
+
+  return { userId, role }
+}
+
 const formatCampaign = (doc) => {
   if (!doc) return null
   return {
@@ -430,11 +441,66 @@ const getCampaignStats = async (_req, res) => {
   }
 }
 
+// Get campaign donors by ID
+const getCampaignDonors = async (req, res) => {
+  try {
+    const { id } = req.params
+
+    const doc = await Campaign.findById(id)
+    if (!doc) {
+      return res.status(404).json({ success: false, message: 'Campaign not found.' })
+    }
+
+    // Return only the donors data
+    const donors = doc.donations?.map(donation => ({
+      id: donation._id || `${doc._id}-${donation.donatedAt.getTime()}`,
+      donorName: donation.anonymous ? 'Anonymous' : donation.donorName,
+      donorEmail: donation.donorEmail,
+      amount: donation.amount,
+      message: donation.message,
+      donatedAt: donation.donatedAt,
+      paymentStatus: donation.paymentStatus,
+      paymentMethod: donation.paymentMethod,
+      paymentTransactionId: donation.paymentTransactionId,
+    })) || []
+
+    return res.status(200).json({ success: true, data: donors })
+  } catch (error) {
+    console.error('getCampaignDonors error:', error)
+    return res.status(500).json({ success: false, message: 'Unable to fetch campaign donors.' })
+  }
+}
+
+const listAllCampaigns = async (req, res) => {
+  try {
+    const { error, userId, role } = ensureAuthenticatedUser(req)
+
+    if (error) {
+      return res.status(error.status).json({ success: false, message: error.message })
+    }
+
+    if (role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'You do not have permission to access admin campaigns.' })
+    }
+
+    // Admin can see all campaigns regardless of approval status
+    const campaigns = await Campaign.find({})
+      .sort({ createdAt: -1 })
+      .lean()
+    return res.status(200).json({ success: true, data: campaigns.map(formatCampaign).filter(Boolean) })
+  } catch (error) {
+    console.error('listAllCampaigns error:', error)
+    return res.status(500).json({ success: false, message: 'Unable to fetch campaigns.' })
+  }
+}
+
 module.exports = {
   listCampaigns,
   getCampaignById,
+  getCampaignDonors,
   listUserCampaigns,
   listMyCampaigns,
+  listAllCampaigns,
   createCampaign,
   updateCampaign,
   deleteCampaign,

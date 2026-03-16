@@ -24,7 +24,10 @@ const RedirectIfAuthenticated = ({ children }) => {
   
   const location = useLocation()
   if (isAuthenticated) {
-    return <Navigate to="/admin/dashboard" replace state={{ from: location }} />
+    // Get user role from localStorage or wherever it's stored
+    const userRole = localStorage.getItem('userRole') || 'admin'
+    const basePath = userRole === 'admin' ? '/admin' : '/coordinator'
+    return <Navigate to={`${basePath}/dashboard`} replace state={{ from: location }} />
   }
   return children
 }
@@ -59,7 +62,7 @@ function App() {
             }
           />
           <Route
-            path="admin/*"
+            path="*"
             element={
               <PrivateRoute>
                 <DashboardRoutes />

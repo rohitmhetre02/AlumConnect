@@ -128,7 +128,7 @@ const RequestMentorshipModal = ({ mentor, onClose, onSubmit, submitting }) => {
   const [formData, setFormData] = useState({
     message: '',
     preferredDate: '',
-    selectedService: '',
+    selectedService: mentor.services?.[0]?.id || mentor.services?.[0]?._id || '',
     mentorshipMode: mentor.modes?.[0] || mentor.mentorshipMode || 'online'
   })
 
@@ -248,13 +248,13 @@ const RequestMentorshipModal = ({ mentor, onClose, onSubmit, submitting }) => {
               </label>
               <div className="space-y-2">
                 {mentor.services.map((service, index) => (
-                  <label key={service._id || index} className="flex items-center justify-between p-3 border border-slate-200 rounded-lg cursor-pointer hover:bg-slate-50">
+                  <label key={service.id || service._id || index} className="flex items-center justify-between p-3 border border-slate-200 rounded-lg cursor-pointer hover:bg-slate-50">
                     <div className="flex items-center">
                       <input
                         type="radio"
                         name="service"
-                        value={service._id || `service-${index}`}
-                        checked={formData.selectedService === (service._id || `service-${index}`)}
+                        value={service.id || service._id || `service-${index}`}
+                        checked={formData.selectedService === (service.id || service._id || `service-${index}`)}
                         onChange={(e) => {
                           console.log('Service selected:', e.target.value, 'Service data:', service)
                           setFormData({...formData, selectedService: e.target.value})
@@ -478,49 +478,20 @@ const MentorProfileView = () => {
       console.log('Processed preferredDateTime:', preferredDateTime)
       
       // Find the selected service details
-      const selectedService = mentor.services?.find(s => s._id === requestData.selectedService)
+      const selectedService = mentor.services?.find(s => (s.id || s._id) === requestData.selectedService)
       console.log('Selected service details:', selectedService)
       
       // Create comprehensive payload matching the complete schema
       const payload = {
-        // Core references
-        menteeId: user?.id,
-        mentorId: mentorId,
-        
-        // Service information
-        serviceName: selectedService?.title || 'Mentorship Session',
-        serviceDuration: selectedService?.duration || '30 min',
-        serviceMode: selectedService?.mode || requestData.mentorshipMode || 'online',
-        servicePrice: selectedService?.price || 0,
-        
-        // Mentee information
-        menteeName: user?.fullName || user?.firstName + ' ' + user?.lastName || 'User',
-        menteeEmail: user?.email || 'user@example.com',
-        menteeAvatar: user?.avatar || '',
-        menteeSkills: user?.skills || [],
-        
-        // Request message
-        notes: requestData.message.trim(),
-        
-        // Request preferences
+        // Required fields for backend
+        serviceId: requestData.selectedService,
         preferredDateTime: preferredDateTime,
         preferredMode: requestData.mentorshipMode || 'online',
+        requestMessage: requestData.message.trim(),
+        notes: '', // Backend expects this field
         
-        // Initial proposed slots
-        proposedSlots: [
-          {
-            slotDate: preferredDateTime,
-            mode: requestData.mentorshipMode || 'online'
-          }
-        ],
-        
-        // Mentor information
-        mentorName: mentor.fullName,
-        mentorEmail: mentor.email,
-        mentorAvatar: mentor.avatar || '',
-        
-        // Status
-        status: 'pending'
+        // Additional fields that will be set by backend
+        // These are included for reference but not required for API call
       }
       
       console.log('=== FINAL COMPREHENSIVE PAYLOAD ===')

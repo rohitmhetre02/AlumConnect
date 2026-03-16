@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { NavLink, useLocation } from 'react-router-dom'
+import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { normalizeProfileStatus, PROFILE_STATUS } from '../../utils/profileStatus'
 import { normalizeRegistrationStatus, REGISTRATION_STATUS } from '../../utils/registrationStatus'
@@ -65,6 +65,19 @@ const Calendar = (props) => (
 const Heart = (props) => (
   <svg {...props} width={props.size || 18} height={props.size || 18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+  </svg>
+)
+
+const Connections = (props) => (
+  <svg {...props} width={props.size || 18} height={props.size || 18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="9" cy="9" r="2" />
+    <path d="M21 9v6M2 9v6M14 9v6M14 4h6M4 4h6M4 4h6M4 4h6" />
+    <line x1="12" y1="1" x2="12" y2="3" />
+    <line x1="12" y1="21" x2="12" y2="23" />
+    <line x1="4.22" y1="8.22" x2="5.78" y2="16.22" />
+    <line x1="18.78" y1="8.22" x2="20.22" y2="16.22" />
+    <line x1="8" y1="12" x2="16" y2="12" />
+    <line x1="8" y1="16" x2="16" y2="16" />
   </svg>
 )
 
@@ -210,6 +223,7 @@ const X = (props) => (
 
 const UserSidebar = ({ isMobile = false, onClose }) => {
   const location = useLocation()
+  const navigate = useNavigate()
   const { user, logout } = useAuth()
   const { items: mentors } = useMentors()
   const [expandedMenus, setExpandedMenus] = useState({
@@ -249,6 +263,7 @@ const UserSidebar = ({ isMobile = false, onClose }) => {
     { label: 'Applications', path: '/dashboard/applications', icon: <Clipboard size={14} /> },
     { label: 'Mentorship Requests', path: '/dashboard/mentorship-requests', icon: <MessageSquare size={14} /> },
     { label: 'Registered Events', path: '/dashboard/registered-events', icon: <Calendar size={14} /> },
+    { label: 'Connections', path: '/dashboard/connections', icon: <Connections size={14} /> },
     { label: 'My Campaigns', path: '/dashboard/campaigns', icon: <Heart size={14} /> },
     { label: 'Insights', path: '/dashboard/insights', icon: <BarChart size={14} /> }
   ]
@@ -308,8 +323,8 @@ const UserSidebar = ({ isMobile = false, onClose }) => {
 
   const handleProfileClick = () => {
     setShowUserMenu(false)
-    // Navigate to profile page
-    window.location.href = '/dashboard/profile'
+    // Navigate to profile page using React Router
+    navigate('/dashboard/profile')
   }
 
   const handleSettingsClick = (e) => {
@@ -319,8 +334,8 @@ const UserSidebar = ({ isMobile = false, onClose }) => {
 
   const handleSettingsNavigate = () => {
     setShowUserMenu(false)
-    // Navigate to settings page
-    window.location.href = '/dashboard/settings'
+    // Navigate to settings page using React Router
+    navigate('/dashboard/settings')
   }
 
   const handleLogoutClick = () => {
@@ -404,7 +419,7 @@ const UserSidebar = ({ isMobile = false, onClose }) => {
             <div className="flex items-center space-x-3">
               <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold text-xl">A</div>
               <div>
-                <h1 className="text-slate-900 font-bold text-lg leading-tight">APCORE Alumni</h1>
+                <h1 className="text-slate-900 font-bold text-lg leading-tight">APCOER Alumni</h1>
                 <p className="text-[10px] text-slate-400 tracking-widest uppercase font-semibold">Community</p>
               </div>
             </div>

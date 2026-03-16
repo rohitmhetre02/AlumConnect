@@ -12,15 +12,15 @@ const AuthTemplate = ({ header, children, footer, align = 'start' }) => {
           <div className="flex w-full flex-col lg:flex-row">
             <AuthCarousel variant="desktop" className="rounded-l-[36px]" />
             <div
-              className={`flex flex-1 flex-col justify-between px-4 py-4 sm:px-6 sm:py-6 lg:px-8 ${
+              className={`flex flex-1 flex-col justify-between px-4 py-3 sm:px-6 sm:py-4 lg:px-8 ${
                 align === 'center' ? 'text-center lg:text-left' : ''
               }`}
             >
-              <div className="space-y-6">
+              <div className="space-y-4">
                 {header}
-                <div className="space-y-4">{children}</div>
+                <div className="space-y-3">{children}</div>
               </div>
-              {footer && <div className="pt-8 text-sm text-slate-500">{footer}</div>}
+              {footer && <div className="pt-4 text-sm text-slate-500">{footer}</div>}
             </div>
           </div>
         </div>

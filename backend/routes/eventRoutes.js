@@ -7,9 +7,12 @@ const { getMyRegistrations } = require('../controllers/eventRegistrationControll
 
 const router = express.Router()
 
+// Admin routes
+router.get('/admin/all', authMiddleware, listAllEvents)
+
+// Public routes
 router.get('/', listEvents)
-router.get('/all', authMiddleware, listAllEvents)
-router.get('/mine', authMiddleware, listMyEvents)
+router.get('/all', authMiddleware, listMyEvents)
 router.get('/registrations/me', authMiddleware, getMyRegistrations)
 router.get('/:id', authMiddleware, getEventById)
 router.get('/:id/registrations', authMiddleware, getEventRegistrations)

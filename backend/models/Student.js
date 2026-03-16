@@ -57,7 +57,9 @@ const studentSchema = new mongoose.Schema(
       type: Number,
     },
     currentYear: {
-      type: Number,
+      type: String,
+      trim: true,
+      default: '',
     },
     phone: {
       type: String,

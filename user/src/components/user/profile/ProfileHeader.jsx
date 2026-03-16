@@ -6,7 +6,7 @@ import { useAuth } from '../../../context/AuthContext'
 
 import useModal from '../../../hooks/useModal'
 
-import useMessages from '../../../hooks/useMessages'
+
 
 import ChatModal from '../directory/ChatModal'
 

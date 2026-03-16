@@ -193,18 +193,14 @@ const getApprovedPosts = async (req, res) => {
   try {
     const actorRole = String(req.user?.role || '').toLowerCase()
 
-    if (!['admin', 'coordinator'].includes(actorRole)) {
+    if (actorRole !== 'admin') {
       return res
         .status(403)
         .json({ success: false, message: 'You do not have permission to view approved posts.' })
     }
 
-    let department
-    if (actorRole === 'admin') {
-      await getAdminContext(req.user.id)
-    } else {
-      ;({ department } = await getCoordinatorContext(req.user.id))
-    }
+    await getAdminContext(req.user.id)
+    const department = undefined // Admin can see all departments
 
     const posts = await collectPosts(buildApprovedQueries({ role: actorRole, department }))
 
@@ -238,18 +234,14 @@ const getPendingPosts = async (req, res) => {
   try {
     const actorRole = String(req.user?.role || '').toLowerCase()
 
-    if (!['admin', 'coordinator'].includes(actorRole)) {
+    if (actorRole !== 'admin') {
       return res
         .status(403)
         .json({ success: false, message: 'You do not have permission to review posts.' })
     }
 
-    let department
-    if (actorRole === 'admin') {
-      await getAdminContext(req.user.id)
-    } else {
-      ;({ department } = await getCoordinatorContext(req.user.id))
-    }
+    await getAdminContext(req.user.id)
+    const department = undefined // Admin can see all departments
 
     console.log(`Fetching pending posts for ${actorRole}, department: ${department || 'all'}`)
     
@@ -288,7 +280,7 @@ const decideOnPost = async (req, res) => {
     const { id, contentType, action, reason } = req.body ?? {}
     const actorRole = String(req.user?.role || '').toLowerCase()
 
-    if (!['admin', 'coordinator'].includes(actorRole)) {
+    if (actorRole !== 'admin') {
       return res
         .status(403)
         .json({ success: false, message: 'You do not have permission to review posts.' })
@@ -313,24 +305,12 @@ const decideOnPost = async (req, res) => {
     }
 
     const objectId = ensureObjectId(id)
-
-    const context =
-      actorRole === 'admin'
-        ? await getAdminContext(req.user.id)
-        : await getCoordinatorContext(req.user.id)
+    const context = await getAdminContext(req.user.id)
 
     const doc = await Model.findById(objectId)
 
     if (!doc) {
       return res.status(404).json({ success: false, message: 'Post not found.' })
-    }
-
-    const docDepartment = deriveDepartment(doc)
-
-    if (actorRole === 'coordinator' && docDepartment !== context.department) {
-      return res
-        .status(403)
-        .json({ success: false, message: 'You can only review posts for your department.' })
     }
 
     const now = new Date()

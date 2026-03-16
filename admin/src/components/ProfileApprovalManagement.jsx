@@ -481,7 +481,7 @@ const getRoleFilters = (reviewerRole) => {
     return ['all', 'faculty', 'coordinator']
   }
   if (reviewerRole === 'coordinator') {
-    return ['all', 'student', 'alumni', 'faculty']
+    return ['all', 'student', 'alumni']
   }
   return ['all']
 }

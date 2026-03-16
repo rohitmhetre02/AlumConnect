@@ -41,12 +41,13 @@ const Login = () => {
 
       setAuthToken(token)
       localStorage.setItem('adminUser', JSON.stringify(user))
+      localStorage.setItem('userRole', role)  // Store role for routing system
       
       // Role-based navigation
       if (role === 'admin') {
         navigate('/admin/dashboard')
       } else if (role === 'coordinator') {
-        navigate('/admin/dashboard')  // Coordinators should use same dashboard as admins
+        navigate('/coordinator/dashboard')  // Coordinators should use coordinator dashboard
       } else {
         navigate('/admin/dashboard')
       }
