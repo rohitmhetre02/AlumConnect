@@ -68,7 +68,7 @@ const DashboardOverviewEnhanced = () => {
       console.log('Fetching data for role:', userRole, 'department:', userDepartment)
 
       // Fetch stats from backend with date filter and role info
-      const statsUrl = `http://localhost:5000/api/admin/dashboard/stats?period=${dateFilter}&role=${userRole}&department=${encodeURIComponent(userDepartment)}`
+      const statsUrl = `${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/admin/dashboard/stats?period=${dateFilter}&role=${userRole}&department=${encodeURIComponent(userDepartment)}`
       console.log('Fetching stats from:', statsUrl)
       
       const statsResponse = await fetch(statsUrl, {
@@ -99,7 +99,7 @@ const DashboardOverviewEnhanced = () => {
       }
 
       // Fetch pending items with role context
-      const pendingUrl = `http://localhost:5000/api/admin/dashboard/pending?role=${userRole}&department=${encodeURIComponent(userDepartment)}`
+      const pendingUrl = `${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/admin/dashboard/pending?role=${userRole}&department=${encodeURIComponent(userDepartment)}`
       const pendingResponse = await fetch(pendingUrl, {
         method: 'GET',
         headers: {
@@ -119,7 +119,7 @@ const DashboardOverviewEnhanced = () => {
       }
 
       // Fetch recent activity with role context
-      const activityUrl = `http://localhost:5000/api/admin/dashboard/activity?role=${userRole}&department=${encodeURIComponent(userDepartment)}`
+      const activityUrl = `${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/admin/dashboard/activity?role=${userRole}&department=${encodeURIComponent(userDepartment)}`
       const activityResponse = await fetch(activityUrl, {
         method: 'GET',
         headers: {
@@ -156,7 +156,7 @@ const DashboardOverviewEnhanced = () => {
   const handleApprove = async (id, type) => {
     try {
       const token = localStorage.getItem('adminToken')
-      const response = await fetch(`http://localhost:5000/api/admin/dashboard/approve/${type}/${id}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/admin/dashboard/approve/${type}/${id}`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -182,7 +182,7 @@ const DashboardOverviewEnhanced = () => {
   const handleReject = async (id, type) => {
     try {
       const token = localStorage.getItem('adminToken')
-      const response = await fetch(`http://localhost:5000/api/admin/dashboard/reject/${type}/${id}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/admin/dashboard/reject/${type}/${id}`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
