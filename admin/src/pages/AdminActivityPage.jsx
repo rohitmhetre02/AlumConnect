@@ -32,7 +32,7 @@ const AdminActivityPage = () => {
       }
 
       // Fetch recent activity with role context
-      const activityUrl = `http://localhost:5000/api/admin/dashboard/activity?role=admin&department=all`
+      const activityUrl = `${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/admin/dashboard/activity?role=admin&department=all`
       const activityResponse = await fetch(activityUrl, {
         method: 'GET',
         headers: {
