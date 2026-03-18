@@ -1,10 +1,10 @@
-import { useRef } from 'react'
+import { useRef, useEffect } from 'react'
 import Avatar from '../../ui/Avatar'
 import Modal from '../../ui/Modal'
 import useModal from '../../../hooks/useModal'
-import useMessages from '../../../hooks/useMessages'
 import { useAuth } from '../../../context/AuthContext'
 import ChatModal from './ChatModal'
+import toast from 'react-hot-toast'
 
 const roleLabels = {
   students: 'Student',
@@ -28,9 +28,10 @@ const DetailSection = ({ title, children }) => (
 
 const DirectoryProfileModal = ({ isOpen, onClose, person }) => {
   const { user } = useAuth()
-  const { getConversationWith, joinConversation } = useMessages()
   const chatModal = useModal(false)
   const conversationIdRef = useRef(null)
+  const [connectionStatus, setConnectionStatus] = useState('not_connected') // not_connected, pending, connected
+  const [loading, setLoading] = useState(false)
 
   if (!person) return null
 
@@ -62,19 +63,59 @@ const DirectoryProfileModal = ({ isOpen, onClose, person }) => {
 
   const targetId = person?._id ?? person?.id
 
+  const handleConnect = async () => {
+    if (!user || !targetId || loading) return
+    
+    // Don't allow connection requests to coordinators
+    if (role === 'coordinator' || role === 'coordinators') {
+      toast.error('Coordinators cannot be sent connection requests.')
+      return
+    }
+    
+    // Don't allow self-connection
+    if (user.id === targetId) {
+      toast.error('You cannot connect to yourself.')
+      return
+    }
+
+    setLoading(true)
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/user/send-connection-request`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({
+          targetUserId: targetId,
+          targetRole: role
+        })
+      })
+
+      const data = await response.json()
+      
+      if (data.success) {
+        setConnectionStatus('pending')
+        toast.success('Connection request sent successfully!')
+      } else {
+        toast.error(data.message || 'Failed to send connection request')
+      }
+    } catch (error) {
+      console.error('Failed to send connection request:', error)
+      toast.error('Failed to send connection request')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const handleMessageClick = async () => {
     if (!user || !targetId) return
     try {
-      const conversation = await getConversationWith({ recipientId: targetId, recipientRole: person.role })
-      if (conversation?._id) {
-        conversationIdRef.current = conversation._id
-        joinConversation(conversation._id)
-      } else {
-        conversationIdRef.current = null
-      }
+      // Simple message handling - replace with actual implementation later
+      conversationIdRef.current = null
       chatModal.openModal()
     } catch (err) {
-      console.error('Failed to open conversation from DirectoryProfileModal:', err)
+      console.error('Failed to start conversation:', err)
     }
   }
 
@@ -87,6 +128,75 @@ const DirectoryProfileModal = ({ isOpen, onClose, person }) => {
       })
     )
   }
+
+  // Check if already connected when component loads
+  useEffect(() => {
+    const checkConnectionStatus = async () => {
+      if (!user || !targetId) return
+      
+      try {
+        console.log('🔍 [Modal] Checking connection status for user:', user.id, 'target:', targetId)
+        
+        // Check if there's a pending request
+        const requestsResponse = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/user/requests`, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        })
+        
+        const requestsData = await requestsResponse.json()
+        console.log('📋 [Modal] Pending requests data:', requestsData)
+        
+        if (requestsData.success) {
+          // Check if current user sent request to target (should show pending)
+          const sentRequest = requestsData.data.some(req => 
+            req.fromUserId === user.id && req.toUserId === targetId
+          )
+          
+          // Check if target sent request to current user (should also show pending)
+          const receivedRequest = requestsData.data.some(req => 
+            req.fromUserId === targetId && req.toUserId === user.id
+          )
+          
+          if (sentRequest || receivedRequest) {
+            console.log('✅ [Modal] Found pending request, setting status to pending')
+            setConnectionStatus('pending')
+            return
+          }
+        }
+        
+        // Check if already connected
+        const connectionsResponse = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/user/my-connections`, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        })
+        
+        const connectionsData = await connectionsResponse.json()
+        console.log('🤝 [Modal] Connections data:', connectionsData)
+        
+        if (connectionsData.success) {
+          const isConnected = connectionsData.data.some(conn => 
+            (conn.fromUserId === user.id && conn.toUserId === targetId) ||
+            (conn.fromUserId === targetId && conn.toUserId === user.id)
+          )
+          
+          if (isConnected) {
+            console.log('✅ [Modal] Found existing connection, setting status to connected')
+            setConnectionStatus('connected')
+          } else {
+            console.log('❌ [Modal] No existing connection found, setting status to not_connected')
+            setConnectionStatus('not_connected')
+          }
+        }
+      } catch (error) {
+        console.error('❌ [Modal] Failed to check connection status:', error)
+        setConnectionStatus('not_connected')
+      }
+    }
+    
+    checkConnectionStatus()
+  }, [user, targetId])
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} width="max-w-5xl">
@@ -124,12 +234,31 @@ const DirectoryProfileModal = ({ isOpen, onClose, person }) => {
             </div>
 
             <div className="flex flex-shrink-0 flex-wrap items-center gap-3">
-              <button
-                type="button"
-                className="rounded-full bg-primary px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-primary-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-              >
-                Connect
-              </button>
+              {/* Show Connect button only for students and alumni, not for coordinators, hide if already connected */}
+              {role && (role.toLowerCase().includes('student') || role.toLowerCase().includes('alumni')) && connectionStatus !== 'connected' && (
+                <button
+                  type="button"
+                  onClick={handleConnect}
+                  disabled={loading || connectionStatus === 'pending'}
+                  className={`rounded-full px-5 py-2 text-sm font-semibold shadow-sm transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${
+                    connectionStatus === 'pending' 
+                      ? 'bg-slate-300 text-slate-500 cursor-not-allowed' 
+                      : 'bg-primary text-white hover:bg-primary-dark'
+                  }`}
+                >
+                  {loading ? 'Sending...' : 
+                   connectionStatus === 'pending' ? 'Pending' : 'Connect'}
+                </button>
+              )}
+
+              {/* Show "Connected" status for students and alumni when connected */}
+              {role && (role.toLowerCase().includes('student') || role.toLowerCase().includes('alumni')) && connectionStatus === 'connected' && (
+                <div className="inline-flex items-center justify-center rounded-full border border-green-500 bg-green-50 px-5 py-2 text-sm font-semibold text-green-600 shadow">
+                  Connected
+                </div>
+              )}
+              
+              {/* Show Message button for all roles except self */}
               {user && targetId && user.id !== targetId && (
                 <button
                   type="button"

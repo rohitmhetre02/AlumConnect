@@ -188,7 +188,7 @@ const MentorRecommendations = ({ preferences, onPreferencesChange, onFilteredMen
                 <div className="relative">
                   {mentor.profilePhoto ? (
                     <img
-                      src={`http://localhost:5000${mentor.profilePhoto}`}
+                      src={`${API_BASE_URL}${mentor.profilePhoto}`}
                       alt={mentor.fullName}
                       className="h-16 w-16 rounded-full object-cover border-2 border-slate-200"
                     />

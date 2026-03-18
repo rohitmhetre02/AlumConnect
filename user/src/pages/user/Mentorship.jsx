@@ -136,7 +136,7 @@ const Mentorship = () => {
                         name: mentor.fullName,
                         position: mentor.currentJobTitle,
                         avatar: mentor.profilePhoto
-                          ? `http://localhost:5000${mentor.profilePhoto.startsWith('/') ? mentor.profilePhoto : '/' + mentor.profilePhoto}`
+                          ? `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${mentor.profilePhoto.startsWith('/') ? mentor.profilePhoto : '/' + mentor.profilePhoto}`
                           : `https://ui-avatars.com/api/?name=${encodeURIComponent(mentor.fullName)}&background=3b82f6&color=fff&size=200`,
                         rating: mentor.rating || 0
                       }}

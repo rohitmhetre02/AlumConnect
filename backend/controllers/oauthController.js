@@ -4,7 +4,7 @@ const { createToken, sanitizeUser, AUTHENTICATABLE_ROLES } = require('./authCont
 const { getModelByRole } = require('../utils/roleModels')
 const { googleConfigured, linkedInConfigured } = require('../config/passport')
 
-const FRONTEND_BASE_URL = (process.env.FRONTEND_URL || 'http://localhost:5173').replace(/\/$/, '')
+const FRONTEND_BASE_URL = (process.env.USER_FRONTEND_URL || process.env.FRONTEND_URL || 'http://localhost:5173').replace(/\/$/, '')
 
 const PROVIDER_CONFIG = {
   google: {

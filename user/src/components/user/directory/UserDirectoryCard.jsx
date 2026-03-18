@@ -36,7 +36,7 @@ const UserDirectoryCard = ({ person, onOpen }) => {
         <h3 className="mt-5 text-xl font-bold text-slate-900 group-hover:text-primary transition-colors">{name}</h3>
         <p className="text-sm font-medium text-slate-600 mt-1">{title ?? roleLabel}</p>
       </div>
- 
+
       <div className="mt-6 space-y-2 text-center">
         <div className="flex items-center justify-center gap-2 text-sm text-slate-600">
           <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -44,14 +44,14 @@ const UserDirectoryCard = ({ person, onOpen }) => {
           </svg>
           <span className="font-medium">{displayDept || program}</span>
         </div>
- 
+
         <div className="flex items-center justify-center gap-2 text-sm text-slate-500">
           <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
           <span>{role === 'students' ? displayClass : displayYear || roleLabel}</span>
         </div>
- 
+
         {location && (
           <div className="flex items-center justify-center gap-2 text-sm text-slate-500">
             <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -62,7 +62,7 @@ const UserDirectoryCard = ({ person, onOpen }) => {
           </div>
         )}
       </div>
- 
+
       <div className="mt-6">
         <button
           type="button"
@@ -76,5 +76,5 @@ const UserDirectoryCard = ({ person, onOpen }) => {
     </article>
   )
 }
- 
+
 export default UserDirectoryCard

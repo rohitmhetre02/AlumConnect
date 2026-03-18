@@ -1,4 +1,5 @@
-import { useRef } from 'react'
+import { useRef, useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 
 import Avatar from '../../ui/Avatar'
 
@@ -6,23 +7,22 @@ import { useAuth } from '../../../context/AuthContext'
 
 import useModal from '../../../hooks/useModal'
 
-
-
 import ChatModal from '../directory/ChatModal'
 
-
+import toast from 'react-hot-toast'
 
 const ProfileHeader = ({ profile = {}, onEditSection, showConnectButtons = false }) => {
 
   const { user } = useAuth()
 
-  const { getConversationWith, joinConversation } = useMessages()
-
   const chatModal = useModal(false)
 
   const conversationIdRef = useRef(null)
 
+  const [connectionStatus, setConnectionStatus] = useState('not_connected')
+  const [loading, setLoading] = useState(false)
 
+  const navigate = useNavigate()
 
   const { name, title, location, avatar, cover, raw } = profile
 
@@ -42,60 +42,152 @@ const ProfileHeader = ({ profile = {}, onEditSection, showConnectButtons = false
 
   const passoutYear = raw?.passoutYear || profile.passoutYear || ''
 
-  const isStudent = role.toLowerCase() === 'student'
+  const isStudent = role.toLowerCase().includes('student')
 
-  const isAlumni = role.toLowerCase() === 'alumni'
+  const isAlumni = role.toLowerCase().includes('alumni')
 
+  const isFaculty = role.toLowerCase().includes('faculty')
 
+  const isCoordinator = role.toLowerCase().includes('coordinator')
 
-  const handleMessageClick = async () => {
-
-    if (!user || !targetId || !targetRole) return
-
-    try {
-
-      const conversation = await getConversationWith({ recipientId: targetId, recipientRole: targetRole })
-
-      if (conversation?._id) {
-
-        conversationIdRef.current = conversation._id
-
-        joinConversation(conversation._id)
-
-      } else {
-
-        conversationIdRef.current = null
-
-      }
-
-      chatModal.openModal()
-
-    } catch (err) {
-
-      console.error('Failed to start conversation:', err)
-
+  const handleConnect = async () => {
+    if (!user || !targetId || loading) return
+    
+    // Don't allow connection requests to coordinators
+    if (isCoordinator) {
+      toast.error('Coordinators cannot be sent connection requests.')
+      return
+    }
+    
+    // Don't allow self-connection
+    if (user.id === targetId) {
+      toast.error('You cannot connect to yourself.')
+      return
     }
 
-  }
-
-
-
-  const handleViewAllMessages = (conversationId) => {
-
-    chatModal.closeModal()
-
-    const targetConversation = conversationId ?? conversationIdRef.current ?? null
-
-    window.dispatchEvent(
-
-      new CustomEvent('app:openMessagesPanel', {
-
-        detail: { conversationId: targetConversation },
-
+    setLoading(true)
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/user/send-connection-request`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({
+          targetUserId: targetId,
+          targetRole: targetRole
+        })
       })
 
-    )
+      const data = await response.json()
+      
+      if (data.success) {
+        setConnectionStatus('pending')
+        toast.success('Connection request sent successfully!')
+      } else {
+        toast.error(data.message || 'Failed to send connection request')
+      }
+    } catch (error) {
+      console.error('Failed to send connection request:', error)
+      toast.error('Failed to send connection request')
+    } finally {
+      setLoading(false)
+    }
+  }
 
+  // Check if already connected when component loads
+  useEffect(() => {
+    const checkConnectionStatus = async () => {
+      if (!user || !targetId) return
+      
+      try {
+        console.log('🔍 Checking connection status for user:', user.id, 'target:', targetId)
+        
+        // Check if there's a pending request
+        const requestsResponse = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/user/requests`, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        })
+        
+        const requestsData = await requestsResponse.json()
+        console.log('📋 Pending requests data:', requestsData)
+        
+        if (requestsData.success) {
+          // Check if current user sent request to target (should show pending)
+          const sentRequest = requestsData.data.some(req => 
+            req.fromUserId === user.id && req.toUserId === targetId
+          )
+          
+          // Check if target sent request to current user (should also show pending)
+          const receivedRequest = requestsData.data.some(req => 
+            req.fromUserId === targetId && req.toUserId === user.id
+          )
+          
+          if (sentRequest || receivedRequest) {
+            console.log('✅ Found pending request, setting status to pending')
+            setConnectionStatus('pending')
+            return
+          }
+        }
+        
+        // Check if already connected
+        const connectionsResponse = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/user/my-connections`, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        })
+        
+        const connectionsData = await connectionsResponse.json()
+        console.log('🤝 Connections data:', connectionsData)
+        
+        if (connectionsData.success) {
+          const isConnected = connectionsData.data.some(conn => 
+            (conn.fromUserId === user.id && conn.toUserId === targetId) ||
+            (conn.fromUserId === targetId && conn.toUserId === user.id)
+          )
+          
+          if (isConnected) {
+            console.log('✅ Found existing connection, setting status to connected')
+            setConnectionStatus('connected')
+          } else {
+            console.log('❌ No existing connection found, setting status to not_connected')
+            setConnectionStatus('not_connected')
+          }
+        }
+      } catch (error) {
+        console.error('❌ Failed to check connection status:', error)
+        setConnectionStatus('not_connected')
+      }
+    }
+    
+    checkConnectionStatus()
+  }, [user, targetId])
+
+  const handleMessageClick = () => {
+    if (!user || !targetId) return
+
+    // Navigate to Connections page with Messages tab active and user info to start chat
+    navigate('/dashboard/connections?tab=messages&userId=' + targetId, { 
+      state: { 
+        userName: name,
+        userRole: role,
+        userAvatar: avatar,
+        userDepartment: department
+      }
+    })
+  }
+
+  const handleViewAllMessages = (conversationId) => {
+    chatModal.closeModal()
+    
+    const targetConversation = conversationId ?? conversationIdRef.current ?? null
+    
+    window.dispatchEvent(
+      new CustomEvent('app:openMessagesPanel', {
+        detail: { conversationId: targetConversation },
+      })
+    )
   }
 
 
@@ -208,69 +300,63 @@ const ProfileHeader = ({ profile = {}, onEditSection, showConnectButtons = false
 
             </div>
 
-            <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2">
 
-              {showConnectButtons && (
-
-                <>
-
+            {showConnectButtons && (
+              <>
+                {/* Show Connect button for students and alumni only, hide if already connected */}
+                {(isStudent || isAlumni) && connectionStatus !== 'connected' && (
                   <button
-
                     type="button"
-
-                    className="inline-flex items-center justify-center rounded-full border border-primary px-5 py-2 text-xs font-semibold uppercase tracking-[0.25em] text-primary shadow transition hover:bg-primary hover:text-white"
-
+                    onClick={handleConnect}
+                    disabled={loading || connectionStatus === 'pending'}
+                    className={`inline-flex items-center justify-center rounded-full border px-5 py-2 text-xs font-semibold uppercase tracking-[0.25em] shadow transition ${
+                      connectionStatus === 'pending' 
+                        ? 'border-slate-300 text-slate-400 cursor-not-allowed' 
+                        : 'border-primary text-primary hover:bg-primary hover:text-white'
+                    }`}
                   >
-
-                    Connect
-
+                    {loading ? 'Sending...' : 
+                     connectionStatus === 'pending' ? 'Pending' : 'Connect'}
                   </button>
+                )}
 
+                {/* Show "Connected" status for students and alumni when connected */}
+                {(isStudent || isAlumni) && connectionStatus === 'connected' && (
+                  <div className="inline-flex items-center justify-center rounded-full border border-green-500 bg-green-50 px-5 py-2 text-xs font-semibold uppercase tracking-[0.25em] text-green-600 shadow">
+                    Connected
+                  </div>
+                )}
+
+                {user && targetId && user.id !== targetId && (
                   <button
-
                     type="button"
-
                     onClick={handleMessageClick}
-
                     className="inline-flex items-center justify-center rounded-full bg-primary px-5 py-2 text-xs font-semibold uppercase tracking-[0.25em] text-white shadow transition hover:bg-primary-dark"
-
                   >
-
                     Message
-
                   </button>
+                )}
+              </>
+            )}
 
-                </>
+            {onEditSection && (
+              <button
+                type="button"
+                onClick={() => onEditSection('summary')}
+                className="inline-flex items-center justify-center rounded-full bg-primary px-5 py-2 text-xs font-semibold uppercase tracking-[0.25em] text-white shadow transition hover:bg-primary-dark"
+              >
+                Edit Profile Info
+              </button>
+            )}
 
-              )}
-
-              {onEditSection && (
-
-                <button
-
-                  type="button"
-
-                  onClick={() => onEditSection('summary')}
-
-                  className="inline-flex items-center justify-center rounded-full bg-primary px-5 py-2 text-xs font-semibold uppercase tracking-[0.25em] text-white shadow transition hover:bg-primary-dark"
-
-                >
-
-                  Edit Profile Info
-
-                </button>
-
-              )}
-
-            </div>
+          </div>
 
           </div>
 
         </div>
 
       </div>
-
-
 
       <ChatModal
 

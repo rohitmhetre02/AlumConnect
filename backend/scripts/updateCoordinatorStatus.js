@@ -1,6 +1,8 @@
 // This script should be run when server is running
 // Use: curl -X POST http://localhost:5000/api/admin/update-coordinator-status -H "Authorization: Bearer YOUR_ADMIN_TOKEN"
 
+const BASE_URL = process.env.BACKEND_URL || 'http://localhost:5000';
+
 const Coordinator = require('../models/Coordinator')
 
 const updateCoordinatorStatus = async (req, res) => {

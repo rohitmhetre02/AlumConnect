@@ -2,10 +2,10 @@
 console.log('=== Authentication Debug ===');
 console.log('Current user:', JSON.parse(localStorage.getItem('user') || 'null'));
 console.log('Auth token:', localStorage.getItem('authToken') ? 'Exists' : 'Missing');
-console.log('Token value:', localStorage.getItem('authToken'));
+console.log('API URL:', import.meta.env.VITE_API_URL || 'http://localhost:5000');
 
 // Test API call
-fetch('http://localhost:5000/auth/profile/me', {
+fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/auth/profile/me`, {
   headers: {
     'Authorization': `Bearer ${localStorage.getItem('authToken')}`
   }

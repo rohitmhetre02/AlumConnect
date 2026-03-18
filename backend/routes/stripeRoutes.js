@@ -60,8 +60,8 @@ router.post('/create-checkout-session', async (req, res) => {
     console.log(`Creating Stripe session for campaign: ${campaign.title}, amount: ₹${numericAmount}`);
 
     // Use provided URLs or fallback to user port (5173)
-    const userSuccessUrl = success_url || `${process.env.USER_FRONTEND_URL || 'http://localhost:5173'}/dashboard/campaigns/${campaignId}?payment=success`;
-    const userCancelUrl = cancel_url || `${process.env.USER_FRONTEND_URL || 'http://localhost:5173'}/dashboard/campaigns/${campaignId}?payment=cancelled`;
+    const userSuccessUrl = success_url || `${process.env.USER_FRONTEND_URL || process.env.FRONTEND_URL || 'http://localhost:5173'}/dashboard/campaigns/${campaignId}?payment=success`;
+    const userCancelUrl = cancel_url || `${process.env.USER_FRONTEND_URL || process.env.FRONTEND_URL || 'http://localhost:5173'}/dashboard/campaigns/${campaignId}?payment=cancelled`;
 
     // Create Stripe checkout session
     const session = await stripe.checkout.sessions.create({

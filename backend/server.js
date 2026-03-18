@@ -86,8 +86,9 @@ const registrationApprovalRoutes = require('./routes/registrationApprovalRoutes'
 const contentApprovalRoutes = require('./routes/contentApprovalRoutes')
 
 const calendarRoutes = require('./routes/calendarRoutes')
-
 const studentRoutes = require('./routes/studentRoutes')
+const connectionRoutes = require('./routes/connectionRoutes')
+const messageRoutes = require('./routes/messageRoutes')
 
 // Debug helper
 const { debugMentorRequest } = require('./debug-mentorship')
@@ -206,6 +207,11 @@ app.use('/api/public', publicRoutes)
 app.use('/api/calendar', calendarRoutes)
 
 app.use('/api/students', studentRoutes)
+
+app.use('/api/user', connectionRoutes)
+app.use('/api/messages', messageRoutes)
+
+app.use('/api/conversations', require('./routes/conversationRoutes'))
 
 
 
