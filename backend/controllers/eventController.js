@@ -31,6 +31,8 @@ const formatEvent = (doc) => {
     description: source.description,
     location: source.location,
     coverImage: source.coverImage,
+    imageUrl: source.coverImage, // Add imageUrl for frontend compatibility
+    date: source.startAt, // Add date for frontend compatibility
     startAt: source.startAt,
     endAt: source.endAt,
     registrationLink: source.registrationLink,

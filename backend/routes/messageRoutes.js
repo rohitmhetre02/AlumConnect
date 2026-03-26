@@ -1,10 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const Message = require('../models/Message');
-const authMiddleware = require('../middleware/authMiddleware');
+const { ensureAuthenticated } = require('../middleware/auth');
 
 // POST /api/messages - Save message
-router.post("/", authMiddleware, async (req, res) => {
+router.post("/", ensureAuthenticated, async (req, res) => {
   try {
     const { conversationId, senderId, senderName, recipientId, text } = req.body;
 
@@ -44,7 +44,7 @@ router.post("/", authMiddleware, async (req, res) => {
 });
 
 // GET /api/messages/:conversationId - Get messages by conversation
-router.get("/:conversationId", authMiddleware, async (req, res) => {
+router.get("/:conversationId", ensureAuthenticated, async (req, res) => {
   try {
     const { conversationId } = req.params;
 
@@ -76,7 +76,7 @@ router.get("/:conversationId", authMiddleware, async (req, res) => {
 });
 
 // PUT /api/messages/:messageId/read - Mark message as read
-router.put("/:messageId/read", authMiddleware, async (req, res) => {
+router.put("/:messageId/read", ensureAuthenticated, async (req, res) => {
   try {
     const { messageId } = req.params;
 

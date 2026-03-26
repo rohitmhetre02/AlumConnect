@@ -318,7 +318,7 @@ const decideOnPost = async (req, res) => {
       normalizedAction === 'approve' ? CONTENT_APPROVAL_STATUS.APPROVED : CONTENT_APPROVAL_STATUS.REJECTED
 
     doc.approvalStatus = nextStatus
-    doc.approvalDepartment = docDepartment
+    doc.approvalDepartment = doc.department || context.admin.department || ''
 
     if (nextStatus === CONTENT_APPROVAL_STATUS.APPROVED) {
       doc.approvedAt = now

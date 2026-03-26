@@ -335,6 +335,10 @@ const EditProfileModal = ({ isOpen, onClose, profile, onSave, activeSection = 's
           department: profile.department ?? profile.raw?.department ?? '',
           currentYear: profile.currentYear ?? profile.raw?.currentYear ?? '',
           passoutYear: profile.passoutYear ?? profile.raw?.passoutYear ?? '',
+          avatar: profile.avatar ?? profile.raw?.avatar ?? '',
+          about: profile.about ?? profile.raw?.about ?? '',
+          email: profile.email ?? profile.raw?.email ?? '',
+          phone: profile.phone ?? profile.raw?.phone ?? '',
         })
         setAvatarPreview(profile.avatar ?? '')
         setCoverPreview(profile.cover ?? '')
@@ -711,57 +715,45 @@ const EditProfileModal = ({ isOpen, onClose, profile, onSave, activeSection = 's
                   <div className="grid gap-4 sm:grid-cols-2">
                     <Input label="First Name" value={formState.firstName ?? ''} onChange={(e) => handleChange('firstName', e.target.value)} required />
                     <Input label="Last Name" value={formState.lastName ?? ''} onChange={(e) => handleChange('lastName', e.target.value)} />
-                    <label className="flex flex-col gap-2 text-sm font-medium text-slate-700">
+                    <div className="flex flex-col gap-2 text-sm font-medium text-slate-700">
                       <span>Department / Program</span>
-                      <select
-                        value={formState.department ?? ''}
-                        onChange={(e) => handleChange('department', e.target.value)}
-                        className="rounded-lg border border-slate-200 px-4 py-2.5 text-sm text-slate-900 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                      >
-                        <option value="">Select department</option>
-                        <option value="Computer Science">Computer Science</option>
-                        <option value="Engineering">Engineering</option>
-                        <option value="Business">Business</option>
-                        <option value="Medicine">Medicine</option>
-                        <option value="Arts">Arts</option>
-                        <option value="Science">Science</option>
-                        <option value="Mathematics">Mathematics</option>
-                        <option value="Physics">Physics</option>
-                        <option value="Chemistry">Chemistry</option>
-                        <option value="Biology">Biology</option>
-                        <option value="Other">Other</option>
-                      </select>
-                    </label>
-                    <label className="flex flex-col gap-2 text-sm font-medium text-slate-700">
+                      <input
+                        type="text"
+                        value={formState.department || 'Not specified'}
+                        disabled
+                        className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-600 cursor-not-allowed"
+                      />
+                    </div>
+                    <div className="flex flex-col gap-2 text-sm font-medium text-slate-700">
                       <span>Role</span>
-                      <select
-                        value={formState.title ?? ''}
-                        onChange={(e) => handleChange('title', e.target.value)}
-                        className="rounded-lg border border-slate-200 px-4 py-2.5 text-sm text-slate-900 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                      >
-                        <option value="">Select role</option>
-                        <option value="Student">Student</option>
-                        <option value="Alumni">Alumni</option>
-                        <option value="Faculty">Faculty</option>
-                      </select>
-                    </label>
+                      <input
+                        type="text"
+                        value={formState.title || normalizedRole || 'Not specified'}
+                        disabled
+                        className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-600 cursor-not-allowed"
+                      />
+                    </div>
                     {isStudent ? (
-                      <Input label="Current Year" value={formState.currentYear ?? ''} onChange={(e) => handleChange('currentYear', e.target.value)} placeholder="e.g. 1, 2, 3, 4" />
+                      <div className="flex flex-col gap-2 text-sm font-medium text-slate-700">
+                        <span>Current Year</span>
+                        <input
+                          type="text"
+                          value={formState.currentYear || 'Not specified'}
+                          disabled
+                          className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-600 cursor-not-allowed"
+                        />
+                      </div>
                     ) : null}
                     {isAlumni ? (
-                      <label className="flex flex-col gap-2 text-sm font-medium text-slate-700">
+                      <div className="flex flex-col gap-2 text-sm font-medium text-slate-700">
                         <span>Passout Year</span>
-                        <select
-                          value={formState.passoutYear ?? ''}
-                          onChange={(e) => handleChange('passoutYear', e.target.value)}
-                          className="rounded-lg border border-slate-200 px-4 py-2.5 text-sm text-slate-900 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                        >
-                          <option value="">Select passout year</option>
-                          {Array.from({ length: 50 }, (_, i) => new Date().getFullYear() - i).map(year => (
-                            <option key={year} value={year}>{year}</option>
-                          ))}
-                        </select>
-                      </label>
+                        <input
+                          type="text"
+                          value={formState.passoutYear || 'Not specified'}
+                          disabled
+                          className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-600 cursor-not-allowed"
+                        />
+                      </div>
                     ) : null}
                   </div>
                 </div>

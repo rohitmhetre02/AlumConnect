@@ -25,7 +25,11 @@ const ensureStudent = (req) => {
   return { userId: req.user.id }
 }
 
+// Export ensureAuthenticated as alias for authMiddleware
+const ensureAuthenticated = authMiddleware
+
 module.exports = {
   authenticateAdmin,
-  ensureStudent
+  ensureStudent,
+  ensureAuthenticated
 }

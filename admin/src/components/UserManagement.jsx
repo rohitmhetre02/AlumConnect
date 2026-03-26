@@ -37,7 +37,7 @@ const UserManagement = () => {
       const email = student.email ?? ''
       const phone = student.phone ?? ''
       const department = student.department ?? student.program ?? ''
-      const yearValue = student.year || student.classYear || student.expectedPassoutYear || ''
+      const yearValue = student.currentYear || student.year || student.classYear || student.expectedPassoutYear || ''
       
       // Get real-time profile status from profileApprovalStatus field
       let status = 'Active' // Default status
@@ -74,7 +74,7 @@ const UserManagement = () => {
         phone,
         avatar: student.avatar || '', // Keep the raw URL string
         department: department || '—',
-        year: yearValue ? String(yearValue) : '—',
+        currentYear: yearValue ? String(yearValue) : '—',
         joinDate: createdAt ? createdAt.toLocaleDateString() : '—',
         status,
         profileApprovalStatus: student.profileApprovalStatus, // Keep original for reference
@@ -91,9 +91,10 @@ const UserManagement = () => {
         student.name.toLowerCase().includes(query) ||
         student.email.toLowerCase().includes(query) ||
         student.phone.toLowerCase().includes(query) ||
-        student.department.toLowerCase().includes(query)
+        student.department.toLowerCase().includes(query) ||
+        student.currentYear.toLowerCase().includes(query)
 
-      const matchesYear = filterYear === 'all' || student.year === String(filterYear)
+      const matchesYear = filterYear === 'all' || student.currentYear === String(filterYear)
       const matchesStatus = filterStatus === 'all' || student.status === filterStatus
 
       return matchesSearch && matchesYear && matchesStatus
@@ -103,8 +104,8 @@ const UserManagement = () => {
   const yearOptions = useMemo(() => {
     const years = new Set()
     normalizedStudents.forEach((student) => {
-      if (student.year && student.year !== '—') {
-        years.add(student.year)
+      if (student.currentYear && student.currentYear !== '—') {
+        years.add(student.currentYear)
       }
     })
     return Array.from(years).sort()
@@ -329,7 +330,7 @@ const UserManagement = () => {
                 <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Student</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Contact</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Department</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Year</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Current Year</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Joined</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Status</th>
                 <th className="px-4 py-3 text-center text-xs font-medium text-slate-500 uppercase tracking-wider">View</th>
@@ -378,7 +379,7 @@ const UserManagement = () => {
                     </td>
                     <td className="px-4 py-4 text-sm text-slate-900">{student.phone || '—'}</td>
                     <td className="px-4 py-4 text-sm text-slate-900">{student.department || '—'}</td>
-                    <td className="px-4 py-4 text-sm text-slate-900">{student.year || '—'}</td>
+                    <td className="px-4 py-4 text-sm text-slate-900">{student.currentYear || '—'}</td>
                     <td className="px-4 py-4 text-sm text-slate-500">{student.joinDate}</td>
                     <td className="px-4 py-4">
                       <span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${getStatusBadgeClass(student.status)}`}>
