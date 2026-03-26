@@ -136,7 +136,7 @@ const createSingleUser = async (req, res) => {
     // Add role-specific fields
     if (normalizedRole === 'student') {
       userPayload.prnNumber = prn
-      userPayload.year = year
+      userPayload.currentYear = year  // Fixed: use currentYear to match schema
     } else if (normalizedRole === 'alumni') {
       userPayload.prnNumber = prn || ''
       userPayload.passoutYear = passoutYear

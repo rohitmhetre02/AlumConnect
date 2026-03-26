@@ -23,10 +23,10 @@ const departmentOptions = [
 ]
 
 const currentYearOptions = [
-  { value: '1st', label: '1st Year' },
-  { value: '2nd', label: '2nd Year' },
-  { value: '3rd', label: '3rd Year' },
-  { value: '4th', label: 'Last Year' },
+  { value: '1st', label: 'First Year' },
+  { value: '2nd', label: 'Second Year' },
+  { value: '3rd', label: 'Third Year' },
+  { value: '4th', label: 'Fourth Year' },
 ]
 
 const admissionYearOptions = [

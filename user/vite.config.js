@@ -16,8 +16,6 @@ export default ({ mode }) => {
       },
     },
   })
-<<<<<<< HEAD
+
 }
-=======
-}
->>>>>>> 0e92e26 (loadEnv fixed)
+

@@ -133,7 +133,47 @@ const signup = async (req, res) => {
     const existingUser = await Model.findOne({ email })
 
     if (existingUser) {
-      return res.status(409).json({ message: 'Email already registered for this role.' })
+      // Check if this is an admin-created student completing their registration
+      if (existingUser.registrationReviewedBy === 'admin' && existingUser.registrationStatus === 'APPROVED') {
+        // Admin-created student found - update their information and allow login
+        const salt = await bcrypt.genSalt(10)
+        const hashedPassword = await bcrypt.hash(req.body.password, salt)
+
+        const updatePayload = {
+          firstName: req.body.firstName?.trim() ?? existingUser.firstName,
+          lastName: req.body.lastName?.trim() ?? existingUser.lastName,
+          password: hashedPassword,
+          department: normalizeDepartment(req.body.department),
+          phoneNumber: req.body.phoneNumber,
+          // Update student-specific fields if provided
+          ...(normalizedRole === 'student' && {
+            prnNumber: req.body.prnNumber || existingUser.prnNumber,
+            admissionYear: req.body.admissionYear || existingUser.admissionYear,
+            currentYear: req.body.currentYear || existingUser.currentYear,
+          }),
+          // Update alumni-specific fields if provided
+          ...(normalizedRole === 'alumni' && {
+            prnNumber: req.body.prnNumber || existingUser.prnNumber,
+            passoutYear: req.body.passoutYear || existingUser.passoutYear,
+          }),
+        }
+
+        const updatedUser = await Model.findByIdAndUpdate(
+          existingUser._id,
+          updatePayload,
+          { new: true }
+        )
+
+        const token = createToken(updatedUser._id, normalizedRole)
+
+        return res.status(200).json({
+          message: 'Registration completed successfully. You can now login.',
+          token,
+          user: sanitizeUser(updatedUser, normalizedRole),
+        })
+      } else {
+        return res.status(409).json({ message: 'Email already registered for this role.' })
+      }
     }
 
     const salt = await bcrypt.genSalt(10)
@@ -148,30 +188,29 @@ const signup = async (req, res) => {
       isProfileApproved: false,
       profileApprovalStatus: PROFILE_STATUS.IN_REVIEW,
       registrationStatus:
-        normalizedRole === 'student' || normalizedRole === 'alumni'
+        normalizedRole === 'student' || normalizedRole === 'alumni' || normalizedRole === 'coordinator' || normalizedRole === 'faculty'
           ? REGISTRATION_STATUS.PENDING
-          : normalizedRole === 'faculty' || normalizedRole === 'coordinator'
-            ? REGISTRATION_STATUS.PENDING
-            : REGISTRATION_STATUS.APPROVED,
+          : REGISTRATION_STATUS.APPROVED,
       registrationDecisionByRole: '',
+      registrationReviewedAt: null,
+      registrationReviewedBy: '',
+      registrationRejectionReason: '',
     }
 
+    // Add role-specific fields
     if (normalizedRole === 'student') {
-      payload.prnNumber = req.body.prnNumber.trim()
-      payload.admissionYear = ensureNumeric(req.body.admissionYear, 'admissionYear')
+      payload.prnNumber = req.body.prnNumber
+      payload.admissionYear = req.body.admissionYear
       payload.currentYear = req.body.currentYear
-      payload.phone = req.body.phoneNumber
-    }
-
-    if (normalizedRole === 'alumni') {
-      payload.prnNumber = req.body.prnNumber.trim()
-      payload.passoutYear = ensureNumeric(req.body.passoutYear, 'passoutYear')
-      payload.phone = req.body.phoneNumber
-    }
-
-    if (normalizedRole === 'faculty') {
-      payload.department = normalizeDepartment(req.body.department)
-      payload.phone = req.body.phoneNumber
+      payload.phoneNumber = req.body.phoneNumber
+    } else if (normalizedRole === 'alumni') {
+      payload.prnNumber = req.body.prnNumber
+      payload.passoutYear = req.body.passoutYear
+      payload.phoneNumber = req.body.phoneNumber
+    } else if (normalizedRole === 'faculty') {
+      payload.phoneNumber = req.body.phoneNumber
+    } else if (normalizedRole === 'coordinator') {
+      payload.phoneNumber = req.body.phoneNumber
     }
 
     const user = await Model.create(payload)
@@ -242,6 +281,8 @@ const createUsers = async (payloads = [], role, adminCreated = false) => {
       registrationDecisionByRole: isAutoApproved ? 'admin' : '',
       registrationReviewedAt: isAutoApproved ? new Date() : null,
       registrationReviewedBy: isAutoApproved ? 'admin' : '',
+      // Include all additional fields from payload
+      ...payload
     })
 
     createdUsers.push({

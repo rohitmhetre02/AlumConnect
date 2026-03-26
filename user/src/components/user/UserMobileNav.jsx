@@ -2,9 +2,9 @@ import { NavLink, useLocation } from 'react-router-dom'
 
 const navItems = [
   { label: 'Home', path: '/dashboard', icon: HomeIcon },
-  { label: 'Directory', path: '/dashboard/directory/students', icon: UsersIcon },
-  { label: 'Events', path: '/dashboard/events', icon: CalendarIcon },
-  { label: 'News', path: '/dashboard/news', icon: NewsIcon },
+  { label: 'Opportunity', path: '/dashboard/opportunities', icon: BriefcaseIcon },
+  { label: 'Mentorship', path: '/dashboard/mentorship', icon: GraduationCapIcon },
+  { label: 'Event', path: '/dashboard/events', icon: CalendarIcon },
   { label: 'Profile', path: '/dashboard/profile', icon: UserIcon },
 ]
 
@@ -64,6 +64,24 @@ function UsersIcon(props) {
       <path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2" />
       <circle cx="9" cy="7" r="4" />
       <path d="M20 8a4 4 0 11-3-7.39" />
+    </IconBase>
+  )
+}
+
+function BriefcaseIcon(props) {
+  return (
+    <IconBase {...props}>
+      <rect x="2" y="7" width="20" height="14" rx="2" ry="2" />
+      <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
+    </IconBase>
+  )
+}
+
+function GraduationCapIcon(props) {
+  return (
+    <IconBase {...props}>
+      <path d="M22 10v6M2 10l10-5 10 5-10 5z" />
+      <path d="M6 12v5a3 3 0 0 0 3 3h6a3 3 0 0 0 3-3v-5" />
     </IconBase>
   )
 }

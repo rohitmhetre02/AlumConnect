@@ -164,22 +164,24 @@ const getPublicMemories = async (req, res) => {
   }
 }
 
-// GET /api/public/events - Show next 6 events
+// GET /api/public/events - Show all approved events
 const getPublicEvents = async (req, res) => {
   try {
-    const currentDate = new Date()
     const events = await Event.find({ 
-      date: { $gte: currentDate },
       approvalStatus: 'APPROVED' 
     })
       .select('title date location description imageUrl registrationDeadline')
       .sort({ date: 1 })
-      .limit(6)
       .lean()
+
+    console.log('🔍 [DEBUG] Found approved events:', events.length)
+    events.forEach(event => {
+      console.log('🔍 [DEBUG] Event:', event.title, 'Date:', event.date, 'Status:', event.approvalStatus)
+    })
 
     res.json({
       success: true,
-      events: events.map(event => ({
+      data: events.map(event => ({
         _id: event._id,
         title: event.title,
         date: event.date,

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { get } from '../../utils/api'
+import { get, API_BASE_URL } from '../../utils/api'
 import useToast from '../../hooks/useToast'
 
 const MentorRecommendations = ({ preferences, onPreferencesChange, onFilteredMentorsUpdate }) => {
