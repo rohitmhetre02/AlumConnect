@@ -7,7 +7,7 @@ import useToast from '../../hooks/useToast'
 const BecomeMentor = () => {
   const navigate = useNavigate()
   const { user, updateUser } = useAuth()
-  const { apply } = useMentors()
+  const { apply, getMyProfile } = useMentors()
   const toast = useToast()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [currentStep, setCurrentStep] = useState(0)
@@ -15,6 +15,8 @@ const BecomeMentor = () => {
   const [photoPreview, setPhotoPreview] = useState('')
   const [skills, setSkills] = useState([])
   const [skillInput, setSkillInput] = useState('')
+  const [fieldErrors, setFieldErrors] = useState({})
+  const [existingProfile, setExistingProfile] = useState(null)
 
   const [formData, setFormData] = useState({
     // Step 1: Basic Profile Details
@@ -77,29 +79,20 @@ const BecomeMentor = () => {
 
   // Department options
   const departmentOptions = [
-    'Computer Engineering',
-    'Information Technology',
-    'Artificial Intelligence & Data Science',
-    'Electronics & Telecommunication Engineering',
-    'Mechanical Engineering',
-    'Civil Engineering',
-    'Other'
+    "Civil Engineering",
+  "Computer Engineering",
+  "Information Technology",
+  "Electronics & Telecommunication Engineering",
+  "Mechanical Engineering",
+  "Artificial Intelligence & Data Science",
+  "Electronics Engineering (VLSI Design & Technology)",
+  "Electronics & Communication Engineering (Advanced Communication Technology)"
   ]
 
-  // Degree/Program options
+  // Degree/Program options - only MCA and Engineering as requested
   const degreeOptions = [
-    'B.E. Computer Engineering',
-    'B.E. Information Technology',
-    'B.E. Electronics & Telecommunication',
-    'B.E. Mechanical Engineering',
-    'B.E. Civil Engineering',
-    'B.Tech Computer Engineering',
-    'B.Tech Information Technology',
-    'M.E. Computer Engineering',
-    'M.E. Information Technology',
-    'M.Tech Computer Engineering',
     'MCA',
-    'Other'
+   'Bachelor of Engineering'
   ]
 
   // Experience options
@@ -134,7 +127,8 @@ const BecomeMentor = () => {
         fullName: `${user?.profile?.firstName ?? ''} ${user?.profile?.lastName ?? ''}`.trim(),
         email: user?.email ?? '',
         phoneNumber: user?.profile?.phone ?? '',
-        graduationYear: user?.profile?.graduationYear ?? '',
+        graduationYear: user?.profile?.graduationYear ?? user?.profile?.passoutYear ?? '',
+        degree: user?.profile?.degree ?? '',
         department: user?.profile?.department ?? '',
         currentLocation: user?.profile?.location ?? '',
         linkedinProfile: user?.profile?.linkedinProfile ?? ''
@@ -142,9 +136,74 @@ const BecomeMentor = () => {
     }
   }, [user])
 
+  // Fetch existing mentor profile if available
+  useEffect(() => {
+    const fetchExistingProfile = async () => {
+      try {
+        const profileData = await getMyProfile()
+        if (profileData) {
+          setExistingProfile(profileData)
+          setFormData(prev => ({
+            ...prev,
+            // Basic Profile Details
+            fullName: profileData.fullName || prev.fullName,
+            email: profileData.email || prev.email,
+            phoneNumber: profileData.phoneNumber || prev.phoneNumber,
+            graduationYear: profileData.graduationYear || prev.graduationYear,
+            degree: profileData.degree || prev.degree,
+            department: profileData.department || prev.department,
+            currentLocation: profileData.currentLocation || prev.currentLocation,
+            linkedinProfile: profileData.linkedinProfile || prev.linkedinProfile,
+            shortBio: profileData.shortBio || prev.shortBio,
+            bio: profileData.bio || prev.bio,
+            
+            // Professional Details
+            currentJobTitle: profileData.currentJobTitle || prev.currentJobTitle,
+            company: profileData.company || prev.company,
+            industry: profileData.industry || prev.industry,
+            yearsOfExperience: profileData.yearsOfExperience || prev.yearsOfExperience,
+            experienceDescription: profileData.experienceDescription || prev.experienceDescription,
+            
+            // Mentorship Details
+            mentorshipAreas: profileData.mentorshipAreas || prev.mentorshipAreas,
+            mentorshipMode: profileData.mentorshipMode || prev.mentorshipMode,
+            availableDays: profileData.availableDays || prev.availableDays,
+            timeCommitment: profileData.timeCommitment || prev.timeCommitment,
+            mentorshipPreference: profileData.mentorshipPreference || prev.mentorshipPreference,
+            maxMentees: profileData.maxMentees || prev.maxMentees,
+            consent1: profileData.consent1 || prev.consent1,
+            consent2: profileData.consent2 || prev.consent2,
+            consent3: profileData.consent3 || prev.consent3
+          }))
+          
+          // Set skills from expertise
+          if (profileData.expertise && Array.isArray(profileData.expertise)) {
+            setSkills(profileData.expertise)
+          }
+          
+          // Set profile photo preview
+          if (profileData.profilePhoto) {
+            setPhotoPreview(profileData.profilePhoto.startsWith('http') ? 
+              profileData.profilePhoto : 
+              `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${profileData.profilePhoto}`)
+          }
+        }
+      } catch (error) {
+        // Silently handle missing profile
+      }
+    }
+
+    fetchExistingProfile()
+  }, [getMyProfile])
+
   const handleInputChange = (field) => (e) => {
     const value = e.target.type === 'checkbox' ? e.target.checked : e.target.value
     setFormData(prev => ({ ...prev, [field]: value }))
+    
+    // Clear field error when user starts typing
+    if (fieldErrors[field]) {
+      setFieldErrors(prev => ({ ...prev, [field]: '' }))
+    }
   }
 
   const handleMentorshipAreaToggle = (area) => {
@@ -207,45 +266,51 @@ const BecomeMentor = () => {
   }
 
   const validateStep = () => {
+    const errors = {}
+    
     switch (currentStep) {
       case 0:
-        if (!formData.fullName.trim()) return 'Full name is required'
-        if (!formData.email.trim()) return 'Email is required'
-        if (!formData.graduationYear.trim()) return 'Graduation year is required'
-        if (!formData.degree.trim()) return 'Degree is required'
-        if (!formData.department.trim()) return 'Department is required'
-        if (!formData.currentLocation.trim()) return 'Current location is required'
-        // Validate graduation year format
+        if (!formData.fullName || !formData.fullName.trim()) errors.fullName = 'Full name is required'
+        if (!formData.email || !formData.email.trim()) errors.email = 'Email is required'
+        if (formData.email && !/\S+@\S+\.\S+/.test(formData.email)) errors.email = 'Email is invalid'
+        if (!formData.graduationYear) errors.graduationYear = 'Graduation year is required'
+        // Validate graduation year - should be between 2012 and current year + 5
         const year = parseInt(formData.graduationYear)
-        if (isNaN(year) || year < 1950 || year > new Date().getFullYear() + 5) {
-          return 'Please enter a valid graduation year'
+        if (formData.graduationYear && (isNaN(year) || year < 2012 || year > new Date().getFullYear() + 5)) {
+          errors.graduationYear = 'Please select a valid graduation year'
         }
-        return null
+        if (!formData.degree || !formData.degree.trim()) errors.degree = 'Degree is required'
+        if (!formData.department || !formData.department.trim()) errors.department = 'Department is required'
+        if (!formData.currentLocation || !formData.currentLocation.trim()) errors.currentLocation = 'Current location is required'
+        break
         
       case 1:
-        if (!formData.currentJobTitle.trim()) return 'Current job title is required'
-        if (!formData.company.trim()) return 'Company is required'
-        if (!formData.industry.trim()) return 'Industry is required'
-        if (!formData.yearsOfExperience.trim()) return 'Years of experience is required'
-        if (formData.mentorshipAreas.length === 0) return 'At least one mentorship area is required'
-        if (skills.length === 0) return 'At least one skill is required'
-        if (skills.length > 10) return 'Maximum 10 skills allowed'
-        return null
+        if (!formData.currentJobTitle || !formData.currentJobTitle.trim()) errors.currentJobTitle = 'Current job title is required'
+        if (!formData.company || !formData.company.trim()) errors.company = 'Company is required'
+        if (!formData.industry || !formData.industry.trim()) errors.industry = 'Industry is required'
+        if (!formData.yearsOfExperience || !formData.yearsOfExperience.trim()) errors.yearsOfExperience = 'Years of experience is required'
+        if (!formData.mentorshipAreas || formData.mentorshipAreas.length === 0) errors.mentorshipAreas = 'At least one mentorship area is required'
+        if (!skills || skills.length === 0) errors.skills = 'At least one skill is required'
+        if (skills.length > 10) errors.skills = 'Maximum 10 skills allowed'
+        break
         
       case 2:
-        if (!formData.mentorshipMode.trim()) return 'Preferred mentorship mode is required'
-        if (!formData.availableDays.trim()) return 'Available days selection is required'
-        if (!formData.timeCommitment.trim()) return 'Time commitment is required'
-        if (!formData.mentorshipPreference.trim()) return 'Mentorship preference is required'
-        if (!formData.maxMentees.trim()) return 'Maximum mentees is required'
-        if (!formData.consent1 || !formData.consent2 || !formData.consent3) {
-          return 'All consent checkboxes must be checked'
-        }
-        return null
+        if (!formData.mentorshipMode || !formData.mentorshipMode.trim()) errors.mentorshipMode = 'Preferred mentorship mode is required'
+        if (!formData.availableDays || !formData.availableDays.trim()) errors.availableDays = 'Available days selection is required'
+        if (!formData.timeCommitment || !formData.timeCommitment.trim()) errors.timeCommitment = 'Time commitment is required'
+        if (!formData.mentorshipPreference || !formData.mentorshipPreference.trim()) errors.mentorshipPreference = 'Mentorship preference is required'
+        if (!formData.maxMentees || !formData.maxMentees.trim()) errors.maxMentees = 'Maximum mentees is required'
+        if (!formData.consent1) errors.consent1 = 'Consent 1 is required'
+        if (!formData.consent2) errors.consent2 = 'Consent 2 is required'
+        if (!formData.consent3) errors.consent3 = 'Consent 3 is required'
+        break
         
       default:
-        return null
+        break
     }
+    
+    setFieldErrors(errors)
+    return Object.keys(errors).length === 0 ? null : 'Please fix the validation errors below'
   }
 
   const nextStep = () => {
@@ -273,17 +338,8 @@ const BecomeMentor = () => {
   const handleSubmit = async (e) => {
     e.preventDefault()
     
-    // Debug: Log current form state
-    console.log('Form data on submit:', formData)
-    console.log('Consent values:', {
-      consent1: formData.consent1,
-      consent2: formData.consent2,
-      consent3: formData.consent3
-    })
-    
     const validationError = validateStep()
     if (validationError) {
-      console.log('Validation error:', validationError)
       toast({
         title: 'Validation Error',
         description: validationError,
@@ -304,7 +360,7 @@ const BecomeMentor = () => {
 
     setIsSubmitting(true)
     try {
-      // Prepare mentor application data
+      // Prepare mentor application data - matching exact database structure
       const mentorData = {
         // Basic Profile Details
         fullName: formData.fullName,
@@ -316,6 +372,7 @@ const BecomeMentor = () => {
         currentLocation: formData.currentLocation,
         linkedinProfile: formData.linkedinProfile,
         shortBio: formData.shortBio,
+        bio: formData.bio, // Main bio field
         
         // Professional Details
         currentJobTitle: formData.currentJobTitle,
@@ -324,28 +381,33 @@ const BecomeMentor = () => {
         yearsOfExperience: formData.yearsOfExperience,
         experience: formData.yearsOfExperience, // For compatibility
         experienceDescription: formData.experienceDescription,
-        bio: formData.bio,
         
         // Mentorship Details
-        mentorshipAreas: formData.mentorshipAreas,
-        expertise: skills, // Use skills state instead of formData.expertise
-        mentorshipMode: formData.mentorshipMode,
-        availableDays: formData.availableDays,
-        timeCommitment: formData.timeCommitment,
-        mentorshipPreference: formData.mentorshipPreference,
-        maxMentees: formData.maxMentees,
+        mentorshipAreas: formData.mentorshipAreas && formData.mentorshipAreas.length > 0 ? formData.mentorshipAreas : [],
+        expertise: skills && skills.length > 0 ? skills : [], // Use skills state instead of formData.expertise
+        mentorshipMode: formData.mentorshipMode || '',
+        mentorshipPreference: formData.mentorshipPreference || '',
+        availableDays: formData.availableDays || '',
+        timeCommitment: formData.timeCommitment || '',
+        maxMentees: formData.maxMentees || '',
         
         // Consent
         consent1: formData.consent1,
         consent2: formData.consent2,
         consent3: formData.consent3,
         
+        // Additional fields from database structure
+        feedbackCount: 0,
+        rating: null,
+        status: 'pending', // Will be updated to 'approved' by admin
+        
         // User info
         userId: user?._id || user?.id,
-        status: 'pending'
+        user: user?._id || user?.id // Match database 'user' field
       }
 
       console.log('Submitting mentor data:', mentorData)
+      console.log('Profile photo:', profilePhoto ? profilePhoto.name : 'No photo')
 
       // Create form data for file upload
       const submitData = new FormData()
@@ -358,8 +420,8 @@ const BecomeMentor = () => {
         } else if (typeof mentorData[key] === 'boolean') {
           // Boolean values as strings
           submitData.append(key, mentorData[key].toString())
-        } else {
-          // Other fields as-is
+        } else if (mentorData[key] !== null && mentorData[key] !== undefined) {
+          // Other fields as-is (skip null/undefined)
           submitData.append(key, mentorData[key])
         }
       })
@@ -373,7 +435,53 @@ const BecomeMentor = () => {
       const response = await apply(submitData)
 
       if (response) {
-        console.log('Application submitted successfully:', response)
+        // Verify all required fields were saved
+        const savedFields = {
+          basic: {
+            fullName: response.fullName,
+            email: response.email,
+            phoneNumber: response.phoneNumber,
+            graduationYear: response.graduationYear,
+            degree: response.degree,
+            department: response.department,
+            currentLocation: response.currentLocation
+          },
+          professional: {
+            currentJobTitle: response.currentJobTitle,
+            company: response.company,
+            industry: response.industry,
+            mentorshipAreas: response.mentorshipAreas,
+            expertise: response.expertise
+          },
+          availability: {
+            mentorshipMode: response.mentorshipMode,
+            availableDays: response.availableDays,
+            timeCommitment: response.timeCommitment,
+            maxMentees: response.maxMentees
+          },
+          consent: {
+            consent1: response.consent1,
+            consent2: response.consent2,
+            consent3: response.consent3
+          },
+          photo: response.profilePhoto
+        }
+        
+        // Check if all critical fields are saved
+        const missingFields = []
+        Object.keys(savedFields.basic).forEach(key => {
+          if (!savedFields.basic[key]) missingFields.push(`basic.${key}`)
+        })
+        Object.keys(savedFields.professional).forEach(key => {
+          if (Array.isArray(savedFields.professional[key]) ? 
+              savedFields.professional[key].length === 0 : 
+              !savedFields.professional[key]) {
+            missingFields.push(`professional.${key}`)
+          }
+        })
+        Object.keys(savedFields.availability).forEach(key => {
+          if (!savedFields.availability[key]) missingFields.push(`availability.${key}`)
+        })
         
         // Update user context to mark as mentor
         updateUser({
@@ -389,17 +497,16 @@ const BecomeMentor = () => {
 
         toast({
           title: 'Registration Successful!',
-          description: 'Your mentor application has been submitted successfully. You will be notified once approved.',
-          tone: 'success'
+          description: `Your mentor application has been submitted successfully. ${missingFields.length === 0 ? 'All data saved correctly!' : 'Some fields may need attention.'}`,
+          tone: missingFields.length === 0 ? 'success' : 'warning'
         })
 
-        // Navigate to mentorship page after successful submission
+        // Navigate to mentorship dashboard after successful submission
         setTimeout(() => {
-          navigate('/dashboard/mentorship')
+          navigate('/dashboard/mentorship/dashboard')
         }, 2000)
       }
     } catch (error) {
-      console.error('Mentor registration error:', error)
       toast({
         title: 'Registration Failed',
         description: error.message || 'Failed to register as mentor. Please try again.',
@@ -427,10 +534,12 @@ const BecomeMentor = () => {
                   type="text"
                   value={formData.fullName}
                   onChange={handleInputChange('fullName')}
-                  className="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                  className="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-500 bg-slate-50"
                   placeholder="John Doe"
+                  readOnly
                   required
                 />
+                <p className="text-xs text-slate-500 mt-1">Auto-filled, read-only</p>
               </div>
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-2">Email ID *</label>
@@ -452,25 +561,40 @@ const BecomeMentor = () => {
                 <label className="block text-sm font-semibold text-slate-700 mb-2">Phone Number</label>
                 <input
                   type="tel"
-                  value={formData.phoneNumber}
+                  value={formData.phoneNumber || '+91 '}
                   onChange={handleInputChange('phoneNumber')}
-                  className="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                  className={`w-full rounded-lg border px-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 ${
+                    fieldErrors.phoneNumber 
+                      ? 'border-red-300 bg-red-50 focus:border-red-500 focus:ring-red-500/20' 
+                      : 'border-slate-300 focus:border-blue-500'
+                  }`}
                   placeholder="+91 98765 43210"
                 />
+                {fieldErrors.phoneNumber && (
+                  <p className="text-xs text-red-600 mt-1 font-medium">{fieldErrors.phoneNumber}</p>
+                )}
                 <p className="text-xs text-slate-500 mt-1">Optional, hidden from students</p>
               </div>
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-2">Graduation Year *</label>
-                <input
-                  type="number"
+                <select
                   value={formData.graduationYear}
                   onChange={handleInputChange('graduationYear')}
-                  className="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                  placeholder="2020"
-                  min="1950"
-                  max={new Date().getFullYear() + 5}
+                  className={`w-full rounded-lg border px-4 py-2.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 ${
+                    fieldErrors.graduationYear 
+                      ? 'border-red-300 bg-red-50 focus:border-red-500 focus:ring-red-500/20' 
+                      : 'border-slate-300 focus:border-blue-500'
+                  }`}
                   required
-                />
+                >
+                  <option value="">Select Year</option>
+                  {Array.from({ length: new Date().getFullYear() - 2011 }, (_, i) => 2012 + i).map(year => (
+                    <option key={year} value={year}>{year}</option>
+                  ))}
+                </select>
+                {fieldErrors.graduationYear && (
+                  <p className="text-xs text-red-600 mt-1 font-medium">{fieldErrors.graduationYear}</p>
+                )}
               </div>
             </div>
 

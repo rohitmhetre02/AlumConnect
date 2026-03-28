@@ -44,9 +44,11 @@ const OpportunityApplications = () => {
     setDataLoading(true)
     setError('')
     try {
-      const response = await get(`/opportunities/${opportunityId}/applicants`)
+      const response = await get(`/api/opportunities/${opportunityId}/applicants`)
+      console.log('🔍 [DEBUG] Applicants response:', response?.data)
       setApplicants(response?.data || null)
     } catch (err) {
+      console.error('🔍 [DEBUG] Applicants error:', err)
       setError(err?.message || 'Unable to load applicants.')
     } finally {
       setDataLoading(false)
@@ -80,7 +82,7 @@ const OpportunityApplications = () => {
   const handleUpdateStatus = async (applicantId, newStatus, note = '') => {
     setIsLoading(true)
     try {
-      await put(`/opportunities/referrals/${applicantId}/status`, { 
+      await put(`/api/opportunities/referrals/${applicantId}/status`, { 
         status: newStatus, 
         reviewerNote: note 
       })
@@ -209,28 +211,34 @@ const OpportunityApplications = () => {
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
                         <div className="h-10 w-10 rounded-full bg-slate-200 flex items-center justify-center">
-                          {applicant.student.profilePicture ? (
+                          {applicant.student.avatar ? (
                             <img 
-                              src={applicant.student.profilePicture} 
+                              src={applicant.student.avatar} 
                               alt={applicant.student.name}
                               className="h-10 w-10 rounded-full object-cover"
                             />
                           ) : (
                             <span className="text-sm font-medium text-slate-600">
-                              {applicant.student.name.charAt(0).toUpperCase()}
+                              {applicant.student.name ? applicant.student.name.charAt(0).toUpperCase() : 'U'}
                             </span>
                           )}
                         </div>
                         <div>
-                          <div className="text-sm font-medium text-slate-900">{applicant.student.name}</div>
-                          <div className="text-xs text-slate-500">{applicant.student.email}</div>
+                          <div className="text-sm font-medium text-slate-900">
+                            {applicant.student.name || 'Unknown Student'}
+                          </div>
+                          <div className="text-xs text-slate-500">
+                            {applicant.student.email || 'No email'}
+                          </div>
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-sm text-slate-700">{applicant.student.department}</td>
+                    <td className="px-6 py-4 text-sm text-slate-700">
+                      {applicant.student.department || 'Not specified'}
+                    </td>
                     <td className="px-6 py-4">
                       <span className="inline-flex rounded-full px-2 py-1 text-xs font-medium bg-slate-100 text-slate-800">
-                        {applicant.student.role}
+                        {applicant.student.role || 'student'}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-sm text-slate-700">{formatDate(applicant.submittedAt)}</td>

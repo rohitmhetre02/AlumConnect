@@ -12,6 +12,7 @@ const {
   donateToCampaign,
   getCampaignStats,
   listAllCampaigns,
+  getUserDonations,
 } = require('../controllers/campaignController')
 
 const router = express.Router()
@@ -26,6 +27,7 @@ router.get('/stats', getCampaignStats)
 
 // Protected routes
 router.get('/mine', authMiddleware, listMyCampaigns)
+router.get('/donations/user', authMiddleware, getUserDonations)
 router.post('/', authMiddleware, createCampaign)
 router.put('/:id', authMiddleware, updateCampaign)
 router.delete('/:id', authMiddleware, deleteCampaign)

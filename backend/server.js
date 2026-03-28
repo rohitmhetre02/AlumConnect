@@ -28,6 +28,8 @@ const profileRoutes = require('./routes/profileRoutes')
 
 const uploadRoutes = require('./routes/uploadRoutes')
 
+
+
 const authMiddleware = require('./middleware/authMiddleware')
 
 const { getOverview: getMentorDashboardOverview } = require('./controllers/mentorDashboardController')
@@ -146,6 +148,7 @@ const startServer = async () => {
     app.use('/api/auth', authLimiter, authRoutes)
 
     app.use('/api/auth/profile', profileLimiter, profileRoutes)
+
 
     app.use('/api/upload', uploadRoutes)
 

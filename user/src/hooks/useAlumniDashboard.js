@@ -39,39 +39,126 @@ export const useAlumniDashboard = (user) => {
       const opportunitiesResponse = await get('/opportunities/mine')
       const myOpps = Array.isArray(opportunitiesResponse?.data) ? opportunitiesResponse.data : []
       
+      // Fetch upcoming events (all events for alumni to see)
+      const upcomingEvents = events.filter(event => {
+        let eventDate = null
+        if (event.startAt) {
+          eventDate = new Date(event.startAt)
+        } else if (event.date) {
+          eventDate = new Date(event.date)
+        } else if (event.createdAt) {
+          eventDate = new Date(event.createdAt)
+        }
+        
+        if (!eventDate || isNaN(eventDate.getTime())) {
+          return false
+        }
+        
+        const oneHourFromNow = new Date(Date.now() + 60 * 60 * 1000)
+        return eventDate > oneHourFromNow
+      })
+
+      // Fetch mentorship requests for alumni
+      const mentorshipResponse = await get('/mentors/me/requests')
+      const mentorshipReqs = Array.isArray(mentorshipResponse?.data) ? mentorshipResponse.data : []
+
       // Fetch alumni's created events
       const eventsResponse = await get('/events/mine')
       const myEvts = Array.isArray(eventsResponse?.data) ? eventsResponse.data : []
 
-      // Fetch mentorship requests for alumni
-      const mentorshipResponse = await get('/mentors/pending')
-      const mentorshipReqs = Array.isArray(mentorshipResponse?.data) ? mentorshipResponse.data : []
+      // Fetch alumni's donations
+      const donationsResponse = await get('/campaigns/mine')
+      const myDonations = Array.isArray(donationsResponse?.data) ? donationsResponse.data : []
 
-      // Fetch recent activity
-      const activityResponse = await get('/alumni/activity')
-      const activity = Array.isArray(activityResponse?.data) ? activityResponse.data : []
+      // Create combined recent activity
+      const activities = []
+      
+      // Add opportunities posted
+      myOpps.forEach(opp => {
+        activities.push({
+          id: `opp_${opp.id}`,
+          title: `Posted opportunity: ${opp.title}`,
+          subtitle: opp.company || 'Company',
+          date: new Date(opp.createdAt).toLocaleDateString('en-US', { 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric' 
+          }),
+          type: 'opportunity',
+          typeLabel: 'Opportunity Posted',
+          status: 'Active',
+          statusColor: 'green',
+          timestamp: new Date(opp.createdAt)
+        })
+      })
+
+      // Add events created
+      myEvts.forEach(event => {
+        activities.push({
+          id: `event_${event.id}`,
+          title: `Created event: ${event.title}`,
+          subtitle: event.organization || 'Organization',
+          date: new Date(event.createdAt).toLocaleDateString('en-US', { 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric' 
+          }),
+          type: 'event',
+          typeLabel: 'Event Created',
+          status: 'Active',
+          statusColor: 'purple',
+          timestamp: new Date(event.createdAt)
+        })
+      })
+
+      // Add mentorship requests
+      mentorshipReqs.forEach(request => {
+        activities.push({
+          id: `mentor_${request.id}`,
+          title: `Mentorship request from ${request.student?.name || 'Student'}`,
+          subtitle: request.subject || 'Request',
+          date: new Date(request.createdAt).toLocaleDateString('en-US', { 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric' 
+          }),
+          type: 'mentorship',
+          typeLabel: 'Mentorship Request',
+          status: request.status || 'Pending',
+          statusColor: request.status === 'Accepted' ? 'green' : 
+                       request.status === 'Rejected' ? 'red' : 'yellow',
+          timestamp: new Date(request.createdAt)
+        })
+      })
+
+      // Sort by timestamp (most recent first) and take top 5
+      const sortedActivities = activities
+        .sort((a, b) => b.timestamp - a.timestamp)
+        .slice(0, 5)
 
       // Calculate overview stats
+      const activeDonations = myDonations.filter(donation => {
+        if (!donation.deadline) return false
+        const deadlineDate = new Date(donation.deadline)
+        return !isNaN(deadlineDate.getTime()) && deadlineDate > new Date() && (donation.isActive !== false)
+      })
+
       const stats = {
         jobsPosted: myOpps.length,
         eventsParticipated: myEvts.length,
-        activeDonations: donations.filter(donation => 
-          new Date(donation.deadline) > new Date() && (donation.isActive !== false)
-        ).length,
+        activeDonations: activeDonations.length,
         mentorshipRequests: mentorshipReqs.length,
-        jobsTrend: `+${Math.floor(Math.random() * 5)} this month`, // You can calculate real trends
-        eventsTrend: `+${Math.floor(Math.random() * 3)} this month`,
-        donationsTrend: `${donations.filter(d => 
-          new Date(d.deadline) - new Date() < 7 * 24 * 60 * 60 * 1000
-        ).length} ending soon`,
-        mentorshipTrend: `+${Math.floor(Math.random() * 8)} this week`
+        jobsTrend: myOpps.length > 0 ? `${myOpps.length} posted` : 'No opportunities',
+        eventsTrend: upcomingEvents.length > 0 ? `${upcomingEvents.length} upcoming` : 'No events',
+        donationsTrend: activeDonations.length > 0 ? `${activeDonations.length} active` : 'No campaigns',
+        mentorshipTrend: mentorshipReqs.length > 0 ? `${mentorshipReqs.length} requests` : 'No requests'
       }
 
       setOverviewStats(stats)
       setMyOpportunities(myOpps)
-      setMyEvents(myEvts)
+      setMyEvents(upcomingEvents)
       setMentorshipRequests(mentorshipReqs)
-      setRecentActivity(activity)
+      setRecentActivity(sortedActivities)
     } catch (fetchError) {
       setError(fetchError)
       addToast?.({
@@ -108,35 +195,41 @@ export const useAlumniDashboard = (user) => {
   // Get formatted events
   const formattedEvents = useMemo(() => {
     return myEvents
-      .filter(event => new Date(event.startAt) > new Date())
-      .slice(0, 4)
-      .map(event => ({
-        id: event.id,
-        title: event.title,
-        date: new Date(event.startAt).toLocaleDateString('en-US', { 
-          year: 'numeric', 
-          month: 'long', 
-          day: 'numeric' 
-        }),
-        time: new Date(event.startAt).toLocaleTimeString('en-US', { 
-          hour: 'numeric', 
-          minute: '2-digit',
-          hour12: true 
-        }),
-        type: event.organization || 'Event',
-        description: event.description?.substring(0, 100) + '...' || 'Join this event',
-        isCreator: event.createdBy === user?.id
-      }))
+      .slice(0, 3)
+      .map(event => {
+        const eventDate = new Date(event.startAt || event.date || event.createdAt)
+        return {
+          id: event.id,
+          title: event.title,
+          date: eventDate.toLocaleDateString('en-US', { 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric' 
+          }),
+          time: eventDate.toLocaleTimeString('en-US', { 
+            hour: 'numeric', 
+            minute: '2-digit',
+            hour12: true 
+          }),
+          type: event.organization || 'Event',
+          description: event.description?.substring(0, 100) + '...' || 'Join this event',
+          isCreator: event.createdBy === user?.id
+        }
+      })
   }, [myEvents, user?.id])
 
   // Get formatted recent activity
   const formattedRecentActivity = useMemo(() => {
-    return recentActivity.slice(0, 5).map(activity => ({
+    return recentActivity.map(activity => ({
       id: activity.id,
       type: activity.type,
+      typeLabel: activity.typeLabel,
       title: activity.title,
-      time: formatRelativeTime(activity.createdAt || activity.timestamp),
-      icon: getActivityIcon(activity.type)
+      subtitle: activity.subtitle,
+      date: activity.date,
+      status: activity.status,
+      statusColor: activity.statusColor,
+      timestamp: activity.timestamp
     }))
   }, [recentActivity])
 

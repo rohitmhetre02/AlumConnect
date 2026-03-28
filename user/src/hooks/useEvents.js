@@ -38,7 +38,7 @@ export const useEvents = () => {
     setLoading(true)
     setError(null)
     try {
-      const response = await get('/api/public/events', { includeAuth: false })
+      const response = await get('/events', { includeAuth: false })
       const data = Array.isArray(response?.data) ? response.data : []
       setItems(data.map(formatEvent).filter(Boolean))
     } catch (fetchError) {

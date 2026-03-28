@@ -130,8 +130,15 @@ const MentorshipRequestsPage = () => {
   const handleSubmitReview = async () => {
     if (!selectedReviewRequest) return
 
+    console.log('Submitting review for request:', selectedReviewRequest)
+    console.log('Review data:', reviewData)
+    console.log('Request ID:', selectedReviewRequest.id)
+    console.log('Full URL:', `/mentors/my-requests/${selectedReviewRequest.id}/review`)
+    console.log('User token:', localStorage.getItem('token') ? 'Token exists' : 'No token')
+    console.log('Token preview:', localStorage.getItem('token')?.substring(0, 20) + '...')
+
     try {
-      const response = await fetch(`/api/mentors/my-requests/${selectedReviewRequest.id}/review`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/mentors/my-requests/${selectedReviewRequest.id}/review`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -140,10 +147,24 @@ const MentorshipRequestsPage = () => {
         body: JSON.stringify(reviewData)
       })
 
+      console.log('Response status:', response.status)
+      console.log('Response ok:', response.ok)
+      console.log('Response headers:', Object.fromEntries(response.headers.entries()))
+
       if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.message || 'Failed to submit review')
+        let errorMessage = 'Failed to submit review'
+        try {
+          const errorData = await response.json()
+          errorMessage = errorData.message || errorMessage
+        } catch (jsonError) {
+          // If response is not JSON, use status text
+          errorMessage = response.statusText || errorMessage
+        }
+        throw new Error(errorMessage)
       }
+
+      const result = await response.json()
+      console.log('Review submitted successfully:', result)
 
       setReviewModalOpen(false)
       setSelectedReviewRequest(null)
@@ -160,26 +181,27 @@ const MentorshipRequestsPage = () => {
 
   const renderRequestCard = (request) => {
 
+    console.log('Request data:', request)
+    console.log('Mentor name from request:', request.mentorName)
+    console.log('Mentor email from request:', request.mentorEmail)
+    console.log('Mentor object:', request.mentor)
+
     const status = String(request?.status ?? '').toLowerCase()
     const tone = STATUS_TONE[status] || STATUS_TONE.pending
 
-    let mentorName = 'Mentor'
-    let mentorEmail = 'No email'
-    let mentorId = null
+    let mentorName = request.mentorName || 'Mentor'
+    let mentorEmail = request.mentorEmail || 'No email'
+    let mentorId = request.mentorId || request.mentor
 
+    // If mentor object is populated, use that data
     if (request?.mentor?.firstName && request?.mentor?.lastName) {
-
       mentorName = `${request.mentor.firstName} ${request.mentor.lastName}`
-      mentorEmail = request.mentor.email || 'No email'
-      mentorId = request.mentor._id || request.mentor.id
-
-    } else if (request.mentorName) {
-
-      mentorName = request.mentorName
-      mentorEmail = request.mentorEmail || 'No email'
-      mentorId = request.mentor
-
+      mentorEmail = request.mentor.email || mentorEmail
+      mentorId = request.mentor._id || request.mentor.id || mentorId
     }
+
+    console.log('Final mentor name:', mentorName)
+    console.log('Final mentor email:', mentorEmail)
 
     const mentorAvatar = request?.mentor?.avatar || request.mentorAvatar || ''
 

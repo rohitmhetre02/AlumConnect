@@ -41,16 +41,50 @@ const getUserByEmail = async (email) => {
 
 // Helper function to update user by ID using role-based approach
 const updateUserById = async (userId, updateData) => {
+  console.log('=== UPDATE USER BY ID DEBUG ===');
+  console.log('Updating user:', userId, 'with data:', updateData);
+  
   const roles = ['student', 'alumni', 'faculty', 'admin', 'coordinator'];
+  
   for (const role of roles) {
     const Model = getModelByRole(role);
     try {
-      const user = await Model.findByIdAndUpdate(userId, updateData, { new: true });
-      if (user) return user;
+      console.log('🔍 Trying to update in', role, 'collection');
+      console.log('Model exists:', !!Model);
+      
+      // First check if user exists in this collection
+      const existingUser = await Model.findById(userId);
+      if (existingUser) {
+        console.log(`✅ Found user in ${role} collection:`, {
+          id: existingUser._id,
+          currentEmail: existingUser.email,
+          role: existingUser.role
+        });
+        
+        // Update the user
+        const user = await Model.findByIdAndUpdate(userId, updateData, { new: true });
+        if (user) {
+          console.log(`✅ Successfully updated user in ${role} collection:`, {
+            id: user._id,
+            newEmail: user.email,
+            updatedAt: user.updatedAt
+          });
+          console.log('=== UPDATE SUCCESSFUL ===\n');
+          return user;
+        } else {
+          console.log(`❌ Failed to update user in ${role} collection`);
+        }
+      } else {
+        console.log(`ℹ️ User not found in ${role} collection`);
+      }
     } catch (error) {
+      console.log(`❌ Error updating in ${role} collection:`, error.message);
       // Continue to next role
     }
   }
+  
+  console.log('❌ User not found in any collection for ID:', userId);
+  console.log('=== UPDATE FAILED ===\n');
   return null;
 };
 
@@ -131,67 +165,68 @@ const validatePassword = (password) => {
 const updateEmail = async (req, res) => {
   try {
     const { currentPassword, newEmail } = req.body;
+    console.log('=== EMAIL UPDATE DEBUG ===');
+    console.log('Request body:', { currentPassword: '***', newEmail });
+    console.log('User from token:', req.user);
+    
     const user = await getUserById(req.user.id);
 
     if (!user) {
+      console.log('❌ User not found:', req.user.id);
       return res.status(404).json({ success: false, error: 'User not found' });
     }
+
+    console.log('✅ User found:', { id: user._id, currentEmail: user.email, role: user.role });
 
     // Verify current password
     const isCurrentPasswordValid = await bcrypt.compare(currentPassword, user.password);
     if (!isCurrentPasswordValid) {
+      console.log('❌ Invalid password provided');
       return res.status(400).json({ success: false, error: 'Incorrect password' });
     }
+
+    console.log('✅ Password verified successfully');
 
     // Check if email is already in use by another user
     const existingUser = await getUserByEmail(newEmail);
 
-    if (existingUser) {
+    if (existingUser && existingUser._id.toString() !== user._id.toString()) {
+      console.log('❌ Email already in use by another user:', newEmail);
       return res.status(400).json({ success: false, error: 'Email address already in use' });
     }
 
-    // Check OTP attempts
-    const emailKey = `${req.user.id}_email`;
-    if (otpAttempts.has(emailKey) && otpAttempts.get(emailKey) >= 5) {
-      return res.status(429).json({ success: false, error: 'Too many OTP attempts. Please try again later.' });
-    }
+    console.log('✅ Email is available for use');
 
-    // Check cooldown
-    if (otpCooldowns.has(emailKey)) {
-      const cooldownEnd = otpCooldowns.get(emailKey);
-      if (Date.now() < cooldownEnd) {
-        const remainingTime = Math.ceil((cooldownEnd - Date.now()) / 1000);
-        return res.status(429).json({ success: false, error: `Please wait ${remainingTime} seconds before requesting OTP` });
-      }
-    }
-
-    // Generate OTP
-    const otp = generateOTP();
-    const tempToken = jwt.sign(
-      { userId: user._id, email: newEmail, otp, purpose: 'email-update' },
-      process.env.JWT_SECRET,
-      { expiresIn: '5m' }
-    );
-
-    // Send OTP email
-    const emailSent = await sendEmailOTP(newEmail, otp, 'Email Update');
-    if (!emailSent) {
-      return res.status(500).json({ success: false, error: 'Failed to send OTP email' });
-    }
-
-    // Reset attempts and set cooldown
-    otpAttempts.set(emailKey, 0);
-    otpCooldowns.set(emailKey, Date.now() + 30000); // 30 seconds cooldown
-
-    res.json({
-      success: true,
-      requiresOtp: true,
-      tempToken,
-      message: 'OTP sent to your email for verification'
+    // Directly update email without OTP
+    console.log('🔄 Updating email from', user.email, 'to', newEmail);
+    const updatedUser = await updateUserById(user._id, { 
+      email: newEmail,
+      emailVerified: true,
+      emailVerifiedAt: new Date()
     });
 
+    if (!updatedUser) {
+      console.log('❌ Failed to update user in database');
+      return res.status(500).json({ success: false, error: 'Failed to update email in database' });
+    }
+
+    console.log('✅ Email updated successfully in database!');
+    console.log('Updated user:', { id: updatedUser._id, newEmail: updatedUser.email });
+
+    // Double-check the update
+    const verifyUser = await getUserById(user._id);
+    console.log('🔍 Verification - Current email in DB:', verifyUser.email);
+
+    res.json({ 
+      success: true, 
+      message: 'Email updated successfully',
+      user: updatedUser // Return updated user data
+    });
+
+    console.log('=== EMAIL UPDATE COMPLETE ===\n');
+
   } catch (error) {
-    console.error('Email update error:', error);
+    console.error('❌ Email update error:', error);
     res.status(500).json({ success: false, error: 'Failed to update email' });
   }
 };
@@ -510,11 +545,90 @@ const resendForgotPasswordOTP = async (req, res) => {
   }
 };
 
+// POST /api/auth/verify-password
+const verifyPassword = async (req, res) => {
+  try {
+    const { password, email } = req.body;
+    
+    let user;
+    
+    // If email is provided, find by email (for initial verification)
+    if (email) {
+      user = await getUserByEmail(email);
+    } 
+    // If user is authenticated, get by ID
+    else if (req.user && req.user.id) {
+      user = await getUserById(req.user.id);
+    }
+    // If no user found, return error
+    else {
+      return res.status(400).json({ success: false, error: 'User identification required' });
+    }
+
+    if (!user) {
+      return res.status(404).json({ success: false, error: 'User not found' });
+    }
+
+    // Verify password
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) {
+      return res.status(400).json({ success: false, error: 'Invalid password' });
+    }
+
+    res.json({ 
+      success: true, 
+      message: 'Password verified successfully',
+      userId: user._id // Return user ID for frontend use
+    });
+
+  } catch (error) {
+    console.error('Password verification error:', error);
+    res.status(500).json({ success: false, error: 'Failed to verify password' });
+  }
+};
+
+// POST /api/auth/delete-account
+const deleteAccount = async (req, res) => {
+  try {
+    const { password } = req.body;
+    const user = await getUserById(req.user.id);
+
+    if (!user) {
+      return res.status(404).json({ success: false, error: 'User not found' });
+    }
+
+    // Verify password
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) {
+      return res.status(400).json({ success: false, error: 'Invalid password' });
+    }
+
+    // Delete user from all role collections
+    const roles = ['student', 'alumni', 'faculty', 'admin', 'coordinator'];
+    for (const role of roles) {
+      const Model = getModelByRole(role);
+      try {
+        await Model.findByIdAndDelete(user._id);
+      } catch (error) {
+        // Continue if user not found in this role
+      }
+    }
+
+    res.json({ success: true, message: 'Account deleted successfully' });
+
+  } catch (error) {
+    console.error('Account deletion error:', error);
+    res.status(500).json({ success: false, error: 'Failed to delete account' });
+  }
+};
+
 module.exports = {
   updateEmail,
   verifyEmailOTP,
   resendEmailOTP,
   updatePassword,
+  verifyPassword,
+  deleteAccount,
   forgotPassword,
   verifyForgotPasswordOTP,
   resendForgotPasswordOTP,

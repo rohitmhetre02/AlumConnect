@@ -101,6 +101,7 @@ const listEvents = async (_req, res) => {
 
 const listMyEvents = async (req, res) => {
   try {
+    console.log('🔍 [DEBUG] listMyEvents called for user:', req.user?.id)
     const userId = req.user?.id
 
     if (!userId) {
@@ -112,6 +113,7 @@ const listMyEvents = async (req, res) => {
       : { createdBy: userId }
 
     const events = await Event.find(filter).sort({ createdAt: -1 }).lean()
+    console.log('🔍 [DEBUG] Found events for user:', events.length)
 
     return res.status(200).json({ success: true, data: events.map(formatEvent).filter(Boolean) })
   } catch (error) {

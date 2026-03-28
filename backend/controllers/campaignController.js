@@ -494,6 +494,61 @@ const listAllCampaigns = async (req, res) => {
   }
 }
 
+// Get user's donation history
+const getUserDonations = async (req, res) => {
+  try {
+    const { error, userId } = ensureAuthenticatedUser(req)
+
+    if (error) {
+      return res.status(error.status).json({ success: false, message: error.message })
+    }
+
+    // Find all campaigns where the user has donated
+    const campaigns = await Campaign.find({
+      'donations.donorEmail': req.user.email
+    })
+      .select('title donations coverImage approvalStatus')
+      .lean()
+
+    // Extract user's donations from all campaigns
+    const userDonations = []
+    
+    campaigns.forEach(campaign => {
+      campaign.donations.forEach(donation => {
+        if (donation.donorEmail === req.user.email) {
+          userDonations.push({
+            id: donation._id || `${campaign._id}-${donation.donatedAt.getTime()}`,
+            amount: donation.amount,
+            message: donation.message,
+            donatedAt: donation.donatedAt,
+            status: donation.paymentStatus || 'success',
+            paymentMethod: donation.paymentMethod,
+            paymentTransactionId: donation.paymentTransactionId,
+            anonymous: donation.anonymous,
+            donorName: donation.donorName,
+            donorEmail: donation.donorEmail,
+            campaign: {
+              _id: campaign._id,
+              id: campaign._id.toString(),
+              title: campaign.title,
+              coverImage: campaign.coverImage,
+              approvalStatus: campaign.approvalStatus
+            }
+          })
+        }
+      })
+    })
+
+    // Sort by donation date (newest first)
+    userDonations.sort((a, b) => new Date(b.donatedAt) - new Date(a.donatedAt))
+
+    return res.status(200).json({ success: true, data: userDonations })
+  } catch (error) {
+    console.error('getUserDonations error:', error)
+    return res.status(500).json({ success: false, message: 'Unable to fetch your donations.' })
+  }
+}
+
 module.exports = {
   listCampaigns,
   getCampaignById,
@@ -506,4 +561,5 @@ module.exports = {
   deleteCampaign,
   donateToCampaign,
   getCampaignStats,
+  getUserDonations,
 }

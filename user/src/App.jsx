@@ -34,12 +34,14 @@ import EventDetail from './pages/user/EventDetail'
 import UserEvents from './pages/user/Events'
 import RegisteredEvents from './pages/user/RegisteredEvents'
 import MyApplications from './pages/user/MyApplications'
+import ApplicationDetail from './pages/user/ApplicationDetail'
 import ContentPosted from './pages/user/ContentPosted'
 import MyPosts from './pages/user/MyPosts'
 import EventRegistrations from './pages/user/EventRegistrations'
 import MentorshipRequestsPage from './pages/user/MentorshipRequestsPage'
 import PostDonationCampaign from './pages/user/PostDonationCampaign'
 import Campaigns from './pages/user/Campaigns'
+import MyDonations from './pages/user/MyDonations'
 import CampaignDetail from './pages/user/CampaignDetailNew'
 import UserSettings from './pages/UserSettings'
 import Connections from './pages/user/Connections'
@@ -354,6 +356,11 @@ function App() {
                 <Campaigns />
               </ProfilePendingGuardWithFallback>
             } />
+            <Route path="my-campaigns" element={
+              <ProfilePendingGuardWithFallback>
+                <MyDonations />
+              </ProfilePendingGuardWithFallback>
+            } />
             <Route path="campaigns/create" element={
               <ProfilePendingGuardWithFallback>
                 <RoleRoute allowedRoles={['alumni']}>
@@ -460,6 +467,11 @@ function App() {
             <Route path="applications" element={
               <ProfilePendingGuardWithFallback>
                 <MyApplications />
+              </ProfilePendingGuardWithFallback>
+            } />
+            <Route path="application/:applicationId" element={
+              <ProfilePendingGuardWithFallback>
+                <ApplicationDetail />
               </ProfilePendingGuardWithFallback>
             } />
            

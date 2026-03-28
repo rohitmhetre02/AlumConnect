@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import useMyOpportunityReferrals from '../../hooks/useMyOpportunityReferrals'
 
 const normalizeOpportunity = (rawSource, fallback = {}) => {
@@ -32,33 +32,10 @@ const normalizeOpportunity = (rawSource, fallback = {}) => {
 }
 
 const statusToneClasses = {
-  submitted: 'bg-sky-100 text-sky-700',
-  reviewed: 'bg-amber-100 text-amber-700',
-  accepted: 'bg-emerald-100 text-emerald-700',
-  declined: 'bg-rose-100 text-rose-700',
-}
-
-const statusIcons = {
-  submitted: (
-    <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-    </svg>
-  ),
-  reviewed: (
-    <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-    </svg>
-  ),
-  accepted: (
-    <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-    </svg>
-  ),
-  declined: (
-    <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-    </svg>
-  ),
+  submitted: 'bg-blue-100 text-blue-600',
+  reviewed: 'bg-amber-100 text-amber-600',
+  accepted: 'bg-emerald-100 text-emerald-600',
+  declined: 'bg-rose-100 text-rose-600',
 }
 
 const statusMessages = {
@@ -73,13 +50,14 @@ const formatDate = (value) => {
   try {
     const date = new Date(value)
     if (Number.isNaN(date.getTime())) return '—'
-    return date.toLocaleDateString(undefined, { dateStyle: 'medium' })
+    return date.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
   } catch (error) {
     return '—'
   }
 }
 
 const MyApplications = () => {
+  const navigate = useNavigate()
   const {
     referrals,
     loading,
@@ -106,16 +84,23 @@ const MyApplications = () => {
 
         return {
           id: entry.id ?? `${opportunity.id}-${entry.status}`,
-          status: (entry.status ?? 'pending').toLowerCase(),
+          status: (entry.status ?? 'submitted').toLowerCase(),
           submittedAt: entry.submittedAt ?? entry.createdAt ?? null,
           updatedAt: entry.updatedAt ?? null,
           resumeUrl: entry.resumeUrl ?? null,
           proposal: entry.proposal ?? null,
+          reviewerNote: entry.reviewerNote ?? null,
           opportunity,
         }
       })
       .filter(Boolean)
   }, [referrals])
+
+  const handleCardClick = (application) => {
+    console.log('🔍 [DEBUG] Clicking application:', application)
+    console.log('🔍 [DEBUG] Navigating to:', `/dashboard/application/${application.id}`)
+    navigate(`/dashboard/application/${application.id}`, { state: { application } })
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-primary/5">
@@ -124,10 +109,9 @@ const MyApplications = () => {
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-400">My Activity</p>
-              <h1 className="mt-2 text-3xl font-bold text-slate-900">Submitted Applications</h1>
+              <h1 className="mt-2 text-3xl font-bold text-slate-900">My Applications</h1>
               <p className="mt-2 max-w-2xl text-sm text-slate-500">
-                Track every role you have applied for through AlumConnect. Review statuses, revisit opportunity
-                details, and jump back to the listing with a single click.
+                Track every role you have applied for through AlumConnect. Click on any application to view detailed status.
               </p>
             </div>
             <div className="rounded-2xl bg-slate-100 px-4 py-3 text-center">
@@ -185,54 +169,59 @@ const MyApplications = () => {
         )}
 
         {!loading && !error && applications.length > 0 && (
-          <div className="mt-8 space-y-4">
-            {applications.map(({ id, opportunity, status, submittedAt, updatedAt }) => {
+          <div className="mt-8 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {applications.map(({ id, opportunity, status, submittedAt, updatedAt, reviewerNote }) => {
               const tone = statusToneClasses[status] ?? 'bg-slate-100 text-slate-600'
 
               return (
                 <article
                   key={id}
-                  className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition hover:border-sky-200 hover:shadow-md"
+                  onClick={() => handleCardClick({ id, opportunity, status, submittedAt, updatedAt, reviewerNote })}
+                  className="bg-white rounded-2xl shadow-md p-5 cursor-pointer hover:shadow-lg transition-all duration-200 hover:scale-[1.02] border border-slate-200"
                 >
-                  <div className="flex flex-wrap items-start justify-between gap-4">
-                    <div className="space-y-1">
-                      <p className="text-xs uppercase tracking-[0.3em] text-slate-400">{opportunity.company}</p>
-                      <h2 className="text-xl font-semibold text-slate-900">{opportunity.title}</h2>
-                      <div className="flex flex-wrap items-center gap-3 text-[11px] uppercase tracking-[0.25em] text-slate-400">
-                        <span>{opportunity.location || 'Location Flexible'}</span>
-                        <span className="h-1 w-1 rounded-full bg-slate-300"></span>
-                        <span>{opportunity.type}</span>
-                        {opportunity.deadline ? (
-                          <>
-                            <span className="h-1 w-1 rounded-full bg-slate-300"></span>
-                            <span>Deadline {formatDate(opportunity.deadline)}</span>
-                          </>
-                        ) : null}
-                      </div>
-                    </div>
-                    <div className="flex flex-col items-end gap-3">
-                      <span className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold ${tone}`}>
-                        {statusIcons[status] || statusIcons.submitted}
-                        {status.replace(/_/g, ' ')}
-                      </span>
-                      <p className="text-xs text-slate-500 max-w-48 text-right">
-                        {statusMessages[status] || statusMessages.submitted}
-                      </p>
-                      <div className="text-right text-[11px] text-slate-400">
-                        <p>Applied {formatDate(submittedAt)}</p>
-                        {updatedAt ? <p>Updated {formatDate(updatedAt)}</p> : null}
-                      </div>
-                      <Link
-                        to={`/dashboard/opportunities/${opportunity.id}`}
-                        className="inline-flex items-center gap-2 rounded-full border border-sky-200 px-3 py-1 text-xs font-semibold text-sky-600 transition hover:border-sky-300 hover:bg-sky-50"
-                      >
-                        View Opportunity
-                        <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                        </svg>
-                      </Link>
-                    </div>
+                  {/* Header with Company and Status */}
+                  <div className="flex justify-between items-center mb-3">
+                    <p className="text-xs text-gray-500 font-semibold uppercase tracking-wider">
+                      {opportunity.company}
+                    </p>
+                    <span className={`text-xs px-3 py-1 rounded-full font-medium ${tone}`}>
+                      {status.replace(/_/g, ' ').charAt(0).toUpperCase() + status.replace(/_/g, ' ').slice(1)}
+                    </span>
                   </div>
+
+                  {/* Job Title */}
+                  <h2 className="text-lg font-semibold text-slate-900 mb-2 line-clamp-2">
+                    {opportunity.title}
+                  </h2>
+
+                  {/* Location and Type */}
+                  <p className="text-gray-500 text-sm mb-2">
+                    {opportunity.location || 'Location Flexible'} • {opportunity.type.charAt(0).toUpperCase() + opportunity.type.slice(1)}
+                  </p>
+
+                  {/* Deadline */}
+                  {opportunity.deadline && (
+                    <p className="text-gray-400 text-sm mb-3">
+                      Deadline: {formatDate(opportunity.deadline)}
+                    </p>
+                  )}
+
+                  {/* Status Message */}
+                  <p className="text-blue-600 text-sm font-medium mb-2">
+                    {statusMessages[status] || statusMessages.submitted}
+                  </p>
+
+                  {/* Applied Date */}
+                  <p className="text-gray-400 text-xs">
+                    Applied on: {formatDate(submittedAt)}
+                  </p>
+
+                  {/* Reviewer Note (if any) */}
+                  {reviewerNote && status === 'declined' && (
+                    <div className="mt-3 p-2 bg-rose-50 rounded-lg">
+                      <p className="text-rose-600 text-xs">Feedback: {reviewerNote}</p>
+                    </div>
+                  )}
                 </article>
               )
             })}

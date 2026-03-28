@@ -321,6 +321,26 @@ const MentorshipProfile = () => {
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-slate-50 disabled:text-slate-500"
                 />
               </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">Degree</label>
+                <input
+                  type="text"
+                  value={profile.degree || ''}
+                  onChange={handleChange('degree')}
+                  disabled={!editing}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-slate-50 disabled:text-slate-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">Department</label>
+                <input
+                  type="text"
+                  value={profile.department || ''}
+                  onChange={handleChange('department')}
+                  disabled={!editing}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-slate-50 disabled:text-slate-500"
+                />
+              </div>
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-slate-700 mb-2">Short Bio</label>
                 <textarea
@@ -384,6 +404,28 @@ const MentorshipProfile = () => {
                   onChange={handleChange('yearsOfExperience')}
                   disabled={!editing}
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-slate-50 disabled:text-slate-500"
+                />
+              </div>
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-slate-700 mb-2">Bio</label>
+                <textarea
+                  value={profile.bio || ''}
+                  onChange={handleChange('bio')}
+                  disabled={!editing}
+                  rows={4}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-slate-50 disabled:text-slate-500"
+                  placeholder="Tell us about your professional background and mentoring approach..."
+                />
+              </div>
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-slate-700 mb-2">Experience Description</label>
+                <textarea
+                  value={profile.experienceDescription || ''}
+                  onChange={handleChange('experienceDescription')}
+                  disabled={!editing}
+                  rows={3}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-slate-50 disabled:text-slate-500"
+                  placeholder="Describe your relevant experience and expertise..."
                 />
               </div>
             </div>
@@ -472,6 +514,20 @@ const MentorshipProfile = () => {
                 </select>
               </div>
               <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">Mentorship Preference</label>
+                <select
+                  value={profile.mentorshipPreference || ''}
+                  onChange={handleChange('mentorshipPreference')}
+                  disabled={!editing}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-slate-50 disabled:text-slate-500"
+                >
+                  <option value="">Select Preference</option>
+                  <option value="Students">Students</option>
+                  <option value="Alumni">Alumni</option>
+                  <option value="Both">Both</option>
+                </select>
+              </div>
+              <div>
                 <label className="block text-sm font-medium text-slate-700 mb-2">Maximum Mentees</label>
                 <input
                   type="number"
@@ -489,24 +545,47 @@ const MentorshipProfile = () => {
           {/* Status Information */}
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
             <h2 className="text-xl font-semibold text-slate-900 mb-6">Status Information</h2>
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
-                  profile.status === 'approved' 
-                    ? 'bg-green-100 text-green-800'
-                    : profile.status === 'pending'
-                    ? 'bg-yellow-100 text-yellow-800'
-                    : 'bg-red-100 text-red-800'
-                }`}>
-                  {profile.status === 'approved' ? '✓ Approved' : 
-                   profile.status === 'pending' ? '⏳ Pending Review' : 
-                   '✗ Rejected'}
-                </span>
+            <div className="space-y-4">
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
+                    profile.status === 'approved' 
+                      ? 'bg-green-100 text-green-800'
+                      : profile.status === 'pending'
+                      ? 'bg-yellow-100 text-yellow-800'
+                      : 'bg-red-100 text-red-800'
+                  }`}>
+                    {profile.status === 'approved' ? '✓ Approved' : 
+                     profile.status === 'pending' ? '⏳ Pending Review' : 
+                     '✗ Rejected'}
+                  </span>
+                </div>
+                <div className="text-sm text-slate-600">
+                  {profile.status === 'approved' && 'Your mentor profile is active and visible to students.'}
+                  {profile.status === 'pending' && 'Your mentor profile is under review.'}
+                  {profile.status === 'rejected' && 'Your mentor profile has been rejected.'}
+                </div>
               </div>
-              <div className="text-sm text-slate-600">
-                {profile.status === 'approved' && 'Your mentor profile is active and visible to students.'}
-                {profile.status === 'pending' && 'Your profile is under review by the admin team.'}
-                {profile.status === 'rejected' && 'Your profile was not approved. Please contact support.'}
+              
+              <div className="border-t pt-4">
+                <h3 className="text-sm font-medium text-slate-700 mb-2">Consent Status</h3>
+                <div className="flex flex-wrap gap-2">
+                  <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${
+                    profile.consent1 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                  }`}>
+                    {profile.consent1 ? '✓ Privacy Policy' : '✗ Privacy Policy'}
+                  </span>
+                  <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${
+                    profile.consent2 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                  }`}>
+                    {profile.consent2 ? '✓ Terms of Service' : '✗ Terms of Service'}
+                  </span>
+                  <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${
+                    profile.consent3 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                  }`}>
+                    {profile.consent3 ? '✓ Code of Conduct' : '✗ Code of Conduct'}
+                  </span>
+                </div>
               </div>
             </div>
           </div>

@@ -601,28 +601,34 @@ const getOpportunityApplicants = async (req, res) => {
     const referrals = await OpportunityReferral.find({ opportunity: id })
       .populate({
         path: 'student',
-        select: 'firstName lastName email department role profilePicture'
+        select: 'firstName lastName email department avatar'
       })
       .sort({ createdAt: -1 })
 
-    const data = referrals.map((referral) => ({
-      id: referral._id,
-      student: {
-        id: referral.student._id,
-        name: `${referral.student.firstName} ${referral.student.lastName}`,
-        email: referral.student.email,
-        department: referral.student.department || 'Not specified',
-        role: referral.student.role || 'student',
-        profilePicture: referral.student.profilePicture || ''
-      },
-      proposal: referral.proposal,
-      resumeUrl: referral.resumeUrl,
-      resumeFileName: referral.resumeFileName,
-      status: referral.status,
-      submittedAt: referral.createdAt,
-      reviewedAt: referral.reviewedAt,
-      reviewerNote: referral.reviewerNote || ''
-    }))
+    const data = referrals.map((referral) => {
+      // Handle cases where student might not exist
+      const student = referral.student || {}
+      return {
+        id: referral._id,
+        student: {
+          id: student._id || '',
+          name: student.firstName && student.lastName 
+            ? `${student.firstName} ${student.lastName}` 
+            : student.email || 'Unknown Student',
+          email: student.email || 'No email',
+          department: student.department || 'Not specified',
+          role: student.role || 'student',
+          profilePicture: student.avatar || ''
+        },
+        proposal: referral.proposal || '',
+        resumeUrl: referral.resumeUrl || '',
+        resumeFileName: referral.resumeFileName || '',
+        status: referral.status || 'submitted',
+        submittedAt: referral.createdAt,
+        reviewedAt: referral.reviewedAt || null,
+        reviewerNote: referral.reviewerNote || ''
+      }
+    })
 
     return res.status(200).json({ success: true, data })
   } catch (error) {

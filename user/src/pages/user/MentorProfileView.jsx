@@ -345,6 +345,9 @@ const MentorProfileView = () => {
   const [feedbackSubmitting, setFeedbackSubmitting] = useState(false)
   const [selectedResource, setSelectedResource] = useState(null)
   const [resourceFeedbacks, setResourceFeedbacks] = useState([])
+  
+  // Reviews state
+  const [reviews, setReviews] = useState([])
 
   // Handle resource download with feedback
   const handleResourceDownload = (resource) => {
@@ -444,6 +447,34 @@ const MentorProfileView = () => {
 
     if (mentorId) {
       fetchMentorDetails()
+    }
+  }, [mentorId])
+
+  // Fetch mentor reviews
+  useEffect(() => {
+    const fetchMentorReviews = async () => {
+      try {
+        console.log('=== FETCHING MENTOR REVIEWS ===')
+        console.log('Mentor ID:', mentorId)
+        const response = await get(`/api/mentors/${mentorId}/reviews`)
+        console.log('Mentor reviews response:', response)
+        console.log('Response data:', response.data)
+        console.log('Response type:', typeof response)
+        
+        // Handle both direct array and object with data property
+        const reviewsData = Array.isArray(response) ? response : (response.data || response || [])
+        console.log('Setting reviews:', reviewsData)
+        console.log('Reviews length:', reviewsData.length)
+        
+        setReviews(reviewsData)
+      } catch (err) {
+        console.error('Error fetching mentor reviews:', err)
+        console.error('Error details:', err.response?.data || err.message)
+      }
+    }
+
+    if (mentorId) {
+      fetchMentorReviews()
     }
   }, [mentorId])
 
@@ -908,19 +939,31 @@ const MentorProfileView = () => {
               <div className="flex items-center gap-6 mb-6 p-4 bg-slate-50 rounded-lg">
                 <div className="text-center">
                   <div className="text-3xl font-bold text-slate-900">
-                    {mentor.rating ? mentor.rating.toFixed(1) : '0.0'}
+                    {reviews.length > 0 ? 
+                      (reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length).toFixed(1) : 
+                      '0.0'
+                    }
                   </div>
                   <div className="flex text-amber-500">
-                    {[1, 2, 3, 4, 5].map(star => (
-                      <span key={star}>
-                        {mentor.rating && star <= Math.round(mentor.rating) ? '⭐' : '☆'}
-                      </span>
-                    ))}
+                    {[1, 2, 3, 4, 5].map(star => {
+                      const averageRating = reviews.length > 0 ? 
+                        reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length : 0
+                      return (
+                        <span key={star}>
+                          {star <= Math.round(averageRating) ? '⭐' : '☆'}
+                        </span>
+                      )
+                    })}
                   </div>
                   <p className="text-sm text-slate-500 mt-1">Overall Rating</p>
                 </div>
                 <div className="flex-1">
-                  <p className="text-slate-600">This mentor hasn't received any reviews yet.</p>
+                  <p className="text-slate-600">
+                    {reviews.length > 0 ? 
+                      `Based on ${reviews.length} review${reviews.length !== 1 ? 's' : ''}` : 
+                      'This mentor hasn\'t received any reviews yet.'
+                    }
+                  </p>
                   <p className="text-sm text-slate-500 mt-1">Be the first to share your experience!</p>
                 </div>
               </div>
@@ -965,11 +1008,48 @@ const MentorProfileView = () => {
               {/* Reviews List */}
               <div className="space-y-4">
                 <h3 className="font-semibold text-slate-800">Recent Reviews</h3>
-                <div className="text-center py-8 text-slate-500 border-2 border-dashed border-slate-200 rounded-lg">
-                  <div className="text-3xl mb-2">💬</div>
-                  <p>No reviews yet</p>
-                  <p className="text-sm text-slate-400 mt-1">Reviews will appear here once mentees share their feedback</p>
-                </div>
+                {reviews.length === 0 ? (
+                  <div className="text-center py-8 text-slate-500 border-2 border-dashed border-slate-200 rounded-lg">
+                    <div className="text-3xl mb-2">💬</div>
+                    <p>No reviews yet</p>
+                    <p className="text-sm text-slate-400 mt-1">Reviews will appear here once mentees share their feedback</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {reviews.map((review) => (
+                      <div key={review.id} className="bg-white border border-slate-200 rounded-lg p-4">
+                        <div className="flex justify-between items-start mb-3">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-3 mb-2">
+                              <div className="flex items-center">
+                                <div className="text-lg font-semibold text-slate-900">
+                                  {review.menteeName || 'Anonymous'}
+                                </div>
+                                <div className="flex text-amber-500">
+                                  {[1, 2, 3, 4, 5].map(star => (
+                                    <span key={star}>
+                                      {star <= review.rating ? '⭐' : '☆'}
+                                    </span>
+                                  ))}
+                                </div>
+                                <span className="text-sm text-slate-500 ml-2">({review.rating}/5)</span>
+                              </div>
+                              <span className="text-xs text-slate-500">
+                                {new Date(review.createdAt).toLocaleDateString()}
+                              </span>
+                            </div>
+                            
+                            <div className="text-sm text-slate-600">
+                              {review.feedback && (
+                                <p className="italic">"{review.feedback}"</p>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           </div>

@@ -19,6 +19,8 @@ const {
   verifyEmailOTP,
   resendEmailOTP,
   updatePassword,
+  verifyPassword,
+  deleteAccount,
   forgotPassword,
   verifyForgotPasswordOTP,
   resendForgotPasswordOTP,
@@ -43,6 +45,9 @@ router.put('/update-email', authMiddleware, updateEmail)
 router.put('/verify-email-otp', verifyEmailOTP)
 router.put('/resend-email-otp', resendEmailOTP)
 router.put('/update-password', authMiddleware, updatePassword)
+router.post('/change-password', authMiddleware, updatePassword) // Add POST route for change-password
+router.post('/verify-password', verifyPassword) // Remove auth middleware for initial verification
+router.delete('/delete-account', authMiddleware, deleteAccount)
 router.post('/forgot-password', forgotPassword)
 router.post('/verify-forgot-password-otp', verifyForgotPasswordOTP)
 router.post('/resend-forgot-password-otp', resendForgotPasswordOTP)

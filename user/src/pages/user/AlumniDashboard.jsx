@@ -117,11 +117,11 @@ const AlumniDashboard = () => {
         <header className="mb-8">
 
   <h1 className="text-3xl font-semibold text-slate-900">
-    Welcome back, {user?.name?.split(' ')[0] || 'User'}
+    Welcome back, {user?.firstName || user?.name?.split(' ')[0] || 'Alumni'}
   </h1>
 
   <p className="text-sm text-slate-500 mt-1">
-    Batch: {user?.profile?.graduationYear || user?.graduationYear || 'N/A'} • {user?.profile?.department || user?.department || 'Department'}
+    Batch: {user?.profile?.graduationYear || user?.graduationYear || user?.passoutYear || 'N/A'} • {user?.profile?.department || user?.department || 'Information Technology'}
   </p>
 
 </header>
@@ -212,21 +212,49 @@ const AlumniDashboard = () => {
 
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
 
-                  {events.slice(0,3).map(e => (
+                  {events.map(e => (
 
-                    <div key={e.id} className="bg-white border rounded-xl p-5">
+                    <div key={e.id} className="bg-white rounded-xl border border-slate-200 p-5 hover:shadow-md transition-shadow">
 
-                      <p className="font-semibold text-slate-900">
-                        {e.title}
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex-1">
+                          <h3 className="font-semibold text-slate-900 text-lg">
+                            {e.title}
+                          </h3>
+                          <p className="text-sm text-slate-600 mt-1">
+                            {e.date}
+                          </p>
+                          <p className="text-sm text-slate-500">
+                            {e.time}
+                          </p>
+                        </div>
+                        <span className="px-2 py-1 bg-purple-100 text-purple-700 text-xs font-medium rounded-full ml-3">
+                          {e.type}
+                        </span>
+                      </div>
+
+                      <p className="text-sm text-slate-600 mb-4 line-clamp-2">
+                        {e.description}
                       </p>
 
-                      <p className="text-sm text-slate-500">
-                        {e.date}
-                      </p>
-
-                      <p className="text-sm text-slate-400">
-                        {e.location}
-                      </p>
+                      <div className="flex gap-2">
+                        <button 
+                          onClick={() => window.location.href = `/dashboard/events/${e.id}`}
+                          className="px-3 -1 text-sm border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
+                        >
+                          View Details
+                        </button>
+                        <button 
+                          onClick={() => window.location.href = `/dashboard/events/${e.id}`}
+                          className={`px-3 -1 text-sm rounded-lg transition-colors ${
+                            e.isCreator 
+                              ? 'bg-green-600 text-white hover:bg-green-700' 
+                              : 'bg-purple-600 text-white hover:bg-purple-700'
+                          }`}
+                        >
+                          {e.isCreator ? 'Manage' : 'Register'}
+                        </button>
+                      </div>
 
                     </div>
 
@@ -236,8 +264,14 @@ const AlumniDashboard = () => {
 
               ) : (
 
-                <div className="bg-white border rounded-xl p-6 text-center text-slate-500">
-                  No upcoming events
+                <div className="bg-white rounded-xl border border-slate-200 p-8 text-center">
+                  <p className="text-slate-600 mb-4">No upcoming events</p>
+                  <button 
+                    onClick={() => window.location.href = '/dashboard/events/post'}
+                    className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                  >
+                    Create an Event
+                  </button>
                 </div>
 
               )}
@@ -253,39 +287,73 @@ const AlumniDashboard = () => {
                 Recent Activity
               </h2>
 
-              <div className="bg-white border rounded-xl p-6">
+              {recentActivity.length ? (
 
-                {recentActivity.length ? (
+                <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
 
-                  recentActivity.slice(0,5).map(a => (
+                  <table className="w-full">
+                    <thead className="bg-slate-50 border-b border-slate-200">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Activity</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Type</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Status</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Date</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-200">
+                      {recentActivity.map((activity) => (
+                        <tr key={activity.id} className="hover:bg-slate-50">
+                          <td className="px-6 py-4">
+                            <div>
+                              <p className="text-sm font-medium text-slate-900">{activity.title}</p>
+                              <p className="text-xs text-slate-500">{activity.subtitle}</p>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <span className="px-2 py-1 text-xs font-medium rounded-full bg-slate-100 text-slate-700">
+                              {activity.typeLabel}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4">
+                            <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                              activity.statusColor === 'green' ? 'bg-green-100 text-green-700' :
+                              activity.statusColor === 'yellow' ? 'bg-yellow-100 text-yellow-700' :
+                              activity.statusColor === 'red' ? 'bg-red-100 text-red-700' :
+                              activity.statusColor === 'purple' ? 'bg-purple-100 text-purple-700' :
+                              'bg-blue-100 text-blue-700'
+                            }`}>
+                              {activity.status}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 text-sm text-slate-600">{activity.date}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
 
-                    <div key={a.id} className="mb-4">
+                </div>
 
-                      <p className="text-sm font-semibold text-slate-900">
-                        {a.title}
-                      </p>
+              ) : (
 
-                      <p className="text-xs text-slate-400">
-                        {a.time}
-                      </p>
+                <div className="bg-white rounded-xl border border-slate-200 p-8 text-center">
+                  <p className="text-slate-600 mb-4">No recent activity</p>
+                  <div className="flex gap-3 justify-center">
+                    <button 
+                      onClick={() => window.location.href = '/dashboard/opportunities/post'}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                    >
+                      Post Opportunity
+                    </button>
+                    <button 
+                      onClick={() => window.location.href = '/dashboard/events/post'}
+                      className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                    >
+                      Create Event
+                    </button>
+                  </div>
+                </div>
 
-                      <p className="text-sm text-slate-600">
-                        {a.description}
-                      </p>
-
-                    </div>
-
-                  ))
-
-                ) : (
-
-                  <p className="text-slate-500 text-sm">
-                    No recent activity
-                  </p>
-
-                )}
-
-              </div>
+              )}
 
             </section>
 

@@ -13,6 +13,7 @@ router.get('/admin/all', authMiddleware, listAllEvents)
 // Public routes
 router.get('/', listEvents)
 router.get('/all', authMiddleware, listMyEvents)
+router.get('/mine', authMiddleware, listMyEvents)
 router.get('/registrations/me', authMiddleware, getMyRegistrations)
 router.get('/:id', authMiddleware, getEventById)
 router.get('/:id/registrations', authMiddleware, getEventRegistrations)

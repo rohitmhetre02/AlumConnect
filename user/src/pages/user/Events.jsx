@@ -112,9 +112,10 @@ const Events = () => {
               <EventSkeleton key={index} />
             ))
           : events.length > 0
-          ? events.map((event) => (
-              <EventCard key={event.id} event={event} />
-            ))
+          ? events.map((event) => {
+              const eventId = event._id || event.id
+              return eventId ? <EventCard key={eventId} event={event} /> : null
+            })
           : (
             <div className="col-span-full rounded-3xl border border-dashed border-slate-200 bg-white p-12 text-center">
               <h3 className="text-lg font-semibold text-slate-900">
@@ -133,6 +134,13 @@ const Events = () => {
 }
 
 const EventCard = ({ event }) => {
+  // Use _id instead of id (MongoDB format)
+  const eventId = event._id || event.id
+  
+  // Don't render card if event has no ID
+  if (!eventId) {
+    return null
+  }
 
   const coverImage =
     event.coverImage && !event.coverImage.startsWith('blob:')
@@ -145,7 +153,7 @@ const EventCard = ({ event }) => {
 
   return (
     <Link
-      to={`/dashboard/events/${event.id}`}
+      to={`/dashboard/events/${eventId}`}
       className="group flex h-full flex-col overflow-hidden rounded-3xl bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-lg"
     >
       <div className="relative h-44 w-full overflow-hidden">

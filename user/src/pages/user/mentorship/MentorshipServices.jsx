@@ -110,7 +110,7 @@ const MentorshipServices = () => {
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Duration</label>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Duration( minutes )</label>
                 <input
                   type="text"
                   value={formData.duration}

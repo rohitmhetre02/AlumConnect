@@ -237,14 +237,13 @@ const MentorRecommendations = ({ preferences, onPreferencesChange, onFilteredMen
                 </div>
               </div>
             </div>
-
             {/* Skills */}
             <div className="mb-4">
               <h4 className="text-sm font-medium text-slate-700 mb-2">Skills</h4>
               <div className="flex flex-wrap gap-2">
-                {mentor.expertise?.slice(0, 5).map((skill, skillIndex) => (
+                {mentor.expertise?.slice(0, 5).map((skill) => (
                   <span
-                    key={skillIndex}
+                    key={skill}
                     className="px-2 py-1 bg-slate-100 text-slate-700 text-xs rounded-full"
                   >
                     {skill}

@@ -766,17 +766,19 @@ const getMyProfile = async (req, res) => {
 
 
 
-    if (!role || role.toLowerCase() !== 'alumni') {
+    // First check if user has alumni/mentor role
+    if (!role || (role.toLowerCase() !== 'alumni' && role.toLowerCase() !== 'mentor')) {
 
-      return res.status(403).json({ message: 'Only alumni can view their mentor profile.' })
+      return res.status(403).json({ message: 'Only alumni/mentors can view their mentor profile.' })
 
     }
 
 
 
-    const application = await MentorApplication.findOne({ user: userId }).populate('user')
+    // Look for Alumni record first (this is where mentor profiles are stored)
+    const alumnus = await Alumni.findById(userId)
 
-    if (!application) {
+    if (!alumnus) {
 
       return res.status(404).json({ message: 'Mentor profile not found.' })
 
@@ -784,19 +786,23 @@ const getMyProfile = async (req, res) => {
 
 
 
-    const [services, resources, alumnus] = await Promise.all([
+    // Also check for MentorApplication if it exists
+    const application = await MentorApplication.findOne({ user: userId }).populate('user')
+
+
+
+    const [services, resources] = await Promise.all([
 
       MentorService.find({ user: userId }),
 
-      MentorResource.find({ user: userId }),
-
-      Alumni.findById(userId)
+      MentorResource.find({ user: userId })
 
     ])
 
 
 
-    const result = formatMentor(application, alumnus || application.user, { services, resources })
+    // Use Alumni as primary source, fall back to application if needed
+    const result = formatMentor(application || alumnus, alumnus, { services, resources })
 
     return res.status(200).json(result)
 

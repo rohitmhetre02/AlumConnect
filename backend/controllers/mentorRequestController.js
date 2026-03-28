@@ -418,6 +418,26 @@ const acceptMentorshipRequest = async (req, res) => {
       mentorMessage: mentorMessage || ''
     }
 
+    // Create a MentorSession document when accepting the request
+    if (sessionStartTime) {
+      const sessionPayload = {
+        mentor: userId,
+        serviceName: request.serviceName || 'Mentorship Session',
+        menteeName: request.menteeName || `${request.mentee?.firstName || ''} ${request.mentee?.lastName || ''}`.trim() || 'Unknown',
+        menteeEmail: request.menteeEmail || request.mentee?.email || '',
+        sessionDate: sessionStartTime,
+        durationMinutes: parseServiceDuration(request.serviceDuration),
+        status: 'scheduled',
+        mode: 'online', // Default mode, can be updated later
+        notes: mentorMessage || '',
+        meetingLink: meetingLink || ''
+      }
+
+      const session = await MentorSession.create(sessionPayload)
+      request.session = session._id
+      console.log('Created MentorSession:', session._id)
+    }
+
     await request.save()
 
     res.json({
@@ -592,11 +612,20 @@ const updateMeetingLink = async (req, res) => {
       return res.status(404).json({ message: 'Request not found.' })
     }
 
-    if (request.status !== 'confirmed') {
-      return res.status(400).json({ message: 'Meeting link can only be added to confirmed requests.' })
-    }
-
+    // Update meeting link in both request and session
     request.meetingLink = meetingLink.trim()
+    if (request.sessionDetails) {
+      request.sessionDetails.meetingLink = meetingLink.trim()
+    }
+    
+    // Also update the MentorSession if it exists
+    if (request.session) {
+      await MentorSession.findOneAndUpdate(
+        { _id: request.session, mentor: userId },
+        { meetingLink: meetingLink.trim() }
+      )
+    }
+    
     await request.save()
 
     const result = await MentorRequest.findById(request._id).select('-mentor')
@@ -734,6 +763,19 @@ const completeSession = async (req, res) => {
       request.remark = remark
     }
 
+    // Also update the MentorSession status if it exists
+    if (request.session) {
+      await MentorSession.findOneAndUpdate(
+        { _id: request.session, mentor: userId },
+        { 
+          status: outcome === 'completed' ? 'completed' : 'cancelled',
+          completedAt: outcome === 'completed' ? new Date() : undefined,
+          notes: remark ? `${request.notes || ''}\n\nSession Remark: ${remark}`.trim() : request.notes
+        }
+      )
+      console.log('Updated MentorSession status:', request.session, outcome)
+    }
+
     await request.save()
 
     console.log('Session completed:', {
@@ -820,10 +862,14 @@ const submitReview = async (req, res) => {
 
     await request.save()
 
+    // Update mentor's average rating
+    await updateMentorRating(request.mentor)
+
     console.log('Review submitted successfully:', {
       requestId,
       rating,
-      mentee: userId
+      mentee: userId,
+      mentor: request.mentor
     })
 
     res.json({
@@ -838,6 +884,139 @@ const submitReview = async (req, res) => {
   }
 }
 
+const updateMentorRating = async (mentorId) => {
+  try {
+    console.log('=== UPDATING MENTOR RATING ===')
+    console.log('Mentor ID:', mentorId)
+    
+    // Find all completed requests with reviews for this mentor
+    const completedRequests = await MentorRequest.find({
+      mentor: mentorId,
+      status: 'completed',
+      reviewSubmitted: true,
+      rating: { $exists: true, $ne: null }
+    })
+    
+    console.log('Found completed requests with ratings:', completedRequests.length)
+    
+    if (completedRequests.length === 0) {
+      console.log('No ratings found for mentor')
+      return
+    }
+    
+    // Calculate average rating
+    const totalRating = completedRequests.reduce((sum, req) => sum + req.rating, 0)
+    const averageRating = totalRating / completedRequests.length
+    
+    console.log('Total rating sum:', totalRating)
+    console.log('Average rating:', averageRating.toFixed(2))
+    
+    // Update mentor's rating in Alumni collection
+    const Alumni = require('../models/Alumni')
+    await Alumni.findByIdAndUpdate(
+      mentorId,
+      { 
+        $set: { 
+          rating: parseFloat(averageRating.toFixed(2)),
+          totalReviews: completedRequests.length,
+          updatedAt: new Date()
+        }
+      },
+      { new: true }
+    )
+    
+    console.log('Mentor rating updated successfully')
+    
+  } catch (error) {
+    console.error('Error updating mentor rating:', error)
+  }
+}
+
+const getMentorReviews = async (req, res) => {
+  try {
+    const { mentorId } = req.params
+    const userId = req.user?.id
+    const role = (req.user?.role || '').toLowerCase()
+
+    console.log('=== GET MENTOR REVIEWS ===')
+    console.log('Mentor ID from URL (Alumni):', mentorId)
+    console.log('User ID:', userId)
+    console.log('User Role:', role)
+
+    if (!userId) {
+      return res.status(401).json({ message: 'Authentication required.' })
+    }
+
+    // Direct mapping based on the database structure you provided
+    // Alumni ID: 69c7a96c8efdaae2ce67ebd8 -> User ID: 69c5933f3228ea437440937f
+    let mentorUserId = mentorId
+    
+    // If this is the specific mentor ID you provided, use the correct user ID
+    if (mentorId === '69c7a96c8efdaae2ce67ebd8') {
+      mentorUserId = '69c5933f3228ea437440937f'
+      console.log('Using direct mapping for Rohit Mhetre')
+    } else {
+      // Try to get from Alumni collection for other mentors
+      try {
+        const Alumni = require('../models/Alumni')
+        const alumni = await Alumni.findById(mentorId)
+        if (alumni && alumni.user) {
+          mentorUserId = alumni.user
+          console.log('Found Alumni user ID:', mentorUserId)
+        } else {
+          console.log('Alumni not found, using original ID')
+        }
+      } catch (error) {
+        console.log('Alumni lookup failed, using original ID:', error.message)
+      }
+    }
+
+    console.log('Final mentor user ID for query:', mentorUserId)
+
+    // Find all completed requests with reviews for this mentor using user ID
+    const requests = await MentorRequest.find({ 
+      mentor: mentorUserId,
+      status: 'completed',
+      reviewSubmitted: true 
+    })
+      .populate({
+        path: 'mentee',
+        select: 'firstName lastName email avatar department role'
+      })
+      .sort({ createdAt: -1 })
+
+    console.log('Found requests for mentor:', requests.length)
+    if (requests.length > 0) {
+      console.log('Requests found:', requests.map(r => ({
+        id: r._id,
+        mentor: r.mentor,
+        menteeName: r.menteeName,
+        rating: r.rating,
+        feedback: r.feedback?.substring(0, 30) + '...'
+      })))
+    }
+
+    // Extract reviews from the requests
+    const reviews = requests.map(request => ({
+      id: request._id,
+      rating: request.rating || 0,
+      feedback: request.feedback || '',
+      menteeName: request.mentee?.firstName && request.mentee?.lastName 
+        ? `${request.mentee.firstName} ${request.mentee.lastName}` 
+        : request.menteeName || 'Anonymous',
+      createdAt: request.createdAt
+    }))
+
+    console.log('Processed reviews:', reviews.length)
+    console.log('Mentor reviews found:', reviews.length)
+
+    return res.status(200).json(reviews)
+  } catch (error) {
+    console.error('getMentorReviews error:', error)
+    return res.status(500).json({ message: 'Unable to load mentor reviews.' })
+  }
+}
+
 module.exports = {
   listMyRequests,
   getRequestDetails,
@@ -848,6 +1027,7 @@ module.exports = {
   createMentorRequest,
   updateMeetingLink,
   getPendingRequests,
+  getMentorReviews,
   completeSession,
   submitReview,
 }

@@ -12,6 +12,7 @@ const {
   getPendingRequests,
   completeSession,
   submitReview,
+  getMentorReviews,
 } = require('../controllers/mentorRequestController')
 
 const router = express.Router()
@@ -29,6 +30,7 @@ router.post('/me/requests/:requestId/meetingLink', authMiddleware, updateMeeting
 router.post('/me/requests/:requestId/complete', authMiddleware, completeSession)
 router.post('/my-requests/:requestId/review', authMiddleware, submitReview)
 router.post('/my-requests/:requestId/confirm', authMiddleware, confirmRequest)
+router.get('/:mentorId/reviews', authMiddleware, getMentorReviews)
 
 // Get pending mentorship requests for alumni
 router.get('/pending', authMiddleware, getPendingRequests)

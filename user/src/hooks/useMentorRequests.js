@@ -37,7 +37,7 @@ const normalizeRequest = (request = {}) => {
 
   return {
     id: request.id || request._id || '',
-    mentorId: toId(request.mentor),
+    mentorId: toId(request.mentor?._id || request.mentor?.id || request.mentorId || request.mentor),
     menteeId: toId(request.mentee),
     serviceId: toId(request.service),
     serviceName: request.serviceName || '',
@@ -53,9 +53,11 @@ const normalizeRequest = (request = {}) => {
     passoutYear: request.passoutYear || '',
     menteeSkills: Array.isArray(request.menteeSkills) ? request.menteeSkills.filter(Boolean) : [],
     requestMessage: request.requestMessage || '',
-    mentorName: request.mentorName || '',
-    mentorEmail: request.mentorEmail || '',
-    mentorAvatar: request.mentorAvatar || '',
+    mentorName: request.mentorName || request.mentor?.firstName && request.mentor?.lastName ? 
+      `${request.mentor.firstName} ${request.mentor.lastName}` : 
+      request.mentorName || '',
+    mentorEmail: request.mentorEmail || request.mentor?.email || '',
+    mentorAvatar: request.mentorAvatar || request.mentor?.avatar || '',
     preferredDateTime,
     preferredMode: request.preferredMode || request.serviceMode || 'online',
     scheduledDateTime,
@@ -74,6 +76,8 @@ const normalizeRequest = (request = {}) => {
     updatedAt,
     // Include populated mentee data if available
     mentee: request.mentee || null,
+    // Include populated mentor data if available
+    mentor: request.mentor || null,
     // Include sessionDetails with new fields
     sessionDetails: request.sessionDetails || null,
   }

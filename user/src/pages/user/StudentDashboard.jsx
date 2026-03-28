@@ -1,5 +1,6 @@
 import { useAuth } from '../../context/AuthContext'
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import useStudentDashboard from '../../hooks/useStudentDashboard'
 import InteractiveCalendar from '../../components/shared/InteractiveCalendar'
 import useCalendarNotes from '../../hooks/useCalendarNotes'
@@ -7,31 +8,30 @@ import useCalendarNotes from '../../hooks/useCalendarNotes'
 const StudentDashboard = () => {
   const { user } = useAuth()
   const [selectedDate, setSelectedDate] = useState(null)
-  const { overviewStats, events, applications, calendarData, loading, error, refresh } = useStudentDashboard()
+  const { overviewStats, events, applications, allActivities, calendarData, loading, error, refresh } = useStudentDashboard()
   const { notes, addNote, deleteNote, loading: notesLoading } = useCalendarNotes()
 
-  // Helper function to determine current year
+  // Helper function to get current year from database
   const getCurrentYear = () => {
-    const currentYear = new Date().getFullYear()
-    const graduationYear = user?.profile?.graduationYear
+    // For student dashboard, only use currentYear from database profile
+    const currentYear = user?.currentYear || user?.profile?.currentYear
     
-    // Debug logging (remove in production)
-    console.log('Current Year:', currentYear)
-    console.log('Graduation Year:', graduationYear)
-    
-    // If no graduation year, default to 1st Year
-    if (!graduationYear) return '1st Year'
-    
-    const yearDifference = graduationYear - currentYear
-    console.log('Year Difference:', yearDifference)
-    
-    // More robust logic for academic year calculation
-    if (yearDifference > 3.5) return '1st Year'
-    if (yearDifference > 2.5) return '2nd Year'  
-    if (yearDifference > 1.5) return '3rd Year'
-    if (yearDifference > 0.5) return 'Final Year'
-    if (yearDifference > 0) return 'Final Year'
-    return 'Alumni'
+    // If no currentYear in database, default to 1st Year
+    return currentYear || '1st Year'
+  }
+
+  // Helper function to get user display name
+  const getUserDisplayName = () => {
+    const firstName = user?.firstName
+    const name = user?.name
+    if (firstName) return firstName
+    if (name) return name.split(' ')[0]
+    return 'Student'
+  }
+
+  // Helper function to get user department
+  const getUserDepartment = () => {
+    return user?.department || user?.profile?.department || 'Not specified'
   }
 
   const colorClasses = {
@@ -114,10 +114,10 @@ const StudentDashboard = () => {
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
             <div>
               <h1 className="text-3xl font-bold text-slate-900">
-                Welcome back, {user?.name?.split(' ')[0] || 'Student'}! 👋
+                Welcome back, {getUserDisplayName()}! 👋
               </h1>
               <p className="text-slate-600 mt-1">
-                Department: {user?.profile?.department || 'Computer Science'} • {getCurrentYear()}
+                Department: {getUserDepartment()} • {getCurrentYear()}
               </p>
             </div>
            
@@ -132,8 +132,8 @@ const StudentDashboard = () => {
             <div className="flex items-start justify-between">
               <div>
                 <p className="text-sm font-medium text-slate-600">Available Job Opportunities</p>
-                <p className="text-2xl font-bold text-slate-900 mt-1">{overviewStats.availableJobs}</p>
-                <p className="text-sm text-slate-500 mt-1">{overviewStats.jobsTrend}</p>
+                <p className="text-2xl font-bold text-slate-900 mt-1">{overviewStats.availableJobs || 0}</p>
+                <p className="text-sm text-slate-500 mt-1">{overviewStats.availableJobs > 0 ? 'Available now' : 'No opportunities'}</p>
               </div>
               <div className="p-3 rounded-xl bg-white/50">
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -147,8 +147,8 @@ const StudentDashboard = () => {
             <div className="flex items-start justify-between">
               <div>
                 <p className="text-sm font-medium text-slate-600">Upcoming Events</p>
-                <p className="text-2xl font-bold text-slate-900 mt-1">{overviewStats.upcomingEvents}</p>
-                <p className="text-sm text-slate-500 mt-1">{overviewStats.eventsTrend}</p>
+                <p className="text-2xl font-bold text-slate-900 mt-1">{overviewStats.upcomingEvents || 0}</p>
+                <p className="text-sm text-slate-500 mt-1">{overviewStats.upcomingEvents > 0 ? 'Events scheduled' : 'No events'}</p>
               </div>
               <div className="p-3 rounded-xl bg-white/50">
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -162,8 +162,8 @@ const StudentDashboard = () => {
             <div className="flex items-start justify-between">
               <div>
                 <p className="text-sm font-medium text-slate-600">Applications Applied</p>
-                <p className="text-2xl font-bold text-slate-900 mt-1">{overviewStats.applicationsApplied}</p>
-                <p className="text-sm text-slate-500 mt-1">{overviewStats.applicationsTrend}</p>
+                <p className="text-2xl font-bold text-slate-900 mt-1">{overviewStats.applicationsApplied || 0}</p>
+                <p className="text-sm text-slate-500 mt-1">{overviewStats.applicationsApplied > 0 ? 'Applications sent' : 'No applications'}</p>
               </div>
               <div className="p-3 rounded-xl bg-white/50">
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -177,8 +177,8 @@ const StudentDashboard = () => {
             <div className="flex items-start justify-between">
               <div>
                 <p className="text-sm font-medium text-slate-600">Active Donation Campaigns</p>
-                <p className="text-2xl font-bold text-slate-900 mt-1">{overviewStats.activeDonations}</p>
-                <p className="text-sm text-slate-500 mt-1">{overviewStats.donationsTrend}</p>
+                <p className="text-2xl font-bold text-slate-900 mt-1">{overviewStats.activeDonations || 0}</p>
+                <p className="text-sm text-slate-500 mt-1">{overviewStats.activeDonations > 0 ? 'Campaigns active' : 'No campaigns'}</p>
               </div>
               <div className="p-3 rounded-xl bg-white/50">
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -197,8 +197,8 @@ const StudentDashboard = () => {
             <div>
               <h2 className="text-xl font-bold text-slate-900 mb-4">Upcoming Events</h2>
               {events.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {events.slice(0, 4).map((event) => (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {events.map((event) => (
                     <div key={event.id} className="bg-white rounded-xl border border-slate-200 p-5 hover:shadow-md">
                       <div className="flex items-start justify-between mb-3">
                         <div>
@@ -211,10 +211,14 @@ const StudentDashboard = () => {
                       </div>
                       <p className="text-sm text-slate-600 mb-3 line-clamp-2">{event.description}</p>
                       <div className="flex gap-2">
-                        <button className="px-3 py-1 text-sm border border-slate-200 rounded-lg hover:bg-slate-50">
+                        <Link 
+                          to={`/dashboard/events/${event.id}`}
+                          className="px-3 py-1 text-sm border border-slate-200 rounded-lg hover:bg-slate-50"
+                        >
                           View Details
-                        </button>
-                        <button 
+                        </Link>
+                        <Link 
+                          to={`/dashboard/events/${event.id}`}
                           className={`px-3 py-1 text-sm rounded-lg transition-colors ${
                             event.isRegistered 
                               ? 'bg-green-600 text-white hover:bg-green-700' 
@@ -222,7 +226,7 @@ const StudentDashboard = () => {
                           }`}
                         >
                           {event.isRegistered ? 'Registered' : 'Register'}
-                        </button>
+                        </Link>
                       </div>
                     </div>
                   ))}
@@ -237,28 +241,37 @@ const StudentDashboard = () => {
             {/* Latest Activity Section */}
             <div>
               <h2 className="text-xl font-bold text-slate-900 mb-4">Latest Activity</h2>
-              {applications.length > 0 ? (
+              {allActivities.length > 0 ? (
                 <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
                   <table className="w-full">
                     <thead className="bg-slate-50 border-b border-slate-200">
                       <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Job Title</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Company</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Activity</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Type</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Status</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Date Applied</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Date</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-200">
-                      {applications.slice(0, 5).map((app) => (
-                        <tr key={app.id} className="hover:bg-slate-50">
-                          <td className="px-6 py-4 text-sm font-medium text-slate-900">{app.title}</td>
-                          <td className="px-6 py-4 text-sm text-slate-600">{app.company}</td>
+                      {allActivities.map((activity) => (
+                        <tr key={activity.id} className="hover:bg-slate-50">
                           <td className="px-6 py-4">
-                            <span className={`px-2 py-1 text-xs font-medium rounded-full ${statusColorClasses[app.statusColor]}`}>
-                              {app.status}
+                            <div>
+                              <p className="text-sm font-medium text-slate-900">{activity.title}</p>
+                              <p className="text-xs text-slate-500">{activity.subtitle}</p>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <span className="px-2 py-1 text-xs font-medium rounded-full bg-slate-100 text-slate-700">
+                              {activity.typeLabel}
                             </span>
                           </td>
-                          <td className="px-6 py-4 text-sm text-slate-600">{app.date}</td>
+                          <td className="px-6 py-4">
+                            <span className={`px-2 py-1 text-xs font-medium rounded-full ${statusColorClasses[activity.statusColor]}`}>
+                              {activity.status}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 text-sm text-slate-600">{activity.date}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -283,7 +296,6 @@ const StudentDashboard = () => {
                 initialNotes={notes}
                 onNotesChange={(updatedNotes) => {
                   // Handle notes update if needed
-                  console.log('Calendar notes updated:', updatedNotes)
                 }}
               />
             </div>

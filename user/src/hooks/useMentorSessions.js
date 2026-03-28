@@ -14,10 +14,13 @@ const normalizeSession = (session = {}) => {
     menteeAvatar: session.menteeAvatar || '',
     serviceName: session.serviceName || '',
     sessionDate: session.sessionDate ? new Date(session.sessionDate) : null,
+    scheduledDate: session.sessionDate || session.sessionDate, // For compatibility with UI
     durationMinutes: typeof session.durationMinutes === 'number' ? session.durationMinutes : Number(session.durationMinutes ?? 0),
-    status: session.status || 'completed',
+    status: session.status || 'scheduled',
     mode: session.mode || 'online',
     notes: session.notes || '',
+    meetingLink: session.meetingLink || '',
+    completedAt: session.completedAt ? new Date(session.completedAt) : null,
     feedback: session.feedback
       ? {
           rating: typeof session.feedback.rating === 'number' ? session.feedback.rating : null,

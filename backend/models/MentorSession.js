@@ -83,6 +83,14 @@ const mentorSessionSchema = new mongoose.Schema(
       trim: true,
       default: '',
     },
+    meetingLink: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+    completedAt: {
+      type: Date,
+    },
     feedback: feedbackSchema,
   },
   {

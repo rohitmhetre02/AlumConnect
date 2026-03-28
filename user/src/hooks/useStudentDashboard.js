@@ -18,6 +18,8 @@ export const useStudentDashboard = () => {
   })
   const [myApplications, setMyApplications] = useState([])
   const [myRegistrations, setMyRegistrations] = useState([])
+  const [myDonations, setMyDonations] = useState([])
+  const [myMentorshipRequests, setMyMentorshipRequests] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const addToast = useToast()
@@ -38,28 +40,62 @@ export const useStudentDashboard = () => {
       const applications = Array.isArray(applicationsResponse?.data) ? applicationsResponse.data : []
       
       // Fetch student's event registrations
-      const registrationsResponse = await get('/event-registrations/mine')
+      const registrationsResponse = await get('/events/registrations/me')
       const registrations = Array.isArray(registrationsResponse?.data) ? registrationsResponse.data : []
 
+      // Fetch student's donations (using correct endpoint)
+      const donationsResponse = await get('/campaigns/donations/user')
+      const donations = Array.isArray(donationsResponse?.data) ? donationsResponse.data : []
+
+      // Fetch student's mentorship requests (using correct endpoint)
+      const mentorshipResponse = await get('/mentors/me/requests')
+      const mentorshipRequests = Array.isArray(mentorshipResponse?.data) ? mentorshipResponse.data : []
+
       // Calculate overview stats
+      const upcomingEvents = events.filter(event => {
+        // Try multiple date fields and handle invalid dates
+        let eventDate = null
+        
+        if (event.startAt) {
+          eventDate = new Date(event.startAt)
+        } else if (event.date) {
+          eventDate = new Date(event.date)
+        } else if (event.createdAt) {
+          eventDate = new Date(event.createdAt)
+        }
+        
+        // If no valid date found, don't include the event
+        if (!eventDate || isNaN(eventDate.getTime())) {
+          return false
+        }
+        
+        // Check if event is in the future (more than 1 hour from now)
+        const oneHourFromNow = new Date(Date.now() + 60 * 60 * 1000)
+        return eventDate > oneHourFromNow
+      })
+      
+      const activeDonations = donations.filter(donation => {
+        if (!donation.deadline) return false
+        const deadlineDate = new Date(donation.deadline)
+        return !isNaN(deadlineDate.getTime()) && deadlineDate > new Date() && (donation.isActive !== false)
+      })
+      
       const stats = {
         availableJobs: opportunities.length,
-        upcomingEvents: events.filter(event => new Date(event.startAt) > new Date()).length,
+        upcomingEvents: upcomingEvents.length,
         applicationsApplied: applications.length,
-        activeDonations: donations.filter(donation => 
-          new Date(donation.deadline) > new Date() && (donation.isActive !== false)
-        ).length,
-        jobsTrend: `+${Math.floor(Math.random() * 10)} this week`, // You can calculate real trends
-        eventsTrend: `+${Math.floor(Math.random() * 5)} this month`,
-        applicationsTrend: `+${Math.floor(Math.random() * 8)} this week`,
-        donationsTrend: `${donations.filter(d => 
-          new Date(d.deadline) - new Date() < 7 * 24 * 60 * 60 * 1000
-        ).length} ending soon`
+        activeDonations: activeDonations.length,
+        jobsTrend: opportunities.length > 0 ? 'Available now' : 'No opportunities',
+        eventsTrend: upcomingEvents.length > 0 ? `${upcomingEvents.length} scheduled` : 'No events',
+        applicationsTrend: applications.length > 0 ? `${applications.length} submitted` : 'No applications',
+        donationsTrend: activeDonations.length > 0 ? `${activeDonations.length} active` : 'No campaigns'
       }
 
       setOverviewStats(stats)
       setMyApplications(applications)
       setMyRegistrations(registrations)
+      setMyDonations(donations)
+      setMyMentorshipRequests(mentorshipRequests)
     } catch (fetchError) {
       setError(fetchError)
       addToast?.({
@@ -80,26 +116,58 @@ export const useStudentDashboard = () => {
 
   // Get formatted events for student
   const formattedEvents = useMemo(() => {
-    return events
-      .filter(event => new Date(event.startAt) > new Date())
-      .slice(0, 4)
-      .map(event => ({
-        id: event.id,
+    const upcomingEvents = events.filter(event => {
+      // Try multiple date fields and handle invalid dates
+      let eventDate = null
+      
+      if (event.startAt) {
+        eventDate = new Date(event.startAt)
+      } else if (event.date) {
+        eventDate = new Date(event.date)
+      } else if (event.createdAt) {
+        eventDate = new Date(event.createdAt)
+      }
+      
+      // If no valid date found, don't include the event
+      if (!eventDate || isNaN(eventDate.getTime())) {
+        return false
+      }
+      
+      // Check if event is in the future (more than 1 hour from now to avoid showing events that just started)
+      const oneHourFromNow = new Date(Date.now() + 60 * 60 * 1000)
+      return eventDate > oneHourFromNow
+    })
+    
+    // Sort by earliest upcoming events first
+    const sortedEvents = upcomingEvents.sort((a, b) => {
+      const dateA = new Date(a.startAt || a.date || a.createdAt)
+      const dateB = new Date(b.startAt || b.date || b.createdAt)
+      return dateA - dateB // Earliest first
+    })
+    
+    // Take only first 3 events
+    const formatted = sortedEvents.slice(0, 3).map(event => {
+      const eventDate = new Date(event.startAt || event.date || event.createdAt)
+      return {
+        id: event.id || event._id,
         title: event.title,
-        date: new Date(event.startAt).toLocaleDateString('en-US', { 
+        date: eventDate.toLocaleDateString('en-US', { 
           year: 'numeric', 
           month: 'long', 
           day: 'numeric' 
         }),
-        time: new Date(event.startAt).toLocaleTimeString('en-US', { 
+        time: eventDate.toLocaleTimeString('en-US', { 
           hour: 'numeric', 
           minute: '2-digit',
           hour12: true 
         }),
-        type: event.organization || 'Event',
+        type: event.organization || event.type || 'Event',
         description: event.description?.substring(0, 100) + '...' || 'Join this event',
-        isRegistered: myRegistrations.some(reg => reg.eventId === event.id)
-      }))
+        isRegistered: myRegistrations.some(reg => reg.eventId === event.id || reg.event === event._id)
+      }
+    })
+    
+    return formatted
   }, [events, myRegistrations])
 
   // Get formatted applications
@@ -116,9 +184,100 @@ export const useStudentDashboard = () => {
       }),
       statusColor: app.status === 'Applied' ? 'blue' : 
                    app.status === 'Reviewed' ? 'yellow' : 
-                   app.status === 'Shortlisted' ? 'green' : 'purple'
+                   app.status === 'Shortlisted' ? 'green' : 'purple',
+      type: 'application',
+      timestamp: new Date(app.appliedAt)
     }))
   }, [myApplications])
+
+  // Get all activities combined
+  const allActivities = useMemo(() => {
+    const activities = []
+    
+    // Add applications
+    myApplications.forEach(app => {
+      activities.push({
+        id: `app_${app.id}`,
+        title: `Applied to ${app.opportunity?.title || 'Opportunity'}`,
+        subtitle: app.opportunity?.company || 'Company',
+        status: app.status || 'Applied',
+        date: new Date(app.appliedAt).toLocaleDateString('en-US', { 
+          year: 'numeric', 
+          month: 'long', 
+          day: 'numeric' 
+        }),
+        type: 'application',
+        typeLabel: 'Job Application',
+        statusColor: app.status === 'Applied' ? 'blue' : 
+                     app.status === 'Reviewed' ? 'yellow' : 
+                     app.status === 'Shortlisted' ? 'green' : 'purple',
+        timestamp: new Date(app.appliedAt)
+      })
+    })
+    
+    // Add event registrations
+    myRegistrations.forEach(reg => {
+      activities.push({
+        id: `event_${reg.id}`,
+        title: `Registered for ${reg.event?.title || 'Event'}`,
+        subtitle: reg.event?.organization || 'Organization',
+        status: 'Registered',
+        date: new Date(reg.registeredAt || reg.createdAt).toLocaleDateString('en-US', { 
+          year: 'numeric', 
+          month: 'long', 
+          day: 'numeric' 
+        }),
+        type: 'event',
+        typeLabel: 'Event Registration',
+        statusColor: 'purple',
+        timestamp: new Date(reg.registeredAt || reg.createdAt)
+      })
+    })
+    
+    // Add donations
+    myDonations.forEach(donation => {
+      activities.push({
+        id: `donation_${donation.id}`,
+        title: `Donated to ${donation.campaign?.title || 'Campaign'}`,
+        subtitle: `Amount: ${donation.amount || 'N/A'}`,
+        status: 'Completed',
+        date: new Date(donation.donatedAt || donation.createdAt).toLocaleDateString('en-US', { 
+          year: 'numeric', 
+          month: 'long', 
+          day: 'numeric' 
+        }),
+        type: 'donation',
+        typeLabel: 'Campaign Donation',
+        statusColor: 'green',
+        timestamp: new Date(donation.donatedAt || donation.createdAt)
+      })
+    })
+    
+    // Add mentorship requests
+    myMentorshipRequests.forEach(request => {
+      activities.push({
+        id: `mentor_${request.id}`,
+        title: `Mentorship request to ${request.mentor?.name || 'Mentor'}`,
+        subtitle: request.subject || 'Request',
+        status: request.status || 'Pending',
+        date: new Date(request.createdAt).toLocaleDateString('en-US', { 
+          year: 'numeric', 
+          month: 'long', 
+          day: 'numeric' 
+        }),
+        type: 'mentorship',
+        typeLabel: 'Mentor Request',
+        statusColor: request.status === 'Accepted' ? 'green' : 
+                     request.status === 'Rejected' ? 'red' : 'yellow',
+        timestamp: new Date(request.createdAt)
+      })
+    })
+    
+    // Sort by timestamp (most recent first) and take top 5
+    return activities
+      .sort((a, b) => b.timestamp - a.timestamp)
+      .slice(0, 5)
+  }, [myApplications, myRegistrations, myDonations, myMentorshipRequests])
 
   // Get calendar data
   const calendarData = useMemo(() => {
@@ -161,12 +320,13 @@ export const useStudentDashboard = () => {
       overviewStats,
       events: formattedEvents,
       applications: formattedApplications,
+      allActivities,
       calendarData,
       loading: loading || opportunitiesLoading || eventsLoading || donationsLoading,
       error,
       refresh: fetchStudentData,
     }),
-    [overviewStats, formattedEvents, formattedApplications, calendarData, loading, opportunitiesLoading, eventsLoading, donationsLoading, error, fetchStudentData]
+    [overviewStats, formattedEvents, formattedApplications, allActivities, calendarData, loading, opportunitiesLoading, eventsLoading, donationsLoading, error, fetchStudentData]
   )
 }
 

@@ -62,24 +62,22 @@ const ContentPosted = () => {
     }
 
     try {
-      const [opportunitiesRes, eventsRes, donationsRes] = await Promise.all([
+      const [opportunitiesRes, eventsRes, campaignsRes] = await Promise.all([
         get('/api/opportunities/mine'),
         get('/api/events/mine'),
-        get('/api/donations/mine')
+        get('/api/campaigns/mine')
       ])
+
+      console.log('🔍 [DEBUG] Opportunities data:', opportunitiesRes?.data)
+      console.log('🔍 [DEBUG] Events data:', eventsRes?.data)
+      console.log('🔍 [DEBUG] Campaigns data:', campaignsRes?.data)
 
       setOpportunities(opportunitiesRes?.data || [])
       setEvents(eventsRes?.data || [])
-      setDonations(donationsRes?.data || [])
-
-      // Try to fetch campaigns separately with error handling
-      try {
-        const campaignsRes = await get('/api/campaigns/mine')
-        setCampaigns(campaignsRes?.data || [])
-      } catch (campaignError) {
-        console.log('Campaigns not available yet, skipping...')
-        setCampaigns([])
-      }
+      setCampaigns(campaignsRes?.data || [])
+      
+      // Set donations to same as campaigns since they are the same thing
+      setDonations(campaignsRes?.data || [])
     } catch (error) {
       console.error('Failed to fetch user content:', error)
     } finally {

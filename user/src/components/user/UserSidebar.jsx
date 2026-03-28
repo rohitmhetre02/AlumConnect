@@ -264,7 +264,7 @@ const UserSidebar = ({ isMobile = false, onClose }) => {
     { label: 'Mentorship Requests', path: '/dashboard/mentorship-requests', icon: <MessageSquare size={14} /> },
     { label: 'Registered Events', path: '/dashboard/registered-events', icon: <Calendar size={14} /> },
     { label: 'Connections', path: '/dashboard/connections', icon: <Connections size={14} /> },
-    { label: 'My Campaigns', path: '/dashboard/campaigns', icon: <Heart size={14} /> },
+    { label: 'My Campaigns', path: '/dashboard/my-campaigns', icon: <Heart size={14} /> },
     { label: 'Insights', path: '/dashboard/insights', icon: <BarChart size={14} /> }
   ]
 
