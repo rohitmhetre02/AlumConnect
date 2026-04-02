@@ -8,8 +8,12 @@ import useCalendarNotes from '../../hooks/useCalendarNotes'
 const StudentDashboard = () => {
   const { user } = useAuth()
   const [selectedDate, setSelectedDate] = useState(null)
+  const [showNoteModal, setShowNoteModal] = useState(false)
+  const [noteCategory, setNoteCategory] = useState('mentorship')
+  const [noteText, setNoteText] = useState('')
+  const [editingNote, setEditingNote] = useState(null)
   const { overviewStats, events, applications, allActivities, calendarData, loading, error, refresh } = useStudentDashboard()
-  const { notes, addNote, deleteNote, loading: notesLoading } = useCalendarNotes()
+  const { notes, addNote, updateNote, deleteNote, getNoteForDate, loading: notesLoading } = useCalendarNotes()
 
   // Helper function to get current year from database
   const getCurrentYear = () => {
@@ -31,7 +35,71 @@ const StudentDashboard = () => {
 
   // Helper function to get user department
   const getUserDepartment = () => {
-    return user?.department || user?.profile?.department || 'Not specified'
+    const department = user?.department || user?.profile?.department
+    return department || 'Computer Science'
+  }
+
+  const handleDateClick = (date) => {
+    console.log('Student Dashboard - handleDateClick called with date:', date)
+    setSelectedDate(date)
+    
+    // Check if note exists for this date
+    const existingNote = getNoteForDate(date)
+    console.log('Student Dashboard - Existing note for date:', existingNote)
+    if (existingNote) {
+      // Edit mode
+      setNoteCategory(existingNote.category)
+      setNoteText(existingNote.noteText)
+      setEditingNote(existingNote)
+    } else {
+      // Add mode
+      setNoteCategory('mentorship')
+      setNoteText('')
+      setEditingNote(null)
+    }
+    
+    setShowNoteModal(true)
+    console.log('Student Dashboard - setShowNoteModal called with true')
+  }
+
+  const handleSaveNote = async () => {
+    if (!noteText.trim()) return
+
+    try {
+      if (editingNote) {
+        // Update existing note
+        await updateNote(editingNote._id, {
+          category: noteCategory,
+          noteText: noteText.trim()
+        })
+      } else {
+        // Add new note
+        await addNote({
+          date: selectedDate,
+          category: noteCategory,
+          noteText: noteText.trim()
+        })
+      }
+      
+      setShowNoteModal(false)
+      setNoteText('')
+      setEditingNote(null)
+    } catch (error) {
+      console.error('Error saving note:', error)
+    }
+  }
+
+  const handleDeleteNote = async () => {
+    if (!editingNote) return
+
+    try {
+      await deleteNote(editingNote._id)
+      setShowNoteModal(false)
+      setNoteText('')
+      setEditingNote(null)
+    } catch (error) {
+      console.error('Error deleting note:', error)
+    }
   }
 
   const colorClasses = {
@@ -293,15 +361,89 @@ const StudentDashboard = () => {
             <div>
               <h2 className="text-xl font-bold text-slate-900 mb-4">Interactive Calendar</h2>
               <InteractiveCalendar 
-                initialNotes={notes}
-                onNotesChange={(updatedNotes) => {
-                  // Handle notes update if needed
-                }}
+                notes={notes}
+                onDateClick={handleDateClick}
               />
             </div>
           </div>
         </div>
       </div>
+
+      {/* NOTE MODAL */}
+      {showNoteModal && selectedDate && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-xl p-6 w-96">
+            <h3 className="text-lg font-semibold mb-4">
+              {editingNote ? 'Edit Calendar Note' : 'Add Calendar Note'}
+            </h3>
+
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                Date
+              </label>
+              <div className="text-sm text-slate-600">
+                {selectedDate}
+              </div>
+            </div>
+
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                Category
+              </label>
+              <select
+                value={noteCategory}
+                onChange={(e) => setNoteCategory(e.target.value)}
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="mentorship">Mentorship</option>
+                <option value="event">Event</option>
+                <option value="opportunity">Opportunity</option>
+              </select>
+            </div>
+
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                Note
+              </label>
+              <textarea
+                value={noteText}
+                onChange={(e) => setNoteText(e.target.value)}
+                placeholder="Enter your note..."
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                rows={3}
+              />
+            </div>
+
+            <div className="flex justify-between">
+              <div>
+                {editingNote && (
+                  <button
+                    onClick={handleDeleteNote}
+                    className="px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                  >
+                    Delete
+                  </button>
+                )}
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setShowNoteModal(false)}
+                  className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSaveNote}
+                  disabled={!noteText.trim() || notesLoading}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  {notesLoading ? 'Saving...' : 'Save'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

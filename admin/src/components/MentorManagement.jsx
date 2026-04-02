@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import useDirectoryMembers from '../hooks/useDirectoryMembers'
 import getStatusBadgeClass from '../utils/status'
 
-const MentorManagement = () => {
+const FacultyManagement = () => {
   const [searchTerm, setSearchTerm] = useState('')
   const [filterDepartment, setFilterDepartment] = useState('all')
   const [filterRole, setFilterRole] = useState('all')
@@ -232,4 +232,4 @@ const MentorManagement = () => {
   )
 }
 
-export default MentorManagement
+export default FacultyManagement

@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { NavLink, useLocation, useNavigate } from 'react-router-dom'
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
+import { faGear } from "@fortawesome/free-solid-svg-icons"
 
 // Icons
 const LayoutDashboard = (props) => (
@@ -328,7 +330,7 @@ const AdminSidebar = ({ isMobile = false, onClose }) => {
                 isDisabled={userRole === 'coordinator' && profileApprovalStatus !== 'APPROVED'}
                 subOptions={[
                   { label: 'Students', path: `${basePath}/users`, icon: <Users size={14} /> },
-                  { label: 'Faculty', path: `${basePath}/mentors`, icon: <UserCheck size={14} /> },
+                  { label: 'Faculty', path: `${basePath}/faculty`, icon: <UserCheck size={14} /> },
                   { label: 'Alumni', path: `${basePath}/alumni`, icon: <UserCheck size={14} /> },
                   { label: 'Coordinators', path: `${basePath}/coordinators`, icon: <UserCheck size={14} /> }
                 ]}
@@ -443,7 +445,7 @@ const AdminSidebar = ({ isMobile = false, onClose }) => {
                     }}
                     className="p-2 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition"
                   >
-                    <Settings size={16} />
+                    <FontAwesomeIcon icon={faGear} />
                   </button>
                 </div>
               </div>

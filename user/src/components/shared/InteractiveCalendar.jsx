@@ -117,7 +117,14 @@ const InteractiveCalendar = ({ notes = [], onDateClick, onNotesChange }) => {
               className={`aspect-square flex flex-col items-center justify-center rounded-lg cursor-pointer relative group ${
                 day ? 'hover:bg-slate-100' : ''
               } ${isToday ? 'bg-blue-50 font-bold' : ''}`}
-              onClick={() => day && onDateClick && onDateClick(formatDateKey(currentDate.getFullYear(), currentDate.getMonth(), day))}
+              onClick={() => {
+                console.log('InteractiveCalendar - Date clicked:', day)
+                if (day && onDateClick) {
+                  const dateKey = formatDateKey(currentDate.getFullYear(), currentDate.getMonth(), day)
+                  console.log('InteractiveCalendar - Calling onDateClick with:', dateKey)
+                  onDateClick(dateKey)
+                }
+              }}
               onMouseEnter={() => setHoveredDate(day)}
               onMouseLeave={() => setHoveredDate(null)}
             >

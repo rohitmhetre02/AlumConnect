@@ -630,6 +630,51 @@ const submitMentorApplication = async (req, res) => {
 
 
 
+const listAllMentors = async (_req, res) => {
+  try {
+    // Get all mentor applications regardless of status
+    const applications = await MentorApplication.find({}).populate('user')
+
+    const userIds = applications.map((application) => application.user?._id).filter(Boolean)
+
+    const [services, resources] = await Promise.all([
+      MentorService.find({ user: { $in: userIds } }),
+      MentorResource.find({ user: { $in: userIds } }),
+    ])
+
+    const servicesByUser = services.reduce((acc, service) => {
+      const key = service.user?.toString()
+      if (!key) return acc
+      acc[key] = acc[key] || []
+      acc[key].push(service)
+      return acc
+    }, {})
+
+    const resourcesByUser = resources.reduce((acc, resource) => {
+      const key = resource.user?.toString()
+      if (!key) return acc
+      acc[key] = acc[key] || []
+      acc[key].push(resource)
+      return acc
+    }, {})
+
+    const mentors = applications
+      .map((application) => {
+        const ownerId = application.user?._id?.toString()
+        return formatMentor(application, application.user, {
+          services: ownerId ? servicesByUser[ownerId] : [],
+          resources: ownerId ? resourcesByUser[ownerId] : [],
+        })
+      })
+      .filter(Boolean)
+
+    return res.status(200).json(mentors)
+  } catch (error) {
+    console.error('listAllMentors error:', error)
+    return res.status(500).json({ message: 'Unable to fetch mentors.' })
+  }
+}
+
 const listMentors = async (_req, res) => {
 
   try {
@@ -817,6 +862,88 @@ const getMyProfile = async (req, res) => {
 }
 
 
+
+const getMentorSessions = async (req, res) => {
+  try {
+    const { mentorId } = req.params
+    
+    console.log('Fetching sessions for mentorId:', mentorId)
+    
+    // Find mentor application
+    const mentorApplication = await MentorApplication.findById(mentorId).populate('user')
+    if (!mentorApplication) {
+      console.log('Mentor application not found for ID:', mentorId)
+      return res.status(404).json({ message: 'Mentor not found' })
+    }
+
+    // Get the user ID from mentor application
+    const mentorUserId = mentorApplication.user?._id || mentorApplication.user
+    console.log('Mentor application found. User ID:', mentorUserId)
+    
+    if (!mentorUserId) {
+      console.log('No user ID found in mentor application')
+      return res.status(404).json({ message: 'Mentor user not found' })
+    }
+
+    // Fetch mentorship requests where this mentor is the mentor
+    const MentorRequest = require('../models/MentorRequest')
+    console.log('Searching for mentor requests with mentor ID:', mentorUserId)
+    
+    const mentorRequests = await MentorRequest.find({ 
+      mentor: mentorUserId 
+    }).populate('mentee', 'fullName email')
+    
+    console.log('Found mentor requests:', mentorRequests.length)
+    
+    // Log some sample requests for debugging
+    if (mentorRequests.length > 0) {
+      console.log('Sample request:', {
+        id: mentorRequests[0]._id,
+        mentor: mentorRequests[0].mentor,
+        mentee: mentorRequests[0].mentee,
+        status: mentorRequests[0].status
+      })
+    }
+
+    // Transform requests into session format
+    const sessions = mentorRequests.map(request => {
+      // Use sessionDetails if available, otherwise fallback to preferredDateTime
+      const startTime = request.sessionDetails?.sessionStartTime || 
+                      request.sessionDetails?.sessionDate || 
+                      request.preferredDateTime || 
+                      request.createdAt
+      const endTime = request.sessionDetails?.sessionEndTime || 
+                     new Date(new Date(startTime).getTime() + 60 * 60 * 1000) // 1 hour later
+      
+      return {
+        id: request._id.toString(),
+        startTime: startTime,
+        endTime: endTime,
+        menteeName: request.mentee?.fullName || request.menteeName || 'Unknown Student',
+        menteeEmail: request.mentee?.email || request.menteeEmail || '',
+        status: request.status === 'completed' ? 'completed' : 
+                request.status === 'accepted' ? 'scheduled' : 
+                request.status,
+        rating: request.rating || null,
+        topic: request.serviceName || 'Mentorship Session',
+        message: request.requestMessage || '',
+        meetingLink: request.sessionDetails?.meetingLink || '',
+        requestType: 'general',
+        serviceDuration: request.serviceDuration || '',
+        serviceMode: request.preferredMode || 'online',
+        sessionOutcome: request.sessionOutcome || '',
+        remark: request.remark || '',
+        feedback: request.feedback || ''
+      }
+    })
+
+    console.log('Returning sessions:', sessions.length)
+    return res.status(200).json(sessions)
+  } catch (error) {
+    console.error('getMentorSessions error:', error)
+    return res.status(500).json({ message: 'Unable to fetch mentor sessions.' })
+  }
+}
 
 const getMentorProfile = async (req, res) => {
 
@@ -1176,6 +1303,8 @@ module.exports = {
 
   submitMentorApplication,
 
+  listAllMentors,
+
   listMentors,
 
   listApplications,
@@ -1184,9 +1313,10 @@ module.exports = {
 
   getMentorProfile,
 
+  getMentorSessions,
+
   updateMyProfile,
 
   formatMentor,
 
 }
-

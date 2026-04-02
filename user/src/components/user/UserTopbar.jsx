@@ -10,7 +10,6 @@ const UserTopbar = ({ onToggleSidebar }) => {
 
   const [conversations, setConversations] = useState([]);
   const [unreadCount] = useState(0);
-
   const [openDropdown, setOpenDropdown] = useState(null);
   const [showActivityPanel, setShowActivityPanel] = useState(false);
 
@@ -97,22 +96,34 @@ const UserTopbar = ({ onToggleSidebar }) => {
   return (
     <>
       <header className="sticky top-0 z-20 flex items-center justify-between border-b bg-white px-6 py-3">
-        {/* Left */}
+        {/* Left - Menu Icon (when sidebar is open) */}
         <div className="flex items-center gap-3">
           <button
             onClick={onToggleSidebar}
-            className="p-2 rounded-md border"
+            className="lg:hidden p-2 rounded-lg text-slate-600 hover:bg-slate-100 transition-colors"
+            aria-label="Toggle sidebar"
           >
-            ☰
+            <svg className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+              <path d="M3 12h18M3 6h18m-9-9v12m9 9v12" />
+            </svg>
           </button>
-
-          <h1 className="font-semibold text-slate-700">
-            Welcome, {displayName}
-          </h1>
+          
+          {/* Logo/Brand - hidden on mobile when sidebar is open */}
+          <div className="hidden sm:block">
+            <div className="flex items-center space-x-3">
+              
+              <div>
+               
+              </div>
+            </div>
+          </div>
         </div>
 
-        {/* Right */}
-        <div className="flex items-center gap-3">
+        {/* Spacer for more blank space */}
+        <div className="flex-1"></div>
+
+        {/* Right - Professional Icons */}
+        <div className="flex items-center gap-4">
           {/* Notifications */}
           <div className="relative" ref={notificationRef}>
             <IconButton
@@ -124,11 +135,28 @@ const UserTopbar = ({ onToggleSidebar }) => {
                 )
               }
             >
-              🔔
+              <svg className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+                <path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
+                <path d="M13.73 21a2 2 0 01-3.46 0" />
+              </svg>
             </IconButton>
 
             {openDropdown === "notifications" && (
-              <div className="absolute right-0 mt-3 w-72 bg-white shadow-lg rounded-lg">
+              <div className="absolute right-0 mt-3 w-80 bg-white shadow-xl rounded-lg border border-slate-200">
+                <div className="p-4 border-b border-slate-200">
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-semibold text-slate-900">Notifications</h3>
+                    <button
+                      onClick={() => {
+                        setShowActivityPanel(true);
+                        setOpenDropdown(null);
+                      }}
+                      className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                    >
+                      View All
+                    </button>
+                  </div>
+                </div>
                 <NotificationDropdown
                   onViewAllActivity={() => {
                     setShowActivityPanel(true);
@@ -150,22 +178,45 @@ const UserTopbar = ({ onToggleSidebar }) => {
                 )
               }
             >
-              💬
+              <svg className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+                <path d="M21 14a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
+              </svg>
             </IconButton>
 
             {openDropdown === "messages" && (
-              <div className="absolute right-0 mt-3 w-72 bg-white shadow-lg rounded-lg">
-                <button
-                  className="w-full text-left p-3 hover:bg-gray-100"
-                  onClick={() => openMessagesPanel()}
-                >
-                  Open Messages
-                </button>
+              <div className="absolute right-0 mt-3 w-80 bg-white shadow-xl rounded-lg border border-slate-200">
+                <div className="p-4 border-b border-slate-200">
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-semibold text-slate-900">Messages</h3>
+                    <button
+                      onClick={() => openMessagesPanel()}
+                      className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                    >
+                      Open All
+                    </button>
+                  </div>
+                </div>
+                <div className="p-4">
+                  <button
+                    className="w-full text-left p-3 hover:bg-slate-50 rounded-lg transition-colors"
+                    onClick={() => openMessagesPanel()}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 bg-blue-100 rounded-full flex items-center justify-center">
+                        <svg className="h-5 w-5 text-blue-600" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+                          <path d="M21 14a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
+                        </svg>
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-medium text-slate-900">Open Messages</p>
+                        <p className="text-sm text-slate-500">View all conversations</p>
+                      </div>
+                    </div>
+                  </button>
+                </div>
               </div>
             )}
           </div>
-
-          
         </div>
       </header>
 

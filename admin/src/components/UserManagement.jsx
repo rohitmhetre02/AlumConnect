@@ -208,14 +208,14 @@ const UserManagement = () => {
   }
 
   const downloadCSV = () => {
-    const headers = ['ID', 'Name', 'Email', 'Phone', 'Department', 'Year', 'Status']
+    const headers = ['ID', 'Name', 'Email', 'Phone', 'Department', 'Current Year', 'Status']
     const rows = filteredStudents.map(s => [
       s.id || '',
       s.name || '',
       s.email || '',
       s.phone || '',
       s.department || '',
-      s.year || '',
+      s.currentYear || '',
       s.status || ''
     ])
     const csvContent = [headers, ...rows]

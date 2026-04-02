@@ -6,12 +6,14 @@ import StatusChangeModal from './StatusChangeModal'
 import UserProvisionModal from './UserProvisionModal'
 import useModal from '../hooks/useModal'
 import { put } from '../utils/api'
+import AdminProfileView from './AdminProfileView'
 
 const CoordinatorManagement = () => {
   const [searchTerm, setSearchTerm] = useState('')
   const [filterDepartment, setFilterDepartment] = useState('all')
   const [filterStatus, setFilterStatus] = useState('all')
   const [statusModalMember, setStatusModalMember] = useState(null)
+  const [selectedCoordinator, setSelectedCoordinator] = useState(null)
   const provisionModal = useModal(false)
 
   const { data: coordinators, isLoading, error, refetch } = useDirectoryMembers('coordinator')
@@ -121,6 +123,14 @@ const CoordinatorManagement = () => {
     setStatusModalMember(coordinator)
   }
 
+  const handleCoordinatorClick = (coordinator) => {
+    setSelectedCoordinator(coordinator)
+  }
+
+  const handleBackToManagement = () => {
+    setSelectedCoordinator(null)
+  }
+
   const confirmStatusChange = async (member, newStatus) => {
     try {
       // For coordinators, if no newStatus is provided, it means suspend action
@@ -156,6 +166,18 @@ const CoordinatorManagement = () => {
       console.error('Failed to update status:', error)
       alert('Failed to update status. Please try again.')
     }
+  }
+
+  // Show coordinator profile view if selected
+  if (selectedCoordinator) {
+    return (
+      <AdminProfileView 
+        profileId={selectedCoordinator.id} 
+        role="coordinator" 
+        onBack={handleBackToManagement}
+        profileData={selectedCoordinator.raw || selectedCoordinator}
+      />
+    )
   }
 
   return (
@@ -245,27 +267,27 @@ const CoordinatorManagement = () => {
                 <th className="px-4 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">Contact</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">Status</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">Join Date</th>
-                {!isCoordinator && <th className="px-4 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">Assignments</th>}
+                <th className="px-4 py-3 text-center text-xs font-semibold text-slate-400 uppercase tracking-wider">View</th>
                 {!isCoordinator && <th className="px-4 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">Actions</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {isLoading ? (
                 <tr>
-                  <td colSpan={isCoordinator ? "5" : "7"} className="px-4 py-12 text-center text-sm text-slate-500">
+                  <td colSpan={isCoordinator ? "6" : "7"} className="px-4 py-12 text-center text-sm text-slate-500">
                     Loading coordinators…
                   </td>
                 </tr>
               ) : error ? (
                 <tr>
-                  <td colSpan={isCoordinator ? "5" : "7"} className="px-4 py-12 text-center text-sm text-slate-500">
+                  <td colSpan={isCoordinator ? "6" : "7"} className="px-4 py-12 text-center text-sm text-slate-500">
                     <p className="text-sm text-red-600 mb-2">Error loading coordinators</p>
                     <p className="text-xs text-slate-500">{error}</p>
                   </td>
                 </tr>
               ) : filteredCoordinators.length === 0 ? (
                 <tr>
-                  <td colSpan={isCoordinator ? "5" : "7"} className="px-4 py-12 text-center text-sm text-slate-500">
+                  <td colSpan={isCoordinator ? "6" : "7"} className="px-4 py-12 text-center text-sm text-slate-500">
                     No coordinators match the filters.
                   </td>
                 </tr>
@@ -319,14 +341,18 @@ const CoordinatorManagement = () => {
                     <td className="px-4 py-4">
                       <p className="text-sm text-slate-700">{formatDate(coordinator.joinDate)}</p>
                     </td>
-                    {!isCoordinator && (
-                      <td className="px-4 py-4">
-                        <div className="space-y-1">
-                          <p className="text-sm text-slate-700">{coordinator.assignedEvents} Events</p>
-                          <p className="text-xs text-slate-500">{coordinator.assignedStudents} Students</p>
-                        </div>
-                      </td>
-                    )}
+                    <td className="px-4 py-4 text-center">
+                      <button
+                        onClick={() => handleCoordinatorClick(coordinator)}
+                        className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 transition-colors group"
+                        title="View Profile"
+                      >
+                        <svg className="w-4 h-4 text-slate-600 group-hover:text-slate-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
+                      </button>
+                    </td>
                     {!isCoordinator && (
                       <td className="px-4 py-4">
                         <div className="flex items-center gap-2">

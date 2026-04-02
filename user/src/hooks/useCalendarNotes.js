@@ -10,13 +10,16 @@ const useCalendarNotes = () => {
 
   // Fetch notes for the current user
   const fetchNotes = useCallback(async () => {
-    if (!user?.id) return
+    const userId = user?.id || user?._id || user?.profile?.id || user?.profile?._id
+    console.log('Calendar Notes - User data:', user)
+    console.log('Calendar Notes - Extracted userId:', userId)
+    if (!userId) return
     
     setLoading(true)
     setError(null)
     
     try {
-      const response = await get(`/api/calendar/notes/${user.id}`)
+      const response = await get(`/api/calendar/notes/${userId}`)
       if (response?.data) {
         setNotes(response.data)
       }
@@ -30,11 +33,12 @@ const useCalendarNotes = () => {
     } finally {
       setLoading(false)
     }
-  }, [user?.id])
+  }, [user?.id, user?._id, user?.profile?.id, user?.profile?._id])
 
   // Add a new note
   const addNote = useCallback(async (noteData) => {
-    if (!user?.id) return null
+    const userId = user?.id || user?._id || user?.profile?.id || user?.profile?._id
+    if (!userId) return null
     
     setLoading(true)
     setError(null)
@@ -42,7 +46,7 @@ const useCalendarNotes = () => {
     try {
       const response = await post('/api/calendar/notes', {
         ...noteData,
-        userId: user.id,
+        userId: userId,
       })
       
       if (response?.data) {

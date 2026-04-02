@@ -389,87 +389,6 @@ const AdminTopbar = ({ onToggleSidebar }) => {
 
 
 
-          {/* Profile Dropdown */}
-
-          <div className="relative">
-
-            <button
-
-              type="button"
-
-              onClick={() => setOpenDropdown((prev) => (prev === 'profile' ? null : 'profile'))}
-
-              className="flex items-center gap-2 rounded-full border border-slate-100 bg-white px-3 py-2 text-left shadow-sm transition hover:border-primary/40"
-
-              aria-haspopup="menu"
-
-              aria-expanded={openDropdown === 'profile'}
-
-            >
-
-              <span className="grid h-8 w-8 place-items-center rounded-full bg-primary/10 text-sm font-bold text-primary">
-
-                {avatarInitial}
-
-              </span>
-
-              <div className="hidden sm:block">
-
-                <p className="text-sm font-medium text-slate-900">{displayName}</p>
-
-                <p className="text-xs text-slate-500">{displayRole}</p>
-
-              </div>
-
-            </button>
-
-            {openDropdown === 'profile' && (
-
-              <div className="absolute right-0 mt-3 w-64 rounded-2xl border border-slate-100 bg-white py-2 shadow-xl">
-
-                <div className="px-4 py-3 border-b border-slate-100">
-
-                  <p className="text-sm font-medium text-slate-900">{displayName}</p>
-
-                  <p className="text-xs text-slate-500">{displayEmail}</p>
-
-                  <p className="text-xs font-medium text-primary">{displayRole}</p>
-
-                </div>
-
-                <button
-
-                  onClick={() => navigate('/admin/settings')}
-
-                  className="flex w-full items-center gap-3 px-4 py-2 text-sm text-slate-600 transition hover:bg-slate-50 hover:text-primary"
-
-                >
-
-                  <Settings className="h-4 w-4" />
-
-                  <span className="font-medium">Settings</span>
-
-                </button>
-
-                <button
-
-                  onClick={handleLogout}
-
-                  className="flex w-full items-center gap-3 px-4 py-2 text-sm text-slate-600 transition hover:bg-slate-50 hover:text-primary"
-
-                >
-
-                  <LogOut className="h-4 w-4" />
-
-                  <span className="font-medium">Logout</span>
-
-                </button>
-
-              </div>
-
-            )}
-
-          </div>
 
         </div>
 
@@ -831,19 +750,7 @@ const UserIcon = (props) => (
 
 
 
-const LogoutIcon = (props) => (
 
-  <IconBase {...props}>
-
-    <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" />
-
-    <polyline points="16 17 21 12 16 7" />
-
-    <line x1="21" y1="12" x2="9" y2="12" />
-
-  </IconBase>
-
-)
 
 
 

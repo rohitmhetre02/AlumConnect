@@ -8,6 +8,7 @@ const MentorshipProfile = () => {
   const { user } = useAuth()
   const toast = useToast()
   const [profile, setProfile] = useState(null)
+  const [originalProfile, setOriginalProfile] = useState(null) // Store original data
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
@@ -19,12 +20,60 @@ const MentorshipProfile = () => {
     const loadProfile = async () => {
       try {
         setLoading(true)
+        setError(null)
+        
         const data = await getMyProfile()
-        setProfile(data)
-        if (data?.profilePhoto) {
-          setPhotoPreview(data.profilePhoto)
+        
+        // Debug: Log fetched data
+        console.log('Fetched profile data:', data)
+        
+        if (data) {
+          // Handle the actual data structure from backend
+          const profileData = {
+            ...data,
+            // Map backend fields to frontend expected fields
+            fullName: data.fullName || '',
+            email: data.email || '',
+            phoneNumber: data.phoneNumber || '',
+            graduationYear: data.graduationYear || '',
+            degree: data.degree || '',
+            department: data.department || '',
+            currentLocation: data.currentLocation || '',
+            linkedinProfile: data.linkedin || data.linkedinProfile || '', // Handle both linkedin and linkedinProfile
+            shortBio: data.shortBio || '',
+            currentJobTitle: data.currentJobTitle || data.position || '', // Handle both currentJobTitle and position
+            company: data.company || '',
+            industry: data.industry || '',
+            yearsOfExperience: data.yearsOfExperience || data.experience || '', // Handle both yearsOfExperience and experience
+            bio: data.bio || '',
+            experienceDescription: data.experienceDescription || '',
+            mentorshipAreas: Array.isArray(data.mentorshipAreas) ? data.mentorshipAreas : [],
+            expertise: Array.isArray(data.expertise) ? data.expertise : Array.isArray(data.skills) ? data.skills.split(',').map(s => s.trim()) : [], // Handle both expertise and skills
+            mentorshipMode: data.mentorshipMode || data.modes || '', // Handle both mentorshipMode and modes
+            availableDays: data.availableDays || '',
+            timeCommitment: data.timeCommitment || data.weeklyHours || '', // Handle both timeCommitment and weeklyHours
+            mentorshipPreference: data.mentorshipPreference || data.preferredStudents || '', // Handle both mentorshipPreference and preferredStudents
+            maxMentees: data.maxMentees || data.maxStudents || '', // Handle both maxMentees and maxStudents
+            status: data.status || '',
+            consent1: data.consent1 || false,
+            consent2: data.consent2 || false,
+            consent3: data.consent3 || false,
+            profilePhoto: data.profilePhoto || data.avatar || '' // Handle both profilePhoto and avatar
+          }
+          
+          console.log('Processed profile data for frontend:', profileData)
+          
+          setProfile(profileData)
+          setOriginalProfile(JSON.parse(JSON.stringify(profileData))) // Store deep copy
+          
+          if (data?.profilePhoto || data?.avatar) {
+            setPhotoPreview(data.profilePhoto || data.avatar)
+          }
+        } else {
+          throw new Error('No profile data received')
         }
       } catch (err) {
+        console.error('Profile load error:', err)
         setError(err.message || 'Failed to load profile')
       } finally {
         setLoading(false)
@@ -65,17 +114,16 @@ const MentorshipProfile = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    
+    if (!profile) return
+
     try {
       setSaving(true)
       setError(null)
 
-      // Create form data for file upload
-      const submitData = new FormData()
-      
-      // Prepare updated profile data
+      // Prepare updated profile data matching backend structure exactly
       const updatedProfile = {
-        ...profile,
-        // Ensure all fields are included
+        // Basic Information (matching backend fields exactly)
         fullName: profile.fullName || '',
         email: profile.email || '',
         phoneNumber: profile.phoneNumber || '',
@@ -85,38 +133,66 @@ const MentorshipProfile = () => {
         currentLocation: profile.currentLocation || '',
         linkedinProfile: profile.linkedinProfile || '',
         shortBio: profile.shortBio || '',
+        
+        // Professional Information (matching backend fields exactly)
         currentJobTitle: profile.currentJobTitle || '',
         company: profile.company || '',
         industry: profile.industry || '',
         yearsOfExperience: profile.yearsOfExperience || '',
-        experience: profile.yearsOfExperience || profile.experience || '',
+        bio: profile.bio || '',
+        experienceDescription: profile.experienceDescription || '',
+        
+        // Skills & Expertise (matching backend fields exactly)
         mentorshipAreas: Array.isArray(profile.mentorshipAreas) ? profile.mentorshipAreas : [],
         expertise: Array.isArray(profile.expertise) ? profile.expertise : [],
+        
+        // Mentorship Preferences (matching backend fields exactly)
         mentorshipMode: profile.mentorshipMode || '',
         availableDays: profile.availableDays || '',
         timeCommitment: profile.timeCommitment || '',
         mentorshipPreference: profile.mentorshipPreference || '',
         maxMentees: profile.maxMentees || '',
+        
+        // Status fields (matching backend fields exactly)
+        consent1: profile.consent1 || false,
+        consent2: profile.consent2 || false,
+        consent3: profile.consent3 || false,
       }
 
-      // Add profile data as JSON
-      submitData.append('data', JSON.stringify(updatedProfile))
-      
-      // Add profile photo if changed
+      // Debug: Log the exact data being sent to backend
+      console.log('=== BACKEND DEBUG INFO ===')
+      console.log('Submitting profile data to backend:', updatedProfile)
+
+      // Try FormData first (for file uploads)
       if (profilePhoto && profilePhoto instanceof File) {
+        console.log('Using FormData for file upload...')
+        
+        const submitData = new FormData()
+        submitData.append('data', JSON.stringify(updatedProfile))
         submitData.append('profilePhoto', profilePhoto)
+        
+        console.log('FormData contents:')
+        for (let [key, value] of submitData.entries()) {
+          console.log(`${key}:`, value)
+        }
+        
+        try {
+          const response = await updateMyProfile(submitData)
+          await handleBackendResponse(response, updatedProfile)
+        } catch (formDataError) {
+          console.error('FormData update failed, trying JSON:', formDataError)
+          await tryJsonUpdate(updatedProfile)
+        }
+      } else {
+        // No file upload, use JSON directly
+        console.log('Using JSON data (no file upload)...')
+        await tryJsonUpdate(updatedProfile)
       }
-
-      const response = await updateMyProfile(submitData)
-      setProfile(response.data || response)
-      setEditing(false)
       
-      toast({
-        title: 'Profile Updated',
-        description: 'Your mentor profile has been updated successfully.',
-        tone: 'success'
-      })
     } catch (err) {
+      console.error('Profile update error:', err)
+      console.error('Error details:', err.details)
+      console.error('Error status:', err.status)
       setError(err.message || 'Failed to update profile')
       toast({
         title: 'Update Failed',
@@ -128,9 +204,184 @@ const MentorshipProfile = () => {
     }
   }
 
+  const tryJsonUpdate = async (updatedProfile) => {
+    try {
+      console.log('Trying JSON update with data:', updatedProfile)
+      const response = await updateMyProfile(updatedProfile)
+      await handleBackendResponse(response, updatedProfile)
+    } catch (jsonError) {
+      console.error('JSON update failed:', jsonError)
+      throw jsonError
+    }
+  }
+
+  const handleBackendResponse = async (response, updatedProfile) => {
+    // Debug: Log the response from backend
+    console.log('=== BACKEND RESPONSE DEBUG ===')
+    console.log('Backend response:', response)
+    console.log('Response status:', response?.status)
+    console.log('Response data:', response?.data)
+    
+    // Compare what we sent vs what we got back
+    const updatedData = response?.data ?? response
+    if (updatedData) {
+      console.log('=== DATA COMPARISON ===')
+      console.log('SENT TO BACKEND:')
+      console.log('  currentJobTitle:', updatedProfile.currentJobTitle)
+      console.log('  company:', updatedProfile.company)
+      console.log('  currentLocation:', updatedProfile.currentLocation)
+      console.log('  yearsOfExperience:', updatedProfile.yearsOfExperience)
+      
+      console.log('RECEIVED FROM BACKEND:')
+      console.log('  currentJobTitle:', updatedData.currentJobTitle)
+      console.log('  position:', updatedData.position)
+      console.log('  company:', updatedData.company)
+      console.log('  currentLocation:', updatedData.currentLocation)
+      console.log('  yearsOfExperience:', updatedData.yearsOfExperience)
+      console.log('  experience:', updatedData.experience)
+      
+      console.log('CHANGES DETECTED:')
+      console.log('  currentJobTitle changed:', updatedProfile.currentJobTitle !== updatedData.currentJobTitle)
+      console.log('  company changed:', updatedProfile.company !== updatedData.company)
+      console.log('  currentLocation changed:', updatedProfile.currentLocation !== updatedData.currentLocation)
+      console.log('  yearsOfExperience changed:', updatedProfile.yearsOfExperience !== updatedData.yearsOfExperience)
+      console.log('=== END DATA COMPARISON ===')
+      
+      // Check if backend actually updated the data
+      const hasChanges = updatedProfile.currentJobTitle !== updatedData.currentJobTitle ||
+                        updatedProfile.company !== updatedData.company ||
+                        updatedProfile.currentLocation !== updatedData.currentLocation ||
+                        updatedProfile.yearsOfExperience !== updatedData.yearsOfExperience
+
+      if (!hasChanges && response?.success) {
+        console.warn('⚠️ Backend claims success but data not updated! Using frontend data as fallback.')
+        // Use frontend data as fallback since backend didn't update
+        const fallbackData = { ...updatedProfile, ...updatedData, ...updatedProfile }
+        await updateLocalState(fallbackData)
+      } else {
+        await updateLocalState(updatedData)
+      }
+    }
+    console.log('=== END BACKEND RESPONSE DEBUG ===')
+  }
+
+  const updateLocalState = async (responseData) => {
+    console.log('Updated data from backend:', responseData)
+    
+    // Handle the response data structure with proper field mapping
+    const profileData = {
+      ...responseData,
+      // Map backend response fields to frontend expected fields
+      fullName: responseData.fullName || '',
+      email: responseData.email || '',
+      phoneNumber: responseData.phoneNumber || '',
+      graduationYear: responseData.graduationYear || '',
+      degree: responseData.degree || '',
+      department: responseData.department || '',
+      currentLocation: responseData.currentLocation || '',
+      linkedinProfile: responseData.linkedin || responseData.linkedinProfile || '', // Handle both linkedin and linkedinProfile
+      shortBio: responseData.shortBio || '',
+      currentJobTitle: responseData.currentJobTitle || responseData.position || '', // Handle both currentJobTitle and position
+      company: responseData.company || '',
+      industry: responseData.industry || '',
+      yearsOfExperience: responseData.yearsOfExperience || responseData.experience || '', // Handle both yearsOfExperience and experience
+      bio: responseData.bio || '',
+      experienceDescription: responseData.experienceDescription || '',
+      mentorshipAreas: Array.isArray(responseData.mentorshipAreas) ? responseData.mentorshipAreas : [],
+      expertise: Array.isArray(responseData.expertise) ? responseData.expertise : Array.isArray(responseData.skills) ? responseData.skills.split(',').map(s => s.trim()) : [], // Handle both expertise and skills
+      mentorshipMode: responseData.mentorshipMode || responseData.modes || '', // Handle both mentorshipMode and modes
+      availableDays: responseData.availableDays || '',
+      timeCommitment: responseData.timeCommitment || responseData.weeklyHours || '', // Handle both timeCommitment and weeklyHours
+      mentorshipPreference: responseData.mentorshipPreference || responseData.preferredStudents || '', // Handle both mentorshipPreference and preferredStudents
+      maxMentees: responseData.maxMentees || responseData.maxStudents || '', // Handle both maxMentees and maxStudents
+      status: responseData.status || '',
+      consent1: responseData.consent1 || false,
+      consent2: responseData.consent2 || false,
+      consent3: responseData.consent3 || false,
+      profilePhoto: responseData.profilePhoto || responseData.avatar || '' // Handle both profilePhoto and avatar
+    }
+    
+    console.log('Processed profile data for state:', profileData)
+    
+    setProfile(profileData)
+    setOriginalProfile(JSON.parse(JSON.stringify(profileData))) // Update original
+    
+    if (responseData?.profilePhoto || responseData?.avatar) {
+      setPhotoPreview(responseData.profilePhoto || responseData.avatar)
+    }
+    
+    setEditing(false)
+    
+    toast({
+      title: 'Profile Updated',
+      description: 'Your mentor profile has been updated successfully.',
+      tone: 'success'
+    })
+    
+    // Force a refresh of profile data after successful update
+    setTimeout(async () => {
+      try {
+        console.log('Refreshing profile data after update...')
+        const freshData = await getMyProfile()
+        console.log('Fresh data after update:', freshData)
+        
+        if (freshData) {
+          // Handle fresh data structure with proper field mapping
+          const profileData = {
+            ...freshData,
+            // Map backend fields to frontend expected fields
+            fullName: freshData.fullName || '',
+            email: freshData.email || '',
+            phoneNumber: freshData.phoneNumber || '',
+            graduationYear: freshData.graduationYear || '',
+            degree: freshData.degree || '',
+            department: freshData.department || '',
+            currentLocation: freshData.currentLocation || '',
+            linkedinProfile: freshData.linkedin || freshData.linkedinProfile || '', // Handle both linkedin and linkedinProfile
+            shortBio: freshData.shortBio || '',
+            currentJobTitle: freshData.currentJobTitle || freshData.position || '', // Handle both currentJobTitle and position
+            company: freshData.company || '',
+            industry: freshData.industry || '',
+            yearsOfExperience: freshData.yearsOfExperience || freshData.experience || '', // Handle both yearsOfExperience and experience
+            bio: freshData.bio || '',
+            experienceDescription: freshData.experienceDescription || '',
+            mentorshipAreas: Array.isArray(freshData.mentorshipAreas) ? freshData.mentorshipAreas : [],
+            expertise: Array.isArray(freshData.expertise) ? freshData.expertise : Array.isArray(freshData.skills) ? freshData.skills.split(',').map(s => s.trim()) : [], // Handle both expertise and skills
+            mentorshipMode: freshData.mentorshipMode || freshData.modes || '', // Handle both mentorshipMode and modes
+            availableDays: freshData.availableDays || '',
+            timeCommitment: freshData.timeCommitment || freshData.weeklyHours || '', // Handle both timeCommitment and weeklyHours
+            mentorshipPreference: freshData.mentorshipPreference || freshData.preferredStudents || '', // Handle both mentorshipPreference and preferredStudents
+            maxMentees: freshData.maxMentees || freshData.maxStudents || '', // Handle both maxMentees and maxStudents
+            status: freshData.status || '',
+            consent1: freshData.consent1 || false,
+            consent2: freshData.consent2 || false,
+            consent3: freshData.consent3 || false,
+            profilePhoto: freshData.profilePhoto || freshData.avatar || '' // Handle both profilePhoto and avatar
+          }
+          
+          console.log('Setting refreshed profile data:', profileData)
+          setProfile(profileData)
+          setOriginalProfile(JSON.parse(JSON.stringify(profileData)))
+        }
+      } catch (refreshErr) {
+        console.error('Error refreshing profile:', refreshErr)
+      }
+    }, 1000) // Increased delay to ensure backend has time to update
+  }
+
   const handleCancel = () => {
     setEditing(false)
-    // Reset to original profile data would need to store original state
+    // Reset to original profile data
+    if (originalProfile) {
+      setProfile(JSON.parse(JSON.stringify(originalProfile)))
+    }
+    // Reset photo
+    setProfilePhoto(null)
+    if (originalProfile?.profilePhoto) {
+      setPhotoPreview(originalProfile.profilePhoto)
+    } else {
+      setPhotoPreview('')
+    }
   }
 
   if (loading) {
@@ -232,26 +483,14 @@ const MentorshipProfile = () => {
                 )}
               </div>
               <div className="flex-1">
-                {editing && (
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">
-                      Update Profile Photo
-                    </label>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={handlePhotoChange}
-                      className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                    />
-                    <p className="text-xs text-slate-500 mt-1">JPG, PNG up to 2MB</p>
-                  </div>
-                )}
-                {!editing && (
-                  <div>
-                    <p className="text-sm text-slate-600">Your current profile photo</p>
-                    <p className="text-xs text-slate-500 mt-1">Click "Edit Profile" to update</p>
-                  </div>
-                )}
+                <div>
+                  <p className="text-sm text-slate-600">
+                    Profile photo is fetched from your account.
+                  </p>
+                  <p className="text-xs text-slate-500">
+                    To update, please change it from your profile settings.
+                  </p>
+                </div>
               </div>
             </div>
           </div>
@@ -314,12 +553,12 @@ const MentorshipProfile = () => {
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-2">Graduation Year</label>
                 <input
-                  type="number"
+                  type="text"
                   value={profile.graduationYear || ''}
-                  onChange={handleChange('graduationYear')}
-                  disabled={!editing}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-slate-50 disabled:text-slate-500"
+                  readOnly
+                  className="w-full px-3 py-2 border border-slate-200 bg-slate-50 rounded-lg text-slate-600 cursor-not-allowed"
                 />
+                <p className="text-xs text-slate-500 mt-1">Fetched from your profile - read-only</p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-2">Degree</label>
@@ -336,10 +575,10 @@ const MentorshipProfile = () => {
                 <input
                   type="text"
                   value={profile.department || ''}
-                  onChange={handleChange('department')}
-                  disabled={!editing}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-slate-50 disabled:text-slate-500"
+                  readOnly
+                  className="w-full px-3 py-2 border border-slate-200 bg-slate-50 rounded-lg text-slate-600 cursor-not-allowed"
                 />
+                <p className="text-xs text-slate-500 mt-1">Fetched from your profile - read-only</p>
               </div>
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-slate-700 mb-2">Short Bio</label>

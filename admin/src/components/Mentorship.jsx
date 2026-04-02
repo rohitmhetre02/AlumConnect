@@ -2,14 +2,15 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { get, post, del, patch } from '../utils/api'
 
-const AdminMentorship = () => {
+const Mentorship = () => {
   const navigate = useNavigate()
-  const [mentors, setMentors] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [actionsDropdown, setActionsDropdown] = useState(null) // Track which dropdown is open
+  const [mentors, setMentors] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+  
   const [stats, setStats] = useState({
     totalMentors: 0,
     approvedMentors: 0,
@@ -77,27 +78,30 @@ const AdminMentorship = () => {
     }
   }
 
-  // Fetch mentors
+  // Fetch mentors from mentorapplications collection
   const fetchMentors = async () => {
     try {
-      const response = await get('/admin/mentorship/mentors')
-      setMentors(response.data || [])
+      setLoading(true)
+      setError(null)
+      const response = await get('/api/mentors/all')
+      const data = Array.isArray(response?.data) ? response.data : Array.isArray(response) ? response : []
+      setMentors(data)
       
       // Calculate stats from mentor data
-      const total = response.data?.length || 0
-      const approved = response.data?.filter(m => m.status === 'approved')?.length || 0
-      const suspended = response.data?.filter(m => m.status === 'suspended')?.length || 0
+      const total = data.length || 0
+      const approved = data.filter(m => m.status === 'approved')?.length || 0
+      const rejected = data.filter(m => m.status === 'rejected')?.length || 0
       
       setStats({
         totalMentors: total,
         approvedMentors: approved,
-        suspendedMentors: suspended,
+        suspendedMentors: rejected,
         totalRequests: 0, // Would need separate API call
         completedSessions: 0, // Would need separate API call
         totalReviews: 0 // Would need separate API call
       })
     } catch (err) {
-      setError(err.message)
+      setError(err.message || 'Failed to fetch mentors')
     } finally {
       setLoading(false)
     }
@@ -121,9 +125,10 @@ const AdminMentorship = () => {
 
   const filteredMentors = mentors.filter(mentor => {
     const matchesSearch = !searchTerm || 
-      mentor.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      mentor.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       mentor.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      mentor.company?.toLowerCase().includes(searchTerm.toLowerCase())
+      mentor.company?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      mentor.department?.toLowerCase().includes(searchTerm.toLowerCase())
     
     const matchesStatus = statusFilter === 'all' || mentor.status === statusFilter
     
@@ -131,8 +136,13 @@ const AdminMentorship = () => {
   })
 
   const handleViewProfile = (mentorId) => {
-    // Navigate to mentor profile details page
-    window.open(`/admin/mentorship/mentor/${mentorId}`, '_blank')
+    // Navigate to mentor profile page
+    navigate(`/admin/mentorship/${mentorId}/profile`)
+  }
+
+  const handleViewSessions = (mentorId) => {
+    // Navigate to mentor sessions page
+    navigate(`/admin/mentorship/${mentorId}/sessions`)
   }
 
   if (loading) {
@@ -184,7 +194,7 @@ const AdminMentorship = () => {
         <div className="flex gap-4">
           <input
             type="text"
-            placeholder="Search by name, email, or company..."
+            placeholder="Search by name, email, or department..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -196,7 +206,8 @@ const AdminMentorship = () => {
           >
             <option value="all">All Mentors</option>
             <option value="approved">Approved</option>
-            <option value="suspended">Suspended</option>
+            <option value="pending">Pending</option>
+            <option value="rejected">Rejected</option>
           </select>
         </div>
       </div>
@@ -207,13 +218,13 @@ const AdminMentorship = () => {
           <table className="min-w-full">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-64">Mentor</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-40">Position</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-28">Department</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">Experience</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-28">Sessions</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20">Status</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">Joined</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-64">Name</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-32">Contact</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-32">Department</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">Status</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-28">Joined</th>
+                <th className="px-4- py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">Sessions</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">View</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">Actions</th>
               </tr>
             </thead>
@@ -227,8 +238,8 @@ const AdminMentorship = () => {
                   <td className="px-4 py-4">
                     <div className="flex items-center">
                       <img 
-                        src={mentor.avatar || '/default-avatar.png'} 
-                        alt={mentor.name}
+                        src={mentor.profilePhoto || mentor.avatar || '/default-avatar.png'} 
+                        alt={mentor.fullName || mentor.name}
                         className="h-10 w-10 rounded-full object-cover border border-gray-200 mr-3 flex-shrink-0"
                       />
                       <div className="min-w-0 flex-1">
@@ -236,34 +247,51 @@ const AdminMentorship = () => {
                           className="text-sm font-medium text-gray-900 truncate hover:text-blue-600 transition-colors"
                           onClick={(e) => handleNameClick(e, mentor.id)}
                         >
-                          {mentor.name}
+                          {mentor.fullName || mentor.name}
                         </div>
                         <div className="text-sm text-gray-500 truncate">{mentor.email}</div>
                       </div>
                     </div>
                   </td>
-                  <td className="px-4 py-4">
-                    <div>
-                      <div className="text-sm font-medium text-gray-900 truncate">{mentor.jobTitle}</div>
-                      <div className="text-sm text-gray-500 truncate">{mentor.company}</div>
-                    </div>
-                  </td>
-                  <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 truncate">{getDepartmentCode(mentor.department)}</td>
                   <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {calculateExperience(mentor.graduationYear)}
+                    {mentor.phoneNumber || '—'}
                   </td>
-                  <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">0</td>
+                  <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 truncate">{mentor.department || '—'}</td>
                   <td className="px-4 py-4 whitespace-nowrap">
                     <span className={`px-2 py-1 text-xs rounded-full ${
                       mentor.status === 'approved' 
                         ? 'bg-green-100 text-green-800' 
+                        : mentor.status === 'pending'
+                        ? 'bg-yellow-100 text-yellow-800'
                         : 'bg-red-100 text-red-800'
                     }`}>
-                      {mentor.status}
+                      {mentor.status || '—'}
                     </span>
                   </td>
                   <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
                     {new Date(mentor.createdAt).toLocaleDateString()}
+                  </td>
+                  <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleViewSessions(mentor.id)
+                      }}
+                      className="px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 transition-colors"
+                    >
+                      View Sessions
+                    </button>
+                  </td>
+                  <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleViewProfile(mentor.id)
+                      }}
+                      className="px-3 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700 transition-colors"
+                    >
+                      View Profile
+                    </button>
                   </td>
                   <td className="px-4 py-4 whitespace-nowrap">
                     <div className="relative">
@@ -317,4 +345,4 @@ const AdminMentorship = () => {
   )
 }
 
-export default AdminMentorship
+export default Mentorship

@@ -29,7 +29,7 @@ const BecomeMentor = () => {
     currentLocation: '',
     linkedinProfile: '',
     shortBio: '',
-    
+
     // Step 2: Professional & Mentorship Details
     currentJobTitle: '',
     company: '',
@@ -39,7 +39,7 @@ const BecomeMentor = () => {
     bio: '',
     mentorshipAreas: [],
     expertise: [],
-    
+
     // Step 3: Availability & Consent
     mentorshipMode: '',
     availableDays: '',
@@ -64,35 +64,25 @@ const BecomeMentor = () => {
 
   // Mentorship areas as per requirements
   const mentorshipAreaOptions = [
-  "Career Guidance",
-  "Resume Review",
-  "Interview Preparation",
-  "Mock Interviews",
-  "Technical Skills / Coding",
-  "Project Guidance",
-  "Higher Studies Guidance",
-  "Startup / Entrepreneurship",
-  "Internship Guidance",
-  "Job Search Strategy",
-  "General Career Queries"
-]
-
-  // Department options
-  const departmentOptions = [
-    "Civil Engineering",
-  "Computer Engineering",
-  "Information Technology",
-  "Electronics & Telecommunication Engineering",
-  "Mechanical Engineering",
-  "Artificial Intelligence & Data Science",
-  "Electronics Engineering (VLSI Design & Technology)",
-  "Electronics & Communication Engineering (Advanced Communication Technology)"
+    "Career Guidance",
+    "Resume Review",
+    "Interview Preparation",
+    "Mock Interviews",
+    "Technical Skills / Coding",
+    "Project Guidance",
+    "Higher Studies Guidance",
+    "Startup / Entrepreneurship",
+    "Internship Guidance",
+    "Job Search Strategy",
+    "General Career Queries"
   ]
+
+
 
   // Degree/Program options - only MCA and Engineering as requested
   const degreeOptions = [
     'MCA',
-   'Bachelor of Engineering'
+    'Bachelor of Engineering'
   ]
 
   // Experience options
@@ -105,17 +95,17 @@ const BecomeMentor = () => {
   ]
 
   const steps = [
-    { 
-      title: 'Basic Profile Details', 
-      description: 'Identify the mentor clearly' 
+    {
+      title: 'Basic Profile Details',
+      description: 'Identify the mentor clearly'
     },
-    { 
-      title: 'Professional & Mentorship Details', 
-      description: 'Understand what help the mentor can offer' 
+    {
+      title: 'Professional & Mentorship Details',
+      description: 'Understand what help the mentor can offer'
     },
-    { 
-      title: 'Availability & Consent', 
-      description: 'Set expectations clearly' 
+    {
+      title: 'Availability & Consent',
+      description: 'Set expectations clearly'
     }
   ]
 
@@ -156,14 +146,14 @@ const BecomeMentor = () => {
             linkedinProfile: profileData.linkedinProfile || prev.linkedinProfile,
             shortBio: profileData.shortBio || prev.shortBio,
             bio: profileData.bio || prev.bio,
-            
+
             // Professional Details
             currentJobTitle: profileData.currentJobTitle || prev.currentJobTitle,
             company: profileData.company || prev.company,
             industry: profileData.industry || prev.industry,
             yearsOfExperience: profileData.yearsOfExperience || prev.yearsOfExperience,
             experienceDescription: profileData.experienceDescription || prev.experienceDescription,
-            
+
             // Mentorship Details
             mentorshipAreas: profileData.mentorshipAreas || prev.mentorshipAreas,
             mentorshipMode: profileData.mentorshipMode || prev.mentorshipMode,
@@ -175,16 +165,16 @@ const BecomeMentor = () => {
             consent2: profileData.consent2 || prev.consent2,
             consent3: profileData.consent3 || prev.consent3
           }))
-          
+
           // Set skills from expertise
           if (profileData.expertise && Array.isArray(profileData.expertise)) {
             setSkills(profileData.expertise)
           }
-          
+
           // Set profile photo preview
           if (profileData.profilePhoto) {
-            setPhotoPreview(profileData.profilePhoto.startsWith('http') ? 
-              profileData.profilePhoto : 
+            setPhotoPreview(profileData.profilePhoto.startsWith('http') ?
+              profileData.profilePhoto :
               `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${profileData.profilePhoto}`)
           }
         }
@@ -199,7 +189,7 @@ const BecomeMentor = () => {
   const handleInputChange = (field) => (e) => {
     const value = e.target.type === 'checkbox' ? e.target.checked : e.target.value
     setFormData(prev => ({ ...prev, [field]: value }))
-    
+
     // Clear field error when user starts typing
     if (fieldErrors[field]) {
       setFieldErrors(prev => ({ ...prev, [field]: '' }))
@@ -267,7 +257,7 @@ const BecomeMentor = () => {
 
   const validateStep = () => {
     const errors = {}
-    
+
     switch (currentStep) {
       case 0:
         if (!formData.fullName || !formData.fullName.trim()) errors.fullName = 'Full name is required'
@@ -283,7 +273,7 @@ const BecomeMentor = () => {
         if (!formData.department || !formData.department.trim()) errors.department = 'Department is required'
         if (!formData.currentLocation || !formData.currentLocation.trim()) errors.currentLocation = 'Current location is required'
         break
-        
+
       case 1:
         if (!formData.currentJobTitle || !formData.currentJobTitle.trim()) errors.currentJobTitle = 'Current job title is required'
         if (!formData.company || !formData.company.trim()) errors.company = 'Company is required'
@@ -293,7 +283,7 @@ const BecomeMentor = () => {
         if (!skills || skills.length === 0) errors.skills = 'At least one skill is required'
         if (skills.length > 10) errors.skills = 'Maximum 10 skills allowed'
         break
-        
+
       case 2:
         if (!formData.mentorshipMode || !formData.mentorshipMode.trim()) errors.mentorshipMode = 'Preferred mentorship mode is required'
         if (!formData.availableDays || !formData.availableDays.trim()) errors.availableDays = 'Available days selection is required'
@@ -304,11 +294,11 @@ const BecomeMentor = () => {
         if (!formData.consent2) errors.consent2 = 'Consent 2 is required'
         if (!formData.consent3) errors.consent3 = 'Consent 3 is required'
         break
-        
+
       default:
         break
     }
-    
+
     setFieldErrors(errors)
     return Object.keys(errors).length === 0 ? null : 'Please fix the validation errors below'
   }
@@ -323,7 +313,7 @@ const BecomeMentor = () => {
       })
       return
     }
-    
+
     if (currentStep < steps.length - 1) {
       setCurrentStep(currentStep + 1)
     }
@@ -337,7 +327,7 @@ const BecomeMentor = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    
+
     const validationError = validateStep()
     if (validationError) {
       toast({
@@ -373,7 +363,7 @@ const BecomeMentor = () => {
         linkedinProfile: formData.linkedinProfile,
         shortBio: formData.shortBio,
         bio: formData.bio, // Main bio field
-        
+
         // Professional Details
         currentJobTitle: formData.currentJobTitle,
         company: formData.company,
@@ -381,7 +371,7 @@ const BecomeMentor = () => {
         yearsOfExperience: formData.yearsOfExperience,
         experience: formData.yearsOfExperience, // For compatibility
         experienceDescription: formData.experienceDescription,
-        
+
         // Mentorship Details
         mentorshipAreas: formData.mentorshipAreas && formData.mentorshipAreas.length > 0 ? formData.mentorshipAreas : [],
         expertise: skills && skills.length > 0 ? skills : [], // Use skills state instead of formData.expertise
@@ -390,17 +380,17 @@ const BecomeMentor = () => {
         availableDays: formData.availableDays || '',
         timeCommitment: formData.timeCommitment || '',
         maxMentees: formData.maxMentees || '',
-        
+
         // Consent
         consent1: formData.consent1,
         consent2: formData.consent2,
         consent3: formData.consent3,
-        
+
         // Additional fields from database structure
         feedbackCount: 0,
         rating: null,
         status: 'pending', // Will be updated to 'approved' by admin
-        
+
         // User info
         userId: user?._id || user?.id,
         user: user?._id || user?.id // Match database 'user' field
@@ -411,7 +401,7 @@ const BecomeMentor = () => {
 
       // Create form data for file upload
       const submitData = new FormData()
-      
+
       // Add all mentor data as individual fields for backend compatibility
       Object.keys(mentorData).forEach(key => {
         if (key === 'mentorshipAreas' || key === 'expertise') {
@@ -425,7 +415,7 @@ const BecomeMentor = () => {
           submitData.append(key, mentorData[key])
         }
       })
-      
+
       // Add profile photo if exists
       if (profilePhoto) {
         submitData.append('profilePhoto', profilePhoto)
@@ -466,23 +456,23 @@ const BecomeMentor = () => {
           },
           photo: response.profilePhoto
         }
-        
+
         // Check if all critical fields are saved
         const missingFields = []
         Object.keys(savedFields.basic).forEach(key => {
           if (!savedFields.basic[key]) missingFields.push(`basic.${key}`)
         })
         Object.keys(savedFields.professional).forEach(key => {
-          if (Array.isArray(savedFields.professional[key]) ? 
-              savedFields.professional[key].length === 0 : 
-              !savedFields.professional[key]) {
+          if (Array.isArray(savedFields.professional[key]) ?
+            savedFields.professional[key].length === 0 :
+            !savedFields.professional[key]) {
             missingFields.push(`professional.${key}`)
           }
         })
         Object.keys(savedFields.availability).forEach(key => {
           if (!savedFields.availability[key]) missingFields.push(`availability.${key}`)
         })
-        
+
         // Update user context to mark as mentor
         updateUser({
           ...user,
@@ -524,7 +514,7 @@ const BecomeMentor = () => {
           <div className="space-y-6">
             <div className="text-center mb-6">
               <h3 className="text-lg font-semibold text-slate-900 mb-2">🔹 STEP 1: Basic Profile Details</h3>
-              <p className="text-sm text-slate-600">👉 Purpose: Identify the mentor clearly.</p>
+              <p className="text-sm text-slate-600">Purpose: Identify the mentor clearly.</p>
             </div>
 
             <div className="grid gap-6 md:grid-cols-2">
@@ -563,11 +553,10 @@ const BecomeMentor = () => {
                   type="tel"
                   value={formData.phoneNumber || '+91 '}
                   onChange={handleInputChange('phoneNumber')}
-                  className={`w-full rounded-lg border px-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 ${
-                    fieldErrors.phoneNumber 
-                      ? 'border-red-300 bg-red-50 focus:border-red-500 focus:ring-red-500/20' 
-                      : 'border-slate-300 focus:border-blue-500'
-                  }`}
+                  className={`w-full rounded-lg border px-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 ${fieldErrors.phoneNumber
+                    ? 'border-red-300 bg-red-50 focus:border-red-500 focus:ring-red-500/20'
+                    : 'border-slate-300 focus:border-blue-500'
+                    }`}
                   placeholder="+91 98765 43210"
                 />
                 {fieldErrors.phoneNumber && (
@@ -576,25 +565,26 @@ const BecomeMentor = () => {
                 <p className="text-xs text-slate-500 mt-1">Optional, hidden from students</p>
               </div>
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-2">Graduation Year *</label>
-                <select
-                  value={formData.graduationYear}
-                  onChange={handleInputChange('graduationYear')}
-                  className={`w-full rounded-lg border px-4 py-2.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 ${
-                    fieldErrors.graduationYear 
-                      ? 'border-red-300 bg-red-50 focus:border-red-500 focus:ring-red-500/20' 
-                      : 'border-slate-300 focus:border-blue-500'
-                  }`}
-                  required
-                >
-                  <option value="">Select Year</option>
-                  {Array.from({ length: new Date().getFullYear() - 2011 }, (_, i) => 2012 + i).map(year => (
-                    <option key={year} value={year}>{year}</option>
-                  ))}
-                </select>
+                <label className="block text-sm font-semibold text-slate-700 mb-2">
+                  Graduation Year *
+                </label>
+
+                <input
+                  type="text"
+                  value={formData.graduationYear || ""}
+                  readOnly
+                  className={`w-full rounded-lg border px-4 py-2.5 text-sm text-slate-900 bg-slate-100 cursor-not-allowed ${fieldErrors.graduationYear
+                    ? 'border-red-300 bg-red-50'
+                    : 'border-slate-300'
+                    }`}
+                />
+
                 {fieldErrors.graduationYear && (
-                  <p className="text-xs text-red-600 mt-1 font-medium">{fieldErrors.graduationYear}</p>
+                  <p className="text-xs text-red-600 mt-1 font-medium">
+                    {fieldErrors.graduationYear}
+                  </p>
                 )}
+                <p className="text-xs text-slate-500 mt-1">Auto-filled, read-only</p>
               </div>
             </div>
 
@@ -614,18 +604,16 @@ const BecomeMentor = () => {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-2">Department *</label>
-                <select
-                  value={formData.department}
-                  onChange={handleInputChange('department')}
-                  className="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                  required
-                >
-                  <option value="">Select Department</option>
-                  {departmentOptions.map(dept => (
-                    <option key={dept} value={dept}>{dept}</option>
-                  ))}
-                </select>
+                <label className="block text-sm font-semibold text-slate-700 mb-2">
+                  Department *
+                </label>
+
+                <input
+                  type="text"
+                  value={formData.department || ""}
+                  readOnly
+                  className="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm text-slate-900 bg-slate-100 cursor-not-allowed"
+                />
               </div>
             </div>
 
@@ -667,25 +655,42 @@ const BecomeMentor = () => {
             </div>
 
             <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-2">Profile Photo</label>
+              <label className="block text-sm font-semibold text-slate-700 mb-2">
+                Profile Photo
+              </label>
+
               <div className="flex items-center space-x-4">
                 {photoPreview ? (
-                  <img src={photoPreview} alt="Profile preview" className="h-16 w-16 rounded-full object-cover" />
+                  <img
+                    src={photoPreview}
+                    alt="Profile"
+                    className="h-16 w-16 rounded-full object-cover"
+                  />
                 ) : (
                   <div className="h-16 w-16 rounded-full bg-slate-200 flex items-center justify-center">
-                    <svg className="h-8 w-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    <svg
+                      className="h-8 w-8 text-slate-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                      />
                     </svg>
                   </div>
                 )}
+
                 <div>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handlePhotoChange}
-                    className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                  />
-                  <p className="text-xs text-slate-500 mt-1">Optional but recommended • Max size: 2MB • For UI display only</p>
+                  <p className="text-sm text-slate-600">
+                    Profile photo is fetched from your account.
+                  </p>
+                  <p className="text-xs text-slate-500">
+                    To update, please change it from your profile settings.
+                  </p>
                 </div>
               </div>
             </div>
@@ -702,13 +707,13 @@ const BecomeMentor = () => {
 
             <div className="space-y-4">
               <h4 className="text-md font-semibold text-slate-800">🧑‍💼 Professional Information</h4>
-              
+
               <div className="grid gap-6 md:grid-cols-2">
                 <div>
                   <label className="block text-sm font-semibold text-slate-700 mb-2">Current Job Title *</label>
                   <input
                     type="text"
-                    value={formData.currentJobTitle}
+                   
                     onChange={handleInputChange('currentJobTitle')}
                     className="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                     placeholder="Senior Software Engineer"
@@ -771,11 +776,10 @@ const BecomeMentor = () => {
                       key={area}
                       type="button"
                       onClick={() => handleMentorshipAreaToggle(area)}
-                      className={`rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-                        isSelected 
-                          ? 'bg-blue-500 text-white' 
-                          : 'border border-slate-300 text-slate-600 hover:border-blue-500 hover:text-blue-500'
-                      }`}
+                      className={`rounded-lg px-3 py-2 text-sm font-medium transition-colors ${isSelected
+                        ? 'bg-blue-500 text-white'
+                        : 'border border-slate-300 text-slate-600 hover:border-blue-500 hover:text-blue-500'
+                        }`}
                     >
                       {area}
                     </button>
@@ -790,7 +794,7 @@ const BecomeMentor = () => {
             <div className="space-y-4">
               <h4 className="text-md font-semibold text-slate-800">🧠 Skills / Expertise</h4>
               <p className="text-xs text-slate-600">Add your technical and professional skills (max 10)</p>
-              
+
               <div className="flex gap-2">
                 <input
                   type="text"
@@ -810,7 +814,7 @@ const BecomeMentor = () => {
                   Add
                 </button>
               </div>
-              
+
               <div className="flex flex-wrap gap-2">
                 {skills.map((skill, index) => (
                   <span
@@ -851,7 +855,7 @@ const BecomeMentor = () => {
 
             <div className="space-y-4">
               <h4 className="text-md font-semibold text-slate-800">⏰ Availability</h4>
-              
+
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-2">Preferred Mentorship Mode *</label>
                 <select
@@ -900,7 +904,7 @@ const BecomeMentor = () => {
 
             <div className="space-y-4">
               <h4 className="text-md font-semibold text-slate-800">👥 Mentorship Preference</h4>
-              
+
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-2">Who can connect *</label>
                 <select
@@ -936,13 +940,12 @@ const BecomeMentor = () => {
             <div className="space-y-4">
               <h4 className="text-md font-semibold text-slate-800">✅ Consent & Agreement</h4>
               <p className="text-sm text-slate-600 mb-4">Please review and accept all the following terms to proceed with your mentor application.</p>
-              
+
               <div className="space-y-4">
-                <label className={`flex items-start p-3 rounded-lg border-2 transition-colors ${
-                  formData.consent1 
-                    ? 'border-green-300 bg-green-50' 
-                    : 'border-slate-200 bg-white hover:border-slate-300'
-                }`}>
+                <label className={`flex items-start p-3 rounded-lg border-2 transition-colors ${formData.consent1
+                  ? 'border-green-300 bg-green-50'
+                  : 'border-slate-200 bg-white hover:border-slate-300'
+                  }`}>
                   <input
                     type="checkbox"
                     checked={formData.consent1}
@@ -950,9 +953,8 @@ const BecomeMentor = () => {
                     className="mt-1 h-5 w-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500 focus:ring-2"
                   />
                   <div className="ml-3 flex-1">
-                    <span className={`text-sm font-medium ${
-                      formData.consent1 ? 'text-green-800' : 'text-slate-700'
-                    }`}>
+                    <span className={`text-sm font-medium ${formData.consent1 ? 'text-green-800' : 'text-slate-700'
+                      }`}>
                       I agree to be listed as a mentor on the alumni portal and make my profile visible to registered users
                     </span>
                     {!formData.consent1 && (
@@ -966,11 +968,10 @@ const BecomeMentor = () => {
                   )}
                 </label>
 
-                <label className={`flex items-start p-3 rounded-lg border-2 transition-colors ${
-                  formData.consent2 
-                    ? 'border-green-300 bg-green-50' 
-                    : 'border-slate-200 bg-white hover:border-slate-300'
-                }`}>
+                <label className={`flex items-start p-3 rounded-lg border-2 transition-colors ${formData.consent2
+                  ? 'border-green-300 bg-green-50'
+                  : 'border-slate-200 bg-white hover:border-slate-300'
+                  }`}>
                   <input
                     type="checkbox"
                     checked={formData.consent2}
@@ -978,9 +979,8 @@ const BecomeMentor = () => {
                     className="mt-1 h-5 w-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500 focus:ring-2"
                   />
                   <div className="ml-3 flex-1">
-                    <span className={`text-sm font-medium ${
-                      formData.consent2 ? 'text-green-800' : 'text-slate-700'
-                    }`}>
+                    <span className={`text-sm font-medium ${formData.consent2 ? 'text-green-800' : 'text-slate-700'
+                      }`}>
                       I understand that I will receive mentorship requests and should respond in a timely manner
                     </span>
                     {!formData.consent2 && (
@@ -994,11 +994,10 @@ const BecomeMentor = () => {
                   )}
                 </label>
 
-                <label className={`flex items-start p-3 rounded-lg border-2 transition-colors ${
-                  formData.consent3 
-                    ? 'border-green-300 bg-green-50' 
-                    : 'border-slate-200 bg-white hover:border-slate-300'
-                }`}>
+                <label className={`flex items-start p-3 rounded-lg border-2 transition-colors ${formData.consent3
+                  ? 'border-green-300 bg-green-50'
+                  : 'border-slate-200 bg-white hover:border-slate-300'
+                  }`}>
                   <input
                     type="checkbox"
                     checked={formData.consent3}
@@ -1006,9 +1005,8 @@ const BecomeMentor = () => {
                     className="mt-1 h-5 w-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500 focus:ring-2"
                   />
                   <div className="ml-3 flex-1">
-                    <span className={`text-sm font-medium ${
-                      formData.consent3 ? 'text-green-800' : 'text-slate-700'
-                    }`}>
+                    <span className={`text-sm font-medium ${formData.consent3 ? 'text-green-800' : 'text-slate-700'
+                      }`}>
                       I agree to follow mentorship guidelines and maintain professional conduct
                     </span>
                     {!formData.consent3 && (
@@ -1022,13 +1020,12 @@ const BecomeMentor = () => {
                   )}
                 </label>
               </div>
-              
+
               {/* Consent Status Summary */}
-              <div className={`p-4 rounded-lg border-2 ${
-                (!formData.consent1 || !formData.consent2 || !formData.consent3)
-                  ? 'border-amber-200 bg-amber-50'
-                  : 'border-green-200 bg-green-50'
-              }`}>
+              <div className={`p-4 rounded-lg border-2 ${(!formData.consent1 || !formData.consent2 || !formData.consent3)
+                ? 'border-amber-200 bg-amber-50'
+                : 'border-green-200 bg-green-50'
+                }`}>
                 <div className="flex items-center">
                   {(!formData.consent1 || !formData.consent2 || !formData.consent3) ? (
                     <>
@@ -1076,17 +1073,15 @@ const BecomeMentor = () => {
           <div className="flex items-center justify-center space-x-2">
             {steps.map((step, index) => (
               <div key={index} className="flex items-center">
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold transition-colors ${
-                  currentStep >= index 
-                    ? 'bg-blue-600 text-white' 
-                    : 'bg-slate-200 text-slate-600'
-                }`}>
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold transition-colors ${currentStep >= index
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-slate-200 text-slate-600'
+                  }`}>
                   {index + 1}
                 </div>
                 {index < steps.length - 1 && (
-                  <div className={`w-16 h-0.5 transition-colors ${
-                    currentStep > index ? 'bg-blue-600' : 'bg-slate-200'
-                  }`} />
+                  <div className={`w-16 h-0.5 transition-colors ${currentStep > index ? 'bg-blue-600' : 'bg-slate-200'
+                    }`} />
                 )}
               </div>
             ))}
@@ -1101,7 +1096,7 @@ const BecomeMentor = () => {
         <div className="bg-white rounded-2xl shadow-xl border border-slate-200 p-8">
           <form onSubmit={handleSubmit}>
             {renderStepContent()}
-            
+
             {/* Navigation Buttons */}
             <div className="flex justify-between mt-8 pt-6 border-t border-slate-200">
               <button
@@ -1112,7 +1107,7 @@ const BecomeMentor = () => {
               >
                 Previous
               </button>
-              
+
               {currentStep < steps.length - 1 ? (
                 <button
                   type="button"
@@ -1131,11 +1126,10 @@ const BecomeMentor = () => {
                   <button
                     type="submit"
                     disabled={isSubmitting || !formData.consent1 || !formData.consent2 || !formData.consent3}
-                    className={`rounded-lg px-6 py-2.5 text-sm font-medium text-white transition-colors ${
-                      !formData.consent1 || !formData.consent2 || !formData.consent3
-                        ? 'bg-slate-400 cursor-not-allowed'
-                        : 'bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed'
-                    }`}
+                    className={`rounded-lg px-6 py-2.5 text-sm font-medium text-white transition-colors ${!formData.consent1 || !formData.consent2 || !formData.consent3
+                      ? 'bg-slate-400 cursor-not-allowed'
+                      : 'bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed'
+                      }`}
                   >
                     {isSubmitting ? 'Registering...' : 'Register as Mentor'}
                   </button>

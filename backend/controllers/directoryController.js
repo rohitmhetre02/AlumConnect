@@ -190,6 +190,8 @@ const formatMember = (memberDoc, normalizedRole) => {
 
     base.year = classYear
 
+    base.currentYear = member.currentYear ?? ''  // Add currentYear field
+
     base.program = base.program || base.department
 
     base.interests = ensureArray(member.interests ?? base.skills)

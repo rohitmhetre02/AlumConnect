@@ -5,11 +5,13 @@ const fs = require('fs')
 const authMiddleware = require('../middleware/authMiddleware')
 const {
   submitMentorApplication,
+  listAllMentors,
   listMentors,
   listApplications,
   getMyProfile,
   updateMyProfile,
   getMentorProfile,
+  getMentorSessions,
 } = require('../controllers/mentorController')
 const { aiMatchMentors } = require('../controllers/mentorMatchController')
 
@@ -48,11 +50,13 @@ const upload = multer({
 })
 
 router.get('/', listMentors)
+router.get('/all', listAllMentors)
 router.post('/applications', authMiddleware, upload.single('profilePhoto'), submitMentorApplication)
 router.get('/applications', authMiddleware, listApplications)
 router.get('/me', authMiddleware, getMyProfile)
 router.put('/me', authMiddleware, updateMyProfile)
 router.post('/ai-match', authMiddleware, aiMatchMentors)
 router.get('/:mentorId', getMentorProfile)
+router.get('/:mentorId/sessions', getMentorSessions)
 
 module.exports = router

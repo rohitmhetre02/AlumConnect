@@ -10,7 +10,6 @@ import DashboardOverviewEnhanced from './DashboardOverviewEnhancedFixed'
 import AdminDashboardHome from '../components/AdminDashboardHome'
 import UserManagement from '../components/UserManagement'
 import FacultyManagement from '../components/FacultyManagement'
-import MentorManagement from '../components/MentorManagement'
 import AlumniManagement from '../components/AlumniManagement'
 import CoordinatorManagement from '../components/CoordinatorManagement'
 import AdminPostEvent from '../components/AdminPostEvent'
@@ -30,13 +29,15 @@ import CoordinatorNewsReview from '../components/CoordinatorNewsReview'
 import AdminNewsDetail from '../components/AdminNewsDetail'
 import MentorDetails from '../components/MentorProfileDetails'
 import Mentorship from '../components/Mentorship'
+import MentorSessions from '../components/MentorSessions'
+import MentorProfile from '../components/MentorProfile'
 import Gallery from '../components/Gallery'
 import AdminAnalyticsDashboard from '../components/AdminAnalyticsDashboard'
-import Settings from '../components/Settings'
-import AdminSettings from './AdminSettings'
+
 import ProfileApprovalManagement from '../components/ProfileApprovalManagement'
 import PostApprovalManagement from '../components/PostApprovalManagement'
 import AdminProfile from './AdminProfile'
+import Settings from './Settings'
 
 // Coordinator Dashboard Components
 import CoordinatorDashboardHome from '../components/CoordinatorDashboardHome'
@@ -57,7 +58,6 @@ const DashboardRoutes = () => {
         <Route path="users/:memberId" element={<UserManagement />} />
         <Route path="faculty" element={<FacultyManagement />} />
         <Route path="faculty/:memberId" element={<FacultyManagement />} />
-        <Route path="mentors" element={<MentorManagement />} />
         <Route path="alumni" element={<AlumniManagement />} />
         <Route path="alumni/:memberId" element={<AlumniManagement />} />
         <Route path="coordinators" element={<CoordinatorManagement />} />
@@ -84,11 +84,12 @@ const DashboardRoutes = () => {
         <Route path="news/:articleId/edit" element={<AdminPostArticle />} />
         <Route path="mentorship" element={<Mentorship />} />
         <Route path="mentorship/:mentorId" element={<MentorDetails />} />
+        <Route path="mentorship/:mentorId/profile" element={<MentorProfile />} />
+        <Route path="mentorship/:mentorId/sessions" element={<MentorSessions />} />
         <Route path="mentorship/:mentorId/requests" element={<MentorDetails />} />
         <Route path="mentorship/:mentorId/reviews" element={<MentorDetails />} />
         <Route path="gallery" element={<Gallery />} />
         <Route path="analytics" element={<AdminAnalyticsDashboard />} />
-        <Route path="settings" element={<Settings />} />
         <Route path="profile-approval" element={<ProfileApprovalManagement />} />
         <Route path="profile-approval/pending" element={<ProfileApprovalManagement />} />
         <Route path="profile-approval/approved" element={<ProfileApprovalManagement />} />
@@ -97,6 +98,7 @@ const DashboardRoutes = () => {
         <Route path="post-approval/pending" element={<PostApprovalManagement />} />
         <Route path="post-approval/approved" element={<PostApprovalManagement />} />
         <Route path="profile" element={<AdminProfile />} />
+        <Route path="settings" element={<Settings />} />
       </Route>
 
       {/* Coordinator Routes with /coordinator prefix */}
@@ -107,7 +109,6 @@ const DashboardRoutes = () => {
         <Route path="users/:memberId" element={<UserManagement />} />
         <Route path="faculty" element={<FacultyManagement />} />
         <Route path="faculty/:memberId" element={<FacultyManagement />} />
-        <Route path="mentors" element={<MentorManagement />} />
         <Route path="alumni" element={<AlumniManagement />} />
         <Route path="alumni/:memberId" element={<AlumniManagement />} />
         <Route path="events" element={<EventsManagement />} />
@@ -126,6 +127,8 @@ const DashboardRoutes = () => {
         <Route path="campaigns/:campaignId/edit" element={<AdminPostCampaign />} />
         <Route path="mentorship" element={<Mentorship />} />
         <Route path="mentorship/:mentorId" element={<MentorDetails />} />
+        <Route path="mentorship/:mentorId/profile" element={<MentorProfile />} />
+        <Route path="mentorship/:mentorId/sessions" element={<MentorSessions />} />
         <Route path="mentorship/:mentorId/requests" element={<MentorDetails />} />
         <Route path="mentorship/:mentorId/reviews" element={<MentorDetails />} />
         <Route path="news" element={<NewsManagement />} />
@@ -138,7 +141,8 @@ const DashboardRoutes = () => {
         <Route path="profile-approval/pending" element={<ProfileApprovalManagement />} />
         <Route path="profile-approval/approved" element={<ProfileApprovalManagement />} />
         <Route path="settings" element={<Settings />} />
-        <Route path="profile" element={<Settings />} />
+        
+        
       </Route>
     </Routes>
   )

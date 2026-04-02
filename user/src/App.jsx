@@ -58,7 +58,7 @@ import EditEvent from './pages/user/EditEvent'
 import EditDonation from './pages/user/EditDonation'
 import EditOpportunity from './pages/user/EditOpportunity'
 import UserInsights from './pages/user/UserInsights'
-import MentorProfile from './pages/user/MentorProfile'
+
 import ProfileReviewBanner from './components/user/ProfileReviewBanner'
 import AccessRestrictedPage from './components/user/AccessRestrictedPage'
 import { normalizeProfileStatus, PROFILE_STATUS } from './utils/profileStatus'
@@ -310,11 +310,7 @@ function App() {
                 <UserMentorship />
               </ProfilePendingGuardWithFallback>
             } />
-            <Route path="mentors/:mentorId" element={
-              <ProfilePendingGuardWithFallback>
-                <MentorProfile />
-              </ProfilePendingGuardWithFallback>
-            } />
+            
             <Route path="events" element={
               <ProfilePendingGuardWithFallback>
                 <UserEvents />
