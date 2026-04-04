@@ -245,7 +245,7 @@ const UserSidebar = ({ isMobile = false, onClose }) => {
     { label: 'Applications', path: '/dashboard/applications', icon: <Clipboard size={18} /> },
     { label: 'Mentorship Requests', path: '/dashboard/mentorship-requests', icon: <MessageSquare size={18} /> },
     { label: 'Registered Events', path: '/dashboard/registered-events', icon: <Calendar size={18} /> },
-    { label: 'Connections', path: '/dashboard/connections', icon: <Connections size={18} /> },
+    // { label: 'Connections', path: '/dashboard/connections', icon: <Connections size={18} /> },
     { label: 'My Campaigns', path: '/dashboard/my-campaigns', icon: <Heart size={18} /> },
     { label: 'Insights', path: '/dashboard/insights', icon: <BarChart size={18} /> }
   ]
@@ -675,44 +675,8 @@ const UserSidebar = ({ isMobile = false, onClose }) => {
         </div>
       </aside>
 
-      {/* Share Modal */}
-      {showShareModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
-          <div className="share-modal-content bg-white rounded-xl shadow-2xl p-6 max-w-md w-full mx-4">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-slate-900">Share Profile</h3>
-              <button
-                onClick={() => setShowShareModal(false)}
-                className="text-slate-400 hover:text-slate-600 p-2 rounded-lg hover:bg-slate-100 transition-colors"
-              >
-                <X size={20} />
-              </button>
-            </div>
-            <div className="text-center mb-4">
-              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-bold text-xl shadow-lg">
-                {displayName.charAt(0).toUpperCase()}
-              </div>
-              <p className="text-base text-slate-700 mb-2">{displayName}</p>
-              <p className="text-sm text-slate-500 mb-4">{user?.profile?.bio || 'No bio available'}</p>
-            </div>
-            <div className="flex flex-col sm:flex-row gap-3">
-              <button
-                onClick={shareProfile}
-                className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
-              >
-                <Share2 size={18} className="mr-2" />
-                Share Profile Link
-              </button>
-              <button
-                onClick={() => setShowShareModal(false)}
-                className="flex-1 px-4 py-3 bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300 transition-colors"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      
+      
     </>
   )
 }

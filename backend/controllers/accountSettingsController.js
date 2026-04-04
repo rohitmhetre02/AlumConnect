@@ -95,7 +95,7 @@ const otpCooldowns = new Map();
 // Send email with OTP
 const sendEmailOTP = async (email, otp, purpose) => {
   try {
-    const transporter = nodemailer.createTransporter({
+    const transporter = nodemailer.createTransport({
       service: 'gmail',
       auth: {
         user: process.env.EMAIL_USER,
@@ -588,9 +588,11 @@ const verifyPassword = async (req, res) => {
 };
 
 // POST /api/auth/delete-account
+// DELETE ACCOUNT
 const deleteAccount = async (req, res) => {
   try {
     const { password } = req.body;
+
     const user = await getUserById(req.user.id);
 
     if (!user) {
@@ -598,27 +600,19 @@ const deleteAccount = async (req, res) => {
     }
 
     // Verify password
-    const isPasswordValid = await bcrypt.compare(password, user.password);
-    if (!isPasswordValid) {
-      return res.status(400).json({ success: false, error: 'Invalid password' });
+    const isValid = await bcrypt.compare(password, user.password);
+    if (!isValid) {
+      return res.status(400).json({ success: false, error: 'Incorrect password' });
     }
 
-    // Delete user from all role collections
-    const roles = ['student', 'alumni', 'faculty', 'admin', 'coordinator'];
-    for (const role of roles) {
-      const Model = getModelByRole(role);
-      try {
-        await Model.findByIdAndDelete(user._id);
-      } catch (error) {
-        // Continue if user not found in this role
-      }
-    }
+    // Delete user
+    await user.deleteOne();
 
     res.json({ success: true, message: 'Account deleted successfully' });
 
   } catch (error) {
-    console.error('Account deletion error:', error);
-    res.status(500).json({ success: false, error: 'Failed to delete account' });
+    console.error(error);
+    res.status(500).json({ success: false, error: 'Delete failed' });
   }
 };
 
@@ -633,3 +627,4 @@ module.exports = {
   verifyForgotPasswordOTP,
   resendForgotPasswordOTP,
 };
+ 

@@ -44,9 +44,8 @@ router.get('/profile', authMiddleware, getMyProfile)
 router.put('/update-email', authMiddleware, updateEmail)
 router.put('/verify-email-otp', verifyEmailOTP)
 router.put('/resend-email-otp', resendEmailOTP)
-router.put('/update-password', authMiddleware, updatePassword)
-router.post('/change-password', authMiddleware, updatePassword) // Add POST route for change-password
-router.post('/verify-password', verifyPassword) // Remove auth middleware for initial verification
+router.post('/update-password', authMiddleware, updatePassword) // POST route for password update
+router.post('/verify-password', verifyPassword) // POST route for password verification
 router.delete('/delete-account', authMiddleware, deleteAccount)
 router.post('/forgot-password', forgotPassword)
 router.post('/verify-forgot-password-otp', verifyForgotPasswordOTP)

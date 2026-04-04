@@ -1,8 +1,10 @@
 import { useAuth } from '../../context/AuthContext'
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import useAlumniDashboard from '../../hooks/useAlumniDashboard'
 import InteractiveCalendar from '../../components/shared/InteractiveCalendar'
 import useCalendarNotes from '../../hooks/useCalendarNotes'
+import { User, Mail, Phone, MapPin, Calendar, Briefcase, GraduationCap, CheckCircle } from 'lucide-react'
 
 const CATEGORY_COLORS = {
   mentorship: { bg: 'bg-blue-100', dot: 'bg-blue-500', text: 'Mentorship', colorName: 'Blue' },
@@ -13,6 +15,147 @@ const CATEGORY_COLORS = {
 const AlumniDashboard = () => {
 
   const { user } = useAuth()
+  const navigate = useNavigate()
+
+  // Debug: Log user data to see available picture fields
+  console.log('User data for profile picture and role:', {
+    avatar: user?.avatar,
+    profile_avatar: user?.profile?.avatar,
+    profilePhoto: user?.profilePhoto,
+    profilePicture: user?.profilePicture,
+    profile_profilePhoto: user?.profile?.profilePhoto,
+    role: user?.role,
+    currentJobTitle: user?.currentJobTitle,
+    profile_currentJobTitle: user?.profile?.currentJobTitle,
+    company: user?.company,
+    profile_company: user?.profile?.company,
+    // Check all available profile fields
+    allProfileFields: user?.profile,
+    allUserFields: user,
+    firstName: user?.firstName,
+    lastName: user?.lastName,
+    email: user?.email,
+    phone: user?.phone,
+    bio: user?.profile?.bio,
+    location: user?.profile?.location,
+    linkedin: user?.profile?.linkedin,
+    github: user?.profile?.github,
+    twitter: user?.profile?.twitter,
+    portfolio: user?.profile?.portfolio,
+    skills: user?.profile?.skills,
+    industry: user?.profile?.industry,
+    experience: user?.profile?.experience,
+    graduationYear: user?.profile?.graduationYear || user?.graduationYear || user?.passoutYear,
+    department: user?.profile?.department || user?.department,
+    degree: user?.profile?.degree,
+    achievements: user?.profile?.achievements
+  })
+
+  // Calculate profile completion percentage
+  const calculateProfileCompletion = () => {
+    if (!user) return 0;
+
+    const profile = user?.profile || {};
+
+    // ✅ Track EXACT fields from Profile.jsx structure with ultra-lenient checks
+    const fields = [
+      // Basic Info (from profile.raw and user object)
+      user?.firstName || profile.raw?.firstName || profile.firstName,
+      user?.lastName || profile.raw?.lastName || profile.lastName,
+      user?.email || profile.contact?.email || profile.email,
+      user?.phone || profile.contact?.phone || profile.phone,
+
+      // Profile Summary
+      profile.title || profile.raw?.title || user?.title,
+      profile.about || profile.raw?.about || user?.about || user?.bio,
+      profile.avatar || profile.raw?.avatar || user?.avatar,
+      profile.cover || profile.raw?.cover || user?.cover,
+
+      // Academic Info
+      profile.department || profile.raw?.department || user?.department,
+      profile.passoutYear || profile.raw?.passoutYear || user?.passoutYear || user?.graduationYear,
+      
+      // Social Links - ultra lenient (count if ANY exists)
+      !!(profile.socials?.linkedin || profile.socials?.github || profile.socials?.instagram || 
+          profile.linkedin || profile.github || profile.instagram),
+      
+      // Skills & Experience - ultra lenient checks
+      !!(profile.skills && (Array.isArray(profile.skills) ? profile.skills.length > 0 : !!profile.skills)),
+      !!(profile.experiences && (Array.isArray(profile.experiences) ? profile.experiences.length > 0 : !!profile.experiences)),
+      !!(profile.education && (Array.isArray(profile.education) ? profile.education.length > 0 : !!profile.education)),
+      !!(profile.certifications && (Array.isArray(profile.certifications) ? profile.certifications.length > 0 : !!profile.certifications))
+    ];
+
+    const completed = fields.filter(f => {
+      // Handle booleans (from social links)
+      if (typeof f === 'boolean') return f;
+      
+      // Handle arrays
+      if (Array.isArray(f)) {
+        return f.length > 0;
+      }
+      
+      // Handle objects
+      if (typeof f === 'object' && f !== null) {
+        return Object.keys(f).length > 0;
+      }
+      
+      // Handle strings and other values - ultra lenient
+      return f !== undefined && f !== null && f !== '' && 
+             f !== 'N/A' && f !== 'Not specified' && f !== 'null' && f !== 'undefined' &&
+             f !== 'NA' && f !== 'n/a' && f !== 'N/A' && f !== 'none' && f !== 'None';
+    }).length;
+
+    const completionPercentage = Math.round((completed / fields.length) * 100);
+    
+    // If completion is very high (>= 90%), consider it 100% for user experience
+    const finalPercentage = completionPercentage >= 90 ? 100 : completionPercentage;
+    
+    console.log('=== ALUMNI PROFILE COMPLETION DEBUG ===');
+    console.log('Total fields:', fields.length);
+    console.log('Completed fields:', completed);
+    console.log('Raw percentage:', completionPercentage);
+    console.log('Final percentage:', finalPercentage);
+    console.log('\n=== FIELD BY FIELD ANALYSIS ===');
+    
+    const fieldNames = [
+      'firstName', 'lastName', 'email', 'phone',
+      'title', 'about', 'avatar', 'cover',
+      'department', 'passoutYear',
+      'socials (any)', 'skills', 'experiences', 'education', 'certifications'
+    ];
+    
+    fields.forEach((field, index) => {
+      const isCompleted = (() => {
+        if (typeof field === 'boolean') return field;
+        if (Array.isArray(field)) return field.length > 0;
+        if (typeof field === 'object' && field !== null) return Object.keys(field).length > 0;
+        return field !== undefined && field !== null && field !== '' && 
+               field !== 'N/A' && field !== 'Not specified' && field !== 'null' && field !== 'undefined' &&
+               field !== 'NA' && field !== 'n/a' && field !== 'N/A' && field !== 'none' && field !== 'None';
+      })();
+      
+      console.log(`${index + 1}. ${fieldNames[index]}:`, {
+        value: field,
+        type: typeof field,
+        isArray: Array.isArray(field),
+        isObject: typeof field === 'object' && field !== null,
+        completed: isCompleted,
+        issue: !isCompleted ? `❌ INCOMPLETE: ${field}` : '✅ OK'
+      });
+    });
+    
+    console.log('\n=== RAW DATA ===');
+    console.log('User object keys:', Object.keys(user || {}));
+    console.log('Profile object keys:', Object.keys(profile || {}));
+    console.log('Socials:', profile.socials);
+    console.log('Skills:', profile.skills);
+    console.log('=========================================');
+
+    return finalPercentage;
+  }
+
+  const profileCompletion = calculateProfileCompletion()
 
   const [selectedDate, setSelectedDate] = useState(null)
   const [showNoteModal, setShowNoteModal] = useState(false)
@@ -112,19 +255,96 @@ const AlumniDashboard = () => {
 
       <div className="max-w-7xl mx-auto px-4 py-8">
 
-        {/* HEADER */}
+        {/* WELCOME CARD */}
 
-        <header className="mb-8">
+        <div className="mb-8">
+          <div className="bg-gradient-to-r from-blue-300 via-pink-300 to-orange-300 rounded-xl p-4 text-slate-700 shadow-lg">
+            <div className="flex flex-col md:flex-row items-center md:items-center gap-3">
+              
+              {/* Profile Picture */}
+              <div className="flex-shrink-0">
+                <div className="w-12 h-12 md:w-14 md:h-14 bg-white rounded-full flex items-center justify-center shadow">
+                  {(user?.avatar ?? user?.profile?.avatar) ? (
+                    <img 
+                      src={user?.avatar ?? user?.profile?.avatar} 
+                      alt="Profile" 
+                      className="w-full h-full rounded-full object-cover"
+                      onError={(e) => {
+                        console.log('Image failed to load, using fallback icon');
+                        e.target.style.display = 'none';
+                        e.target.nextSibling.style.display = 'flex';
+                      }}
+                    />
+                  ) : null}
+                  <User className="w-6 h-6 md:w-7 md:h-7 text-blue-500" 
+                        style={{display: (user?.avatar ?? user?.profile?.avatar) ? 'none' : 'flex'}} />
+                </div>
+              </div>
 
-  <h1 className="text-3xl font-semibold text-slate-900">
-    Welcome back, {user?.firstName || user?.name?.split(' ')[0] || 'Alumni'}
-  </h1>
+              {/* User Info */}
+              <div className="flex-1 text-center md:text-left">
+                <h1 className="text-xl md:text-2xl font-bold mb-1 text-slate-800">
+                  Welcome back, {user?.firstName || user?.name?.split(' ')[0] || 'Alumni'}!
+                </h1>
+                
+                {/* Role/Position */}
+                <p className="text-slate-600 text-sm mb-2">
+  {user?.role
+    ? user.role.charAt(0).toUpperCase() + user.role.slice(1)
+    : 'Alumni'}
+</p>
+                
+                {/* Quick Info */}
+                <div className="flex flex-wrap gap-2 text-xs text-slate-600 mb-2">
+                  <div className="flex items-center gap-1">
+                    <GraduationCap className="w-3 h-3" />
+                    <span>Passout Year: {user?.profile?.graduationYear || user?.graduationYear || user?.passoutYear || 'N/A'}</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Briefcase className="w-3 h-3" />
+                    <span>{user?.profile?.department || user?.department || 'Computer Engineering'}</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <MapPin className="w-3 h-3" />
+                    <span>{user?.profile?.location || user?.location || 'Location'}</span>
+                  </div>
+                </div>
 
-  <p className="text-sm text-slate-500 mt-1">
-    Batch: {user?.profile?.graduationYear || user?.graduationYear || user?.passoutYear || 'N/A'} • {user?.profile?.department || user?.department || 'Information Technology'}
-  </p>
+                {/* Profile Completion */}
+                <div className="bg-white/50 backdrop-blur-sm rounded-lg p-2">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs font-medium text-slate-700">Profile Completion</span>
+                    <span className="text-xs font-bold text-slate-700">{profileCompletion}%</span>
+                  </div>
+                  <div className="w-full bg-white/70 rounded-full h-1.5">
+                    <div 
+                      className="bg-blue-500 rounded-full h-1.5 transition-all duration-300"
+                      style={{ width: `${profileCompletion}%` }}
+                    />
+                  </div>
+                  {profileCompletion < 100 && (
+                    <p className="text-xs text-slate-600 mt-1">
+                      Complete your profile to get better opportunities
+                    </p>
+                  )}
+                </div>
+              </div>
 
-</header>
+              {/* Action Button */}
+              <div className="flex-shrink-0">
+                <button
+                  onClick={() => {
+                    console.log('Navigating to profile...');
+                    navigate('/dashboard/profile');
+                  }}
+                  className="bg-white text-blue-600 px-4 py-1.5 rounded-lg font-semibold hover:bg-blue-50 transition-colors shadow text-xs"
+                >
+                  View Profile
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
 
 
         {/* STATS */}

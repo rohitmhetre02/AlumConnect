@@ -107,13 +107,13 @@ const UserTopbar = ({ onToggleSidebar }) => {
               <path d="M3 12h18M3 6h18m-9-9v12m9 9v12" />
             </svg>
           </button>
-          
+
           {/* Logo/Brand - hidden on mobile when sidebar is open */}
           <div className="hidden sm:block">
             <div className="flex items-center space-x-3">
-              
+
               <div>
-               
+
               </div>
             </div>
           </div>
@@ -142,27 +142,20 @@ const UserTopbar = ({ onToggleSidebar }) => {
             </IconButton>
 
             {openDropdown === "notifications" && (
-              <div className="absolute right-0 mt-3 w-80 bg-white shadow-xl rounded-lg border border-slate-200">
-                <div className="p-4 border-b border-slate-200">
-                  <div className="flex items-center justify-between">
-                    <h3 className="font-semibold text-slate-900">Notifications</h3>
-                    <button
-                      onClick={() => {
-                        setShowActivityPanel(true);
-                        setOpenDropdown(null);
-                      }}
-                      className="text-sm text-blue-600 hover:text-blue-700 font-medium"
-                    >
-                      View All
-                    </button>
-                  </div>
+              <div className="absolute right-0 mt-3 w-72 bg-white shadow-xl rounded-xl border border-slate-200 p-6 text-center">
+
+                <div className="h-12 w-12 mx-auto bg-blue-100 rounded-full flex items-center justify-center mb-3">
+                  <svg className="h-6 w-6 text-blue-600" fill="none" stroke="currentColor" strokeWidth="1.6" viewBox="0 0 24 24">
+                    <path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
+                    <path d="M13.73 21a2 2 0 01-3.46 0" />
+                  </svg>
                 </div>
-                <NotificationDropdown
-                  onViewAllActivity={() => {
-                    setShowActivityPanel(true);
-                    setOpenDropdown(null);
-                  }}
-                />
+
+                <p className="font-semibold text-slate-900">Coming Soon </p>
+                <p className="text-sm text-slate-500 mt-1">
+                  Notifications feature is under development
+                </p>
+
               </div>
             )}
           </div>
@@ -184,36 +177,81 @@ const UserTopbar = ({ onToggleSidebar }) => {
             </IconButton>
 
             {openDropdown === "messages" && (
-              <div className="absolute right-0 mt-3 w-80 bg-white shadow-xl rounded-lg border border-slate-200">
-                <div className="p-4 border-b border-slate-200">
-                  <div className="flex items-center justify-between">
-                    <h3 className="font-semibold text-slate-900">Messages</h3>
-                    <button
-                      onClick={() => openMessagesPanel()}
-                      className="text-sm text-blue-600 hover:text-blue-700 font-medium"
-                    >
-                      Open All
-                    </button>
-                  </div>
+              <div className="absolute right-0 mt-3 w-72 bg-white shadow-xl rounded-xl border border-slate-200 p-6 text-center">
+
+                <div className="h-12 w-12 mx-auto bg-blue-100 rounded-full flex items-center justify-center mb-3">
+                  <svg className="h-6 w-6 text-blue-600" fill="none" stroke="currentColor" strokeWidth="1.6" viewBox="0 0 24 24">
+                    <path d="M21 14a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
+                  </svg>
                 </div>
-                <div className="p-4">
-                  <button
-                    className="w-full text-left p-3 hover:bg-slate-50 rounded-lg transition-colors"
-                    onClick={() => openMessagesPanel()}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 bg-blue-100 rounded-full flex items-center justify-center">
-                        <svg className="h-5 w-5 text-blue-600" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-                          <path d="M21 14a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
-                        </svg>
-                      </div>
-                      <div className="flex-1">
-                        <p className="font-medium text-slate-900">Open Messages</p>
-                        <p className="text-sm text-slate-500">View all conversations</p>
-                      </div>
-                    </div>
-                  </button>
+
+                <p className="font-semibold text-slate-900">Coming Soon </p>
+                <p className="text-sm text-slate-500 mt-1">
+                  Messaging feature is under development
+                </p>
+
+              </div>
+
+            )}
+          </div>
+
+          {/* Responsive Profile Dropdown - Only visible on mobile */}
+          <div className="relative lg:hidden">
+            <button
+              onClick={() =>
+                setOpenDropdown((prev) =>
+                  prev === "profile" ? null : "profile"
+                )
+              }
+              className="flex items-center justify-center w-10 h-10 rounded-full overflow-hidden border-2 border-slate-200 hover:border-blue-500 transition-colors"
+              aria-label="Profile menu"
+            >
+              {user?.avatar || user?.profile?.avatar ? (
+                <img
+                  src={user?.avatar || user?.profile?.avatar}
+                  alt="Profile"
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="w-full h-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+                  <span className="text-white font-semibold text-sm">
+                    {avatarInitial}
+                  </span>
                 </div>
+              )}
+            </button>
+
+            {openDropdown === "profile" && (
+              <div className="absolute right-0 mt-3 w-48 bg-white shadow-xl rounded-xl border border-slate-200 py-2 z-50">
+                
+
+                {/* Menu Items */}
+                <button
+                  onClick={() => {
+                    navigate('/dashboard/settings');
+                    setOpenDropdown(null);
+                  }}
+                  className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-3 transition-colors"
+                >
+                  <svg className="h-4 w-4 text-slate-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                    <path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                    <path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                  Settings
+                </button>
+
+                <button
+                  onClick={() => {
+                    handleLogout();
+                    setOpenDropdown(null);
+                  }}
+                  className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-3 transition-colors"
+                >
+                  <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                    <path d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                  </svg>
+                  Logout
+                </button>
               </div>
             )}
           </div>

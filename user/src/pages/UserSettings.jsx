@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { get, post } from '../utils/api'
+import { get, post, put } from '../utils/api'
 
 const UserSettings = () => {
   const navigate = useNavigate()
@@ -11,6 +11,7 @@ const UserSettings = () => {
   const [currentEmail, setCurrentEmail] = useState('')
   const [newEmail, setNewEmail] = useState('')
   const [emailPassword, setEmailPassword] = useState('')
+  const [tempToken, setTempToken] = useState('')
   const [emailOtp, setEmailOtp] = useState('')
   const [isEditingEmail, setIsEditingEmail] = useState(false)
   const [isEmailVerified, setIsEmailVerified] = useState(false)
@@ -72,7 +73,7 @@ const UserSettings = () => {
     setLoading(true)
     try {
       // First verify password using current email
-      const response = await post('/auth/verify-password', { 
+      const response = await post('/auth/verify-password', {
         password: emailPassword,
         email: currentEmail
       })
@@ -103,7 +104,7 @@ const UserSettings = () => {
 
     setLoading(true)
     try {
-      const response = await post('/auth/update-email', { 
+      const response = await put('/api/auth/update-email', {
         currentPassword: emailPassword,
         newEmail: newEmail
       }, { includeAuth: true })
@@ -111,11 +112,11 @@ const UserSettings = () => {
       if (response?.success) {
         // Update frontend state immediately
         setCurrentEmail(newEmail)
-        
+
         // Update user state with returned data or create updated object
         const updatedUserData = response?.user || { ...user, email: newEmail }
         setUser(updatedUserData)
-        
+
         // Update user in localStorage
         const storedUser = localStorage.getItem('user')
         if (storedUser) {
@@ -123,15 +124,15 @@ const UserSettings = () => {
           localStorageUser.email = newEmail
           localStorage.setItem('user', JSON.stringify(localStorageUser))
         }
-        
+
         // Reset form
         setNewEmail('')
         setEmailPassword('')
         setIsEditingEmail(false)
         setIsEmailVerified(false)
-        
+
         showToast('Email updated successfully', 'success')
-        
+
         // Optional: Fetch fresh data to ensure consistency
         setTimeout(() => {
           fetchUserData()
@@ -158,18 +159,38 @@ const UserSettings = () => {
       return
     }
 
-    if (newPassword.length < 6) {
-      showToast('Password must be at least 6 characters', 'error')
+    if (newPassword.length < 8) {
+      showToast('Password must be at least 8 characters', 'error')
+      return
+    }
+
+    if (!/[A-Z]/.test(newPassword)) {
+      showToast('Must include uppercase letter', 'error')
+      return
+    }
+
+    if (!/[a-z]/.test(newPassword)) {
+      showToast('Must include lowercase letter', 'error')
+      return
+    }
+
+    if (!/\d/.test(newPassword)) {
+      showToast('Must include number', 'error')
+      return
+    }
+
+    if (!/[!@#$%^&*(),.?":{}|<>]/.test(newPassword)) {
+      showToast('Must include special character', 'error')
       return
     }
 
     setLoading(true)
     try {
-      const response = await post('/auth/change-password', {
+      const response = await post('/auth/update-password', {
         currentPassword,
         newPassword
       }, { includeAuth: true })
-
+      
       if (response?.success) {
         setCurrentPassword('')
         setNewPassword('')
@@ -194,16 +215,15 @@ const UserSettings = () => {
 
     setLoading(true)
     try {
-      const response = await post('/auth/forgot-password', {
-        email: forgotEmail
-      })
+      const response = await post('/api/auth/forgot-password', {
+  email: forgotEmail
+})
 
-      if (response?.success) {
-        setForgotOtpSent(true)
-        showToast('OTP sent to your email', 'success')
-      } else {
-        showToast(response?.message || 'Failed to send OTP', 'error')
-      }
+if (response?.success) {
+  setForgotOtpSent(true)
+  setTempToken(response.tempToken) // ⭐ IMPORTANT
+  showToast('OTP sent to your email', 'success')
+}
     } catch (error) {
       showToast('Failed to send OTP', 'error')
     } finally {
@@ -237,40 +257,49 @@ const UserSettings = () => {
   }
 
   const handleResetPassword = async () => {
-    if (!resetPassword || !confirmResetPassword) {
-      showToast('Please fill all password fields', 'error')
-      return
-    }
-
-    if (resetPassword !== confirmResetPassword) {
-      showToast('Passwords do not match', 'error')
-      return
-    }
-
-    setLoading(true)
-    try {
-      const response = await post('/auth/reset-password', {
-        email: forgotEmail,
-        newPassword: resetPassword
-      })
-
-      if (response?.success) {
-        setShowForgotPassword(false)
-        setForgotEmail('')
-        setForgotOtp('')
-        setForgotOtpSent(false)
-        setResetPassword('')
-        setConfirmResetPassword('')
-        showToast('Password reset successfully', 'success')
-      } else {
-        showToast(response?.message || 'Failed to reset password', 'error')
-      }
-    } catch (error) {
-      showToast('Failed to reset password', 'error')
-    } finally {
-      setLoading(false)
-    }
+  if (!forgotOtp || forgotOtp.length !== 6) {
+    showToast('Enter valid OTP', 'error')
+    return
   }
+
+  if (!resetPassword || !confirmResetPassword) {
+    showToast('Fill all fields', 'error')
+    return
+  }
+
+  if (resetPassword !== confirmResetPassword) {
+    showToast('Passwords do not match', 'error')
+    return
+  }
+
+  setLoading(true)
+
+  try {
+    const response = await post('/api/auth/verify-forgot-password-otp', {
+      tempToken,
+      otp: forgotOtp,
+      newPassword: resetPassword
+    })
+ 
+    if (response?.success) {
+      showToast('Password reset successfully', 'success')
+
+      setShowForgotPassword(false)
+      setForgotEmail('')
+      setForgotOtp('')
+      setResetPassword('')
+      setConfirmResetPassword('')
+    } else {
+      showToast(response?.message, 'error')
+    }
+
+  } catch (error) {
+    showToast(error.message, 'error')
+  } finally {
+    setLoading(false)
+  }
+}
+  
 
   // Delete Account Functions
   const handleDeleteAccount = async () => {
@@ -306,11 +335,10 @@ const UserSettings = () => {
   const showToast = (message, type = 'info') => {
     // Create toast notification
     const toast = document.createElement('div')
-    toast.className = `fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg z-50 transform transition-all duration-300 ${
-      type === 'success' ? 'bg-emerald-500 text-white' :
-      type === 'error' ? 'bg-red-500 text-white' :
-      'bg-blue-500 text-white'
-    }`
+    toast.className = `fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg z-50 transform transition-all duration-300 ${type === 'success' ? 'bg-emerald-500 text-white' :
+        type === 'error' ? 'bg-red-500 text-white' :
+          'bg-blue-500 text-white'
+      }`
     toast.textContent = message
     document.body.appendChild(toast)
 
@@ -677,7 +705,7 @@ const UserSettings = () => {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4">
             <h3 className="text-lg font-semibold text-slate-900 mb-4">Reset Password</h3>
-            
+
             {!forgotOtpSent ? (
               <div className="space-y-4">
                 <div>
