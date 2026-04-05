@@ -55,8 +55,6 @@ const ApplicationDetail = () => {
   const navigate = useNavigate()
   const application = location.state?.application
 
-  console.log('🔍 [DEBUG] ApplicationDetail location.state:', location.state)
-  console.log('🔍 [DEBUG] ApplicationDetail application:', application)
 
   if (!application) {
     return (

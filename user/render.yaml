@@ -1,0 +1,10 @@
+services:
+  # Express server service for React Router support
+  - type: web
+    name: alumni-connect
+    env: node
+    buildCommand: "npm install && npm run build"
+    startCommand: "npm start"
+    envVars:
+      - key: NODE_ENV
+        value: production

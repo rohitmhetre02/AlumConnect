@@ -187,7 +187,6 @@ const Profile = () => {
     }, 30000) // 30 seconds
 
     return () => {
-      console.log('Profile: Clearing profile status polling interval')
       clearInterval(interval)
     }
   }, [refreshUserData, user?.profileApprovalStatus])

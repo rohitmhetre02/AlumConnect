@@ -75,12 +75,6 @@ const StudentDashboard = () => {
     // If completion is very high (>= 90%), consider it 100% for user experience
     const finalPercentage = completionPercentage >= 90 ? 100 : completionPercentage;
     
-    console.log('=== STUDENT PROFILE COMPLETION DEBUG ===');
-    console.log('Total fields:', fields.length);
-    console.log('Completed fields:', completed);
-    console.log('Raw percentage:', completionPercentage);
-    console.log('Final percentage:', finalPercentage);
-    console.log('\n=== FIELD BY FIELD ANALYSIS ===');
     
     const fieldNames = [
       'firstName', 'lastName', 'email', 'phone',
@@ -99,22 +93,12 @@ const StudentDashboard = () => {
                field !== 'NA' && field !== 'n/a' && field !== 'N/A' && field !== 'none' && field !== 'None';
       })();
       
-      console.log(`${index + 1}. ${fieldNames[index]}:`, {
-        value: field,
-        type: typeof field,
-        isArray: Array.isArray(field),
-        isObject: typeof field === 'object' && field !== null,
-        completed: isCompleted,
-        issue: !isCompleted ? `❌ INCOMPLETE: ${field}` : '✅ OK'
-      });
+      // console.log(` Field ${index + 1}/${fieldNames.length} (${fieldNames[index]}): ${field ? ' ' : ' '}`);
     });
     
-    console.log('\n=== RAW DATA ===');
-    console.log('User object keys:', Object.keys(user || {}));
-    console.log('Profile object keys:', Object.keys(profile || {}));
-    console.log('Socials:', profile.socials);
-    console.log('Skills:', profile.skills);
-    console.log('=========================================');
+    // console.timeEnd('Profile completion calculation');
+    // console.log(`Profile completion calculation took ${performance.now() - startTime}ms`);
+    
 
     return finalPercentage;
   }
@@ -148,12 +132,10 @@ const StudentDashboard = () => {
   }
 
   const handleDateClick = (date) => {
-    console.log('Student Dashboard - handleDateClick called with date:', date)
     setSelectedDate(date)
     
     // Check if note exists for this date
     const existingNote = getNoteForDate(date)
-    console.log('Student Dashboard - Existing note for date:', existingNote)
     if (existingNote) {
       // Edit mode
       setNoteCategory(existingNote.category)
@@ -301,7 +283,6 @@ const StudentDashboard = () => {
                       alt="Profile" 
                       className="w-full h-full rounded-full object-cover"
                       onError={(e) => {
-                        console.log('Image failed to load, using fallback icon');
                         e.target.style.display = 'none';
                         e.target.nextSibling.style.display = 'flex';
                       }}
@@ -365,7 +346,6 @@ const StudentDashboard = () => {
               <div className="flex-shrink-0">
                 <button
                   onClick={() => {
-                    console.log('Navigating to profile...');
                     navigate('/dashboard/profile');
                   }}
                   className="bg-white text-blue-600 px-4 py-1.5 rounded-lg font-semibold hover:bg-blue-50 transition-colors shadow text-xs"

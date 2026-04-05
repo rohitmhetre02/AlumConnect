@@ -17,15 +17,6 @@ const FacultyDashboard = () => {
 
     const profile = user?.profile || {};
 
-    console.log('=== FACULTY RAW DATA DEBUG ===');
-    console.log('User object:', user);
-    console.log('Profile object:', profile);
-    console.log('Profile raw:', profile.raw);
-    console.log('Profile socials:', profile.socials);
-    console.log('Profile education:', profile.education);
-    console.log('Profile experience:', profile.experiences);
-    console.log('Profile skills:', profile.skills);
-    console.log('Profile certifications:', profile.certifications);
 
     // ✅ Faculty-specific essential fields only
     const fields = [
@@ -82,12 +73,6 @@ const FacultyDashboard = () => {
     // Only show 100% if actually 100% complete
     const finalPercentage = completionPercentage;
     
-    console.log('=== FACULTY PROFILE COMPLETION DEBUG ===');
-    console.log('Total fields:', fields.length);
-    console.log('Completed fields:', completed);
-    console.log('Raw percentage:', completionPercentage);
-    console.log('Final percentage:', finalPercentage);
-    console.log('\n=== FACULTY FIELD ANALYSIS ===');
     
     const fieldNames = [
       'firstName', 'lastName', 'email', 'phone',
@@ -108,14 +93,7 @@ const FacultyDashboard = () => {
         return field !== undefined && field !== null && field !== '';
       })();
       
-      console.log(`${index + 1}. ${fieldNames[index]}:`, {
-        value: field,
-        type: typeof field,
-        completed: isCompleted,
-        issue: !isCompleted ? `❌ INCOMPLETE: ${field}` : '✅ OK'
-      });
     });
-    console.log('=========================================');
 
     return finalPercentage;
   }
@@ -221,7 +199,6 @@ const FacultyDashboard = () => {
                       alt="Profile" 
                       className="w-full h-full rounded-full object-cover"
                       onError={(e) => {
-                        console.log('Image failed to load, using fallback icon');
                         e.target.style.display = 'none';
                         e.target.nextSibling.style.display = 'flex';
                       }}
@@ -281,7 +258,6 @@ const FacultyDashboard = () => {
               <div className="flex-shrink-0">
                 <button
                   onClick={() => {
-                    console.log('Navigating to profile...');
                     navigate('/dashboard/profile');
                   }}
                   className="bg-white text-blue-600 px-4 py-1.5 rounded-lg font-semibold hover:bg-blue-50 transition-colors shadow text-xs"

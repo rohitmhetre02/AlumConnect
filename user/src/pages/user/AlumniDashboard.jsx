@@ -17,40 +17,6 @@ const AlumniDashboard = () => {
   const { user } = useAuth()
   const navigate = useNavigate()
 
-  // Debug: Log user data to see available picture fields
-  console.log('User data for profile picture and role:', {
-    avatar: user?.avatar,
-    profile_avatar: user?.profile?.avatar,
-    profilePhoto: user?.profilePhoto,
-    profilePicture: user?.profilePicture,
-    profile_profilePhoto: user?.profile?.profilePhoto,
-    role: user?.role,
-    currentJobTitle: user?.currentJobTitle,
-    profile_currentJobTitle: user?.profile?.currentJobTitle,
-    company: user?.company,
-    profile_company: user?.profile?.company,
-    // Check all available profile fields
-    allProfileFields: user?.profile,
-    allUserFields: user,
-    firstName: user?.firstName,
-    lastName: user?.lastName,
-    email: user?.email,
-    phone: user?.phone,
-    bio: user?.profile?.bio,
-    location: user?.profile?.location,
-    linkedin: user?.profile?.linkedin,
-    github: user?.profile?.github,
-    twitter: user?.profile?.twitter,
-    portfolio: user?.profile?.portfolio,
-    skills: user?.profile?.skills,
-    industry: user?.profile?.industry,
-    experience: user?.profile?.experience,
-    graduationYear: user?.profile?.graduationYear || user?.graduationYear || user?.passoutYear,
-    department: user?.profile?.department || user?.department,
-    degree: user?.profile?.degree,
-    achievements: user?.profile?.achievements
-  })
-
   // Calculate profile completion percentage
   const calculateProfileCompletion = () => {
     if (!user) return 0;
@@ -111,12 +77,6 @@ const AlumniDashboard = () => {
     // If completion is very high (>= 90%), consider it 100% for user experience
     const finalPercentage = completionPercentage >= 90 ? 100 : completionPercentage;
     
-    console.log('=== ALUMNI PROFILE COMPLETION DEBUG ===');
-    console.log('Total fields:', fields.length);
-    console.log('Completed fields:', completed);
-    console.log('Raw percentage:', completionPercentage);
-    console.log('Final percentage:', finalPercentage);
-    console.log('\n=== FIELD BY FIELD ANALYSIS ===');
     
     const fieldNames = [
       'firstName', 'lastName', 'email', 'phone',
@@ -135,22 +95,8 @@ const AlumniDashboard = () => {
                field !== 'NA' && field !== 'n/a' && field !== 'N/A' && field !== 'none' && field !== 'None';
       })();
       
-      console.log(`${index + 1}. ${fieldNames[index]}:`, {
-        value: field,
-        type: typeof field,
-        isArray: Array.isArray(field),
-        isObject: typeof field === 'object' && field !== null,
-        completed: isCompleted,
-        issue: !isCompleted ? `❌ INCOMPLETE: ${field}` : '✅ OK'
-      });
     });
     
-    console.log('\n=== RAW DATA ===');
-    console.log('User object keys:', Object.keys(user || {}));
-    console.log('Profile object keys:', Object.keys(profile || {}));
-    console.log('Socials:', profile.socials);
-    console.log('Skills:', profile.skills);
-    console.log('=========================================');
 
     return finalPercentage;
   }
@@ -270,7 +216,6 @@ const AlumniDashboard = () => {
                       alt="Profile" 
                       className="w-full h-full rounded-full object-cover"
                       onError={(e) => {
-                        console.log('Image failed to load, using fallback icon');
                         e.target.style.display = 'none';
                         e.target.nextSibling.style.display = 'flex';
                       }}
@@ -334,7 +279,6 @@ const AlumniDashboard = () => {
               <div className="flex-shrink-0">
                 <button
                   onClick={() => {
-                    console.log('Navigating to profile...');
                     navigate('/dashboard/profile');
                   }}
                   className="bg-white text-blue-600 px-4 py-1.5 rounded-lg font-semibold hover:bg-blue-50 transition-colors shadow text-xs"

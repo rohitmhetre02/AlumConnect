@@ -91,9 +91,6 @@ const MatchCard = ({ match, onViewProfile }) => {
   const { mentor, matchScore, shortReason } = match
   if (!mentor) return null
   
-  // Debug: Log mentor data to see available fields
-  console.log('Mentor data:', mentor)
-  
   const scoreTone = matchScore >= 80 ? 'text-emerald-500' : matchScore >= 60 ? 'text-amber-500' : 'text-slate-600'
 
   const getMatchLabel = (score) => {
@@ -344,7 +341,6 @@ const AIMentorMatch = () => {
       return
     }
     
-    console.log('Navigating to mentor profile:', mentorId)
     navigate(`/dashboard/mentors/${mentorId}`)
   }
 
