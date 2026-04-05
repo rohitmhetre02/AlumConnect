@@ -35,6 +35,7 @@ const UserSettings = () => {
   const [forgotEmail, setForgotEmail] = useState('')
   const [forgotOtp, setForgotOtp] = useState('')
   const [forgotOtpSent, setForgotOtpSent] = useState(false)
+  const [otpVerified, setOtpVerified] = useState(false)
   const [resetPassword, setResetPassword] = useState('')
   const [confirmResetPassword, setConfirmResetPassword] = useState('')
   const [showResetPassword, setShowResetPassword] = useState(false)
@@ -53,7 +54,7 @@ const UserSettings = () => {
 
   const fetchUserData = async () => {
     try {
-      const response = await get('/auth/profile', { includeAuth: true })
+      const response = await get('/api/auth/profile', { includeAuth: true })
       if (response?.data) {
         setUser(response.data)
         setCurrentEmail(response.data.email || '')
@@ -73,7 +74,7 @@ const UserSettings = () => {
     setLoading(true)
     try {
       // First verify password using current email
-      const response = await post('/auth/verify-password', {
+      const response = await post('/api/auth/verify-password', {
         password: emailPassword,
         email: currentEmail
       })
@@ -186,7 +187,7 @@ const UserSettings = () => {
 
     setLoading(true)
     try {
-      const response = await post('/auth/update-password', {
+      const response = await post('/api/auth/update-password', {
         currentPassword,
         newPassword
       }, { includeAuth: true })
@@ -219,13 +220,25 @@ const UserSettings = () => {
   email: forgotEmail
 })
 
+console.log('Forgot password response:', response);
+
 if (response?.success) {
   setForgotOtpSent(true)
   setTempToken(response.tempToken) // ⭐ IMPORTANT
-  showToast('OTP sent to your email', 'success')
+  
+  // Show OTP if available (development mode)
+  if (response.otp) {
+    showToast(`OTP sent to your email. For development: ${response.otp}`, 'success')
+  } else {
+    showToast('OTP sent to your email', 'success')
+  }
+} else {
+  showToast(response?.error || response?.message || 'Failed to send OTP', 'error')
 }
     } catch (error) {
-      showToast('Failed to send OTP', 'error')
+      console.error('Forgot password error:', error);
+      const errorMessage = error?.response?.data?.error || error?.response?.data?.message || 'Failed to send OTP';
+      showToast(errorMessage, 'error')
     } finally {
       setLoading(false)
     }
@@ -239,36 +252,62 @@ if (response?.success) {
 
     setLoading(true)
     try {
-      const response = await post('/auth/verify-otp', {
-        email: forgotEmail,
+      const response = await post('/api/auth/verify-forgot-password-otp', {
+        tempToken,
         otp: forgotOtp
       })
 
+      console.log('Verify OTP response:', response);
+
       if (response?.success) {
-        showToast('OTP verified. You can now reset your password.', 'success')
+        showToast('OTP verified. Now enter your new password.', 'success')
+        setOtpVerified(true)
       } else {
-        showToast(response?.message || 'Invalid OTP', 'error')
+        showToast(response?.error || response?.message || 'Invalid OTP', 'error')
       }
     } catch (error) {
-      showToast('Failed to verify OTP', 'error')
+      console.error('Verify OTP error:', error);
+      const errorMessage = error?.response?.data?.error || error?.response?.data?.message || 'Failed to verify OTP';
+      showToast(errorMessage, 'error')
     } finally {
       setLoading(false)
     }
   }
 
   const handleResetPassword = async () => {
-  if (!forgotOtp || forgotOtp.length !== 6) {
-    showToast('Enter valid OTP', 'error')
-    return
-  }
-
   if (!resetPassword || !confirmResetPassword) {
-    showToast('Fill all fields', 'error')
+    showToast('Fill all password fields', 'error')
     return
   }
 
   if (resetPassword !== confirmResetPassword) {
     showToast('Passwords do not match', 'error')
+    return
+  }
+
+  // Validate new password
+  if (resetPassword.length < 8) {
+    showToast('Password must be at least 8 characters', 'error')
+    return
+  }
+
+  if (!/[A-Z]/.test(resetPassword)) {
+    showToast('Must include uppercase letter', 'error')
+    return
+  }
+
+  if (!/[a-z]/.test(resetPassword)) {
+    showToast('Must include lowercase letter', 'error')
+    return
+  }
+
+  if (!/\d/.test(resetPassword)) {
+    showToast('Must include number', 'error')
+    return
+  }
+
+  if (!/[!@#$%^&*(),.?":{}|<>]/.test(resetPassword)) {
+    showToast('Must include special character', 'error')
     return
   }
 
@@ -280,21 +319,27 @@ if (response?.success) {
       otp: forgotOtp,
       newPassword: resetPassword
     })
+
+    console.log('Reset password response:', response);
  
     if (response?.success) {
-      showToast('Password reset successfully', 'success')
-
+      showToast('Password reset successfully! You can now login with your new password.', 'success')
+      // Reset all forgot password states
       setShowForgotPassword(false)
       setForgotEmail('')
       setForgotOtp('')
+      setForgotOtpSent(false)
+      setOtpVerified(false)
       setResetPassword('')
       setConfirmResetPassword('')
+      setTempToken('')
     } else {
-      showToast(response?.message, 'error')
+      showToast(response?.error || response?.message || 'Failed to reset password', 'error')
     }
-
   } catch (error) {
-    showToast(error.message, 'error')
+    console.error('Reset password error:', error);
+    const errorMessage = error?.response?.data?.error || error?.response?.data?.message || 'Failed to reset password';
+    showToast(errorMessage, 'error')
   } finally {
     setLoading(false)
   }
@@ -310,7 +355,7 @@ if (response?.success) {
 
     setLoading(true)
     try {
-      const response = await post('/auth/delete-account', {
+      const response = await post('/api/auth/delete-account', {
         password: deletePassword
       }, { includeAuth: true })
 

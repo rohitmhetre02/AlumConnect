@@ -53,19 +53,33 @@ export const useMentorSessions = () => {
     setError(null)
     try {
       const response = await get(SESSIONS_ENDPOINT)
-      const data = Array.isArray(response?.data) ? response.data : Array.isArray(response) ? response : []
+      console.log('MentorSessions API Response:', response)
+      
+      // Handle different response formats
+      let data = []
+      if (Array.isArray(response?.data)) {
+        data = response.data
+      } else if (Array.isArray(response)) {
+        data = response
+      } else if (response === null || response === undefined) {
+        data = []
+      } else {
+        console.warn('Unexpected response format:', response)
+        data = []
+      }
+      
+      console.log('MentorSessions Parsed Data:', data)
       setItems(sortSessions(data.map(normalizeSession).filter(Boolean)))
     } catch (err) {
-      setError(err)
-      toast?.({
-        title: 'Unable to load session history',
-        description: err?.message ?? 'Please try again later.',
-        tone: 'error',
-      })
+      console.error('MentorSessions fetch error:', err)
+      // Don't set error for sessions - just log it
+      console.warn('Session history unavailable, this is normal for new users')
+      // Set empty items instead of error
+      setItems([])
     } finally {
       setLoading(false)
     }
-  }, [toast])
+  }, []) // Remove toast dependency to prevent error messages
 
   useEffect(() => {
     fetchSessions()

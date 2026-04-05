@@ -340,7 +340,7 @@ const AlumniDashboard = () => {
                   desc="Share job opportunities with students"
                   btn="Post Opportunity"
                   color="bg-blue-100 text-blue-700"
-                  link="/dashboard/opportunities/post"
+                  link="/#/dashboard/opportunities/post"
                 />
 
                 <ActionCard
@@ -348,7 +348,7 @@ const AlumniDashboard = () => {
                   desc="Organize networking events"
                   btn="Create Event"
                   color="bg-purple-100 text-purple-700"
-                  link="/dashboard/events/post"
+                  link="/#/dashboard/events/post"
                 />
 
                 <ActionCard
@@ -356,7 +356,7 @@ const AlumniDashboard = () => {
                   desc="Support institutional development"
                   btn="Donate"
                   color="bg-green-100 text-green-700"
-                  link="/dashboard/donations"
+                  link="/#/dashboard/campaigns/create"
                 />
 
               </div>

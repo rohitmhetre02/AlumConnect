@@ -1,5 +1,5 @@
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
-import { BrowserRouter as Router } from 'react-router-dom'
+import { Router } from 'react-router-dom'
 import Login from './pages/Login'
 import Signup from './pages/Signup'
 import Profile from './pages/Profile'
@@ -27,7 +27,7 @@ const RedirectIfAuthenticated = ({ children }) => {
     // Get user role from localStorage or wherever it's stored
     const userRole = localStorage.getItem('userRole') || 'admin'
     const basePath = userRole === 'admin' ? '/admin' : '/coordinator'
-    return <Navigate to={`${basePath}/dashboard`} replace state={{ from: location }} />
+    return <Navigate to={`/${basePath}/dashboard`} replace />
   }
   return children
 }
@@ -35,45 +35,41 @@ const RedirectIfAuthenticated = ({ children }) => {
 function App() {
   return (
     <ToastProvider>
-      <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-        <Routes>
-          <Route
-            index
-            element={
-              <RedirectIfAuthenticated>
-                <Login />
-              </RedirectIfAuthenticated>
-            }
-          />
-          <Route
-            path="login"
-            element={
-              <RedirectIfAuthenticated>
-                <Login />
-              </RedirectIfAuthenticated>
-            }
-          />
-          <Route
-            path="signup"
-            element={
-              <RedirectIfAuthenticated>
-                <Signup />
-              </RedirectIfAuthenticated>
-            }
-          />
-          <Route
-            path="*"
-            element={
-              <PrivateRoute>
-                <DashboardRoutes />
-              </PrivateRoute>
-            }
-          />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </Router>
+      <Routes>
+        <Route
+          index
+          element={
+            <RedirectIfAuthenticated>
+              <Login />
+            </RedirectIfAuthenticated>
+          }
+        />
+        <Route
+          path="login"
+          element={
+            <RedirectIfAuthenticated>
+              <Login />
+            </RedirectIfAuthenticated>
+          }
+        />
+        <Route
+          path="signup"
+          element={
+            <RedirectIfAuthenticated>
+              <Signup />
+            </RedirectIfAuthenticated>
+          }
+        />
+        <Route
+          path="*"
+          element={
+            <PrivateRoute>
+              <DashboardRoutes />
+            </PrivateRoute>
+          }
+        />
+      </Routes>
     </ToastProvider>
   )
 }
-
 export default App

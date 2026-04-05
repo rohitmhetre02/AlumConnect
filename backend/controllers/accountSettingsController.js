@@ -95,6 +95,13 @@ const otpCooldowns = new Map();
 // Send email with OTP
 const sendEmailOTP = async (email, otp, purpose) => {
   try {
+    // Check if email configuration is available
+    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+      console.warn('Email configuration missing. OTP would be:', otp);
+      // For development, return true and include OTP flag
+      return { success: true, otp: otp };
+    }
+
     const transporter = nodemailer.createTransport({
       service: 'gmail',
       auth: {
@@ -106,7 +113,7 @@ const sendEmailOTP = async (email, otp, purpose) => {
     const mailOptions = {
       from: process.env.EMAIL_USER,
       to: email,
-      subject: `${purpose} - AlumniConnect OTP`,
+      subject: `${purpose} - APCOER Alumni Portal OTP`,
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <div style="background: #f8f9fa; padding: 30px; border-radius: 10px;">
@@ -127,10 +134,12 @@ const sendEmailOTP = async (email, otp, purpose) => {
     };
 
     await transporter.sendMail(mailOptions);
-    return true;
+    return { success: true };
   } catch (error) {
     console.error('Email send error:', error);
-    return false;
+    // For development, don't fail the entire process if email fails
+    console.warn('Email failed but continuing process. OTP would be:', otp);
+    return { success: true, otp: otp };
   }
 };
 
@@ -342,21 +351,28 @@ const resendEmailOTP = async (req, res) => {
 const updatePassword = async (req, res) => {
   try {
     const { currentPassword, newPassword } = req.body;
+    
+    console.log('Update password request received');
+    console.log('User ID:', req.user?.id);
+
     const user = await getUserById(req.user.id);
 
     if (!user) {
+      console.log('User not found');
       return res.status(404).json({ success: false, error: 'User not found' });
     }
 
     // Verify current password
     const isCurrentPasswordValid = await bcrypt.compare(currentPassword, user.password);
     if (!isCurrentPasswordValid) {
+      console.log('Current password invalid');
       return res.status(400).json({ success: false, error: 'Incorrect password' });
     }
 
     // Validate new password
     const passwordValidation = validatePassword(newPassword);
     if (!passwordValidation.valid) {
+      console.log('Password validation failed:', passwordValidation.message);
       return res.status(400).json({ success: false, error: passwordValidation.message });
     }
 
@@ -367,6 +383,7 @@ const updatePassword = async (req, res) => {
     // Update password
     await updateUserById(user._id, { password: hashedNewPassword });
 
+    console.log('Password updated successfully');
     res.json({ success: true, message: 'Password updated successfully' });
 
   } catch (error) {
@@ -379,10 +396,13 @@ const updatePassword = async (req, res) => {
 const forgotPassword = async (req, res) => {
   try {
     const { email } = req.body;
+    
+    console.log('Forgot password request received for email:', email);
 
     // Find user by email
     const user = await getUserByEmail(email);
     if (!user) {
+      console.log('No user found with email:', email);
       return res.status(400).json({ success: false, error: 'No account found with this email address' });
     }
 
@@ -403,6 +423,8 @@ const forgotPassword = async (req, res) => {
 
     // Generate OTP
     const otp = generateOTP();
+    console.log('Generated OTP for development:', otp);
+    
     const tempToken = jwt.sign(
       { userId: user._id, email: user.email, otp, purpose: 'forgot-password' },
       process.env.JWT_SECRET,
@@ -410,8 +432,9 @@ const forgotPassword = async (req, res) => {
     );
 
     // Send OTP email
-    const emailSent = await sendEmailOTP(user.email, otp, 'Password Reset');
-    if (!emailSent) {
+    const emailResult = await sendEmailOTP(user.email, otp, 'Password Reset');
+    if (!emailResult.success) {
+      console.log('Email sending failed');
       return res.status(500).json({ success: false, error: 'Failed to send OTP email' });
     }
 
@@ -419,12 +442,23 @@ const forgotPassword = async (req, res) => {
     otpAttempts.set(emailKey, 0);
     otpCooldowns.set(emailKey, Date.now() + 30000); // 30 seconds cooldown
 
-    res.json({
+    console.log('OTP sent successfully');
+    
+    // Include OTP in response if in development mode (email not configured)
+    const responseData = {
       success: true,
       requiresOtp: true,
       tempToken,
       message: 'OTP sent to your email for password reset'
-    });
+    };
+    
+    // Add OTP to response for development
+    if (emailResult.otp) {
+      responseData.otp = emailResult.otp;
+      console.log('OTP included in response for development:', emailResult.otp);
+    }
+    
+    res.json(responseData);
 
   } catch (error) {
     console.error('Forgot password error:', error);

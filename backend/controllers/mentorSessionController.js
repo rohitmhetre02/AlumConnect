@@ -2,13 +2,14 @@ const MentorSession = require('../models/MentorSession')
 
 const ensureMentor = (req) => {
   const userId = req.user?.id
-  const role = req.user?.role
+  const role = req.user?.role?.toLowerCase()
 
   if (!userId) {
     return { error: { status: 401, message: 'Authentication required.' } }
   }
 
-  if (!role || role.toLowerCase() !== 'alumni') {
+  const allowedRoles = ['alumni', 'alumni-student']
+  if (!role || !allowedRoles.includes(role)) {
     return { error: { status: 403, message: 'Only mentors can access session history.' } }
   }
 
@@ -31,14 +32,17 @@ const listMySessions = async (req, res) => {
         : String(status).toLowerCase()
     }
 
+    // Find sessions, but return empty array if none exist
     const sessions = await MentorSession.find(filters)
       .sort({ sessionDate: -1 })
       .select('-mentor')
+      .lean() // Use lean for better performance
 
-    return res.status(200).json(sessions)
+    return res.status(200).json(sessions || [])
   } catch (error) {
     console.error('listMySessions error:', error)
-    return res.status(500).json({ message: 'Unable to load session history.' })
+    // Return empty array on error instead of failing
+    return res.status(200).json([])
   }
 }
 

@@ -1,10 +1,16 @@
 import { useMentorSessions } from '../../../hooks/useMentorSessions'
 import { useMentorRequests } from '../../../hooks/useMentorRequests'
+import { useAuth } from '../../../context/AuthContext'
 import { useState } from 'react'
 
 const MentorshipSessions = () => {
-  const { sessions, loading: sessionsLoading, error: sessionsError, refresh: refreshSessions } = useMentorSessions()
-  const { requests, loading: requestsLoading, updateRequestStatus, completeSession } = useMentorRequests()
+  const { user } = useAuth()
+  console.log('MentorshipSessions - Current user:', user?.role, user?.id)
+  
+  const { sessions, loading: sessionsLoading, refresh: refreshSessions } = useMentorSessions()
+  const { requests, loading: requestsLoading, error: requestsError, updateRequestStatus, completeSession } = useMentorRequests()
+  
+  console.log('MentorshipSessions - Requests:', requests?.length, 'Error:', requestsError?.message)
   const [selectedSession, setSelectedSession] = useState(null)
   const [selectedRequest, setSelectedRequest] = useState(null)
   const [sessionStatusModalOpen, setSessionStatusModalOpen] = useState(false)
@@ -62,7 +68,7 @@ const MentorshipSessions = () => {
     setSelectedRequest(null)
   }
 
-  if (sessionsLoading || requestsLoading) {
+  if (requestsLoading) {
     return (
       <div className="p-6">
         <div className="text-center py-8">
@@ -73,21 +79,39 @@ const MentorshipSessions = () => {
     )
   }
 
-  if (sessionsError) {
+  if (requestsError) {
     return (
       <div className="p-6">
         <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <p className="text-red-600">{sessionsError.message || 'Failed to load sessions'}</p>
+          <p className="text-red-600">{requestsError.message || 'Failed to load mentorship requests'}</p>
         </div>
       </div>
     )
   }
+
+  // Sessions errors are now handled silently - no need to check sessionsError
 
   return (
     <div className="p-6">
       <div className="mb-6">
         <h2 className="text-xl font-semibold text-slate-900">Sessions</h2>
         <p className="text-sm text-slate-500">Manage your upcoming and completed mentorship sessions.</p>
+      </div>
+
+      {/* Info Section */}
+      <div className="mb-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <div className="flex">
+          <div className="flex-shrink-0">
+            <svg className="h-5 w-5 text-blue-400" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+            </svg>
+          </div>
+          <div className="ml-3">
+            <p className="text-sm text-blue-800">
+              <strong>How sessions work:</strong> When your mentorship request is accepted by a mentor, it will appear here as an upcoming session. Once completed, it will move to the completed sessions section.
+            </p>
+          </div>
+        </div>
       </div>
 
       {/* Upcoming Sessions - Show accepted requests */}
@@ -98,6 +122,11 @@ const MentorshipSessions = () => {
         {acceptedRequests.length === 0 ? (
           <div className="bg-white border border-slate-200 rounded-lg p-6 text-center">
             <p className="text-slate-500">No upcoming sessions scheduled</p>
+            <p className="text-sm text-slate-400 mt-2">
+              {requests?.length === 0 
+                ? "You haven't sent any mentorship requests yet." 
+                : "Your accepted mentorship requests will appear here once scheduled."}
+            </p>
           </div>
         ) : (
           <div className="space-y-4">
@@ -272,9 +301,14 @@ const MentorshipSessions = () => {
   </h3>
 
   {completedRequests.length === 0 ? (
-    <div className="bg-white border border-slate-200 rounded-lg p-6 text-center">
-      <p className="text-slate-500">No completed sessions yet</p>
-    </div>
+          <div className="bg-white border border-slate-200 rounded-lg p-6 text-center">
+            <p className="text-slate-500">No completed sessions yet</p>
+            <p className="text-sm text-slate-400 mt-2">
+              {requests?.length === 0 
+                ? "Start by sending mentorship requests to mentors." 
+                : "Your completed mentorship sessions will appear here."}
+            </p>
+          </div>
   ) : (
     <div className="space-y-4">
       {completedRequests.map((request) => (

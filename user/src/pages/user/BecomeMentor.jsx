@@ -803,7 +803,7 @@ const BecomeMentor = () => {
                   onKeyPress={handleSkillKeyPress}
                   className="flex-1 rounded-lg border border-slate-300 px-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                   placeholder="Add a skill (e.g., React, Python, Project Management)..."
-                  disabled={skills.length >= 10}
+                  disabled={skills.length >= 15}
                 />
                 <button
                   type="button"
