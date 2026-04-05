@@ -12,7 +12,7 @@ const session = require('cookie-session')
 
 const passport = require('passport')
 
-
+const path = require("path");
 
 const connectDB = require('./config/db')
 
@@ -99,7 +99,7 @@ const { debugMentorRequest } = require('./debug-mentorship')
 
 const app = express()
 
-
+app.use(express.static(path.join(__dirname, "dist")));
 
 app.use(cors())
 
@@ -294,6 +294,13 @@ app.use('/api/conversations', require('./routes/conversationRoutes'))
   }
 
 }
+const path = require("path");
+
+app.use(express.static(path.join(__dirname, "dist")));
+
+app.get("*", (req, res) => {
+  res.sendFile(path.join(__dirname, "dist", "index.html"));
+});
 
 
 
