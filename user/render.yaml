@@ -8,3 +8,7 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
+    # Health check to ensure the service is running
+    healthCheckPath: /
+    # Auto-deploy on push to main branch
+    autoDeploy: true
