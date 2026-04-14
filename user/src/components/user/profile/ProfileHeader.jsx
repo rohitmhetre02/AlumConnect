@@ -412,7 +412,7 @@ const ProfileHeader = ({ profile = {}, onEditSection, showConnectButtons = false
 
                     {role && <span>•</span>}
 
-                    <span>Year {currentYear}</span>
+                    <span> {currentYear}</span>
 
                   </>
 

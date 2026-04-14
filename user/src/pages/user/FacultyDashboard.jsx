@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react"
 import { useAuth } from "../../context/AuthContext"
 import { useNavigate } from "react-router-dom"
 import { get } from "../../utils/api"
+import WelcomeNotification from '../../components/user/WelcomeNotification'
 import { User, Mail, Phone, MapPin, Calendar, Briefcase, GraduationCap, CheckCircle } from "lucide-react"
 
 const FacultyDashboard = () => {
@@ -182,6 +183,11 @@ const FacultyDashboard = () => {
 
   return (
     <div className="min-h-screen bg-slate-50">
+      {/* Welcome Notification for admin-created users */}
+      <WelcomeNotification 
+        firstName={user?.firstName || user?.name?.split(' ')[0] || 'User'} 
+      />
+      
       <div className="max-w-7xl mx-auto px-4 py-8">
 
         {/* WELCOME CARD */}

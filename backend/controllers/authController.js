@@ -281,6 +281,8 @@ const createUsers = async (payloads = [], role, adminCreated = false) => {
       registrationDecisionByRole: isAutoApproved ? 'admin' : '',
       registrationReviewedAt: isAutoApproved ? new Date() : null,
       registrationReviewedBy: isAutoApproved ? 'admin' : '',
+      // Set status to Inactive for admin-created users to force password reset on first login
+      status: adminCreated ? 'Inactive' : 'Active',
       // Include all additional fields from payload
       ...payload
     })
@@ -362,9 +364,19 @@ const login = async (req, res) => {
       return res.status(401).json({ message: 'Invalid credentials.' })
     }
 
-    // Allow login for all users regardless of registration status
-    // Profile approval status will be checked on frontend for popup display
-    
+    // Check if user status is Inactive (admin-created user who hasn't set password yet)
+    if (matchedUser.status === 'Inactive') {
+      return res.status(200).json({
+        message: 'Login successful. Please set your new password.',
+        token: createToken(matchedUser._id, matchedRole),
+        user: {
+          ...sanitizeUser(matchedUser, matchedRole),
+          status: 'Inactive' // Include status to trigger password reset on frontend
+        }
+      })
+    }
+
+    // Allow login for active users
     const token = createToken(matchedUser._id, matchedRole)
 
     return res.status(200).json({
@@ -378,12 +390,92 @@ const login = async (req, res) => {
   }
 }
 
+const activateAccount = async (req, res) => {
+  try {
+    const { email, tempPassword, newPassword } = req.body
+
+    if (!email || !tempPassword || !newPassword) {
+      return res.status(400).json({ message: 'All fields are required.' })
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ message: 'Password must be at least 6 characters long.' })
+    }
+
+    const normalizedEmail = String(email).toLowerCase().trim()
+
+    // Find user across all role models
+    let user = null
+    let userRole = null
+    let UserModel = null
+
+    for (const role of AUTHENTICATABLE_ROLES) {
+      if (role === 'admin') continue // Skip admin role
+      
+      UserModel = getModelByRole(role)
+      if (!UserModel) continue
+
+      const foundUser = await UserModel.findOne({ email: normalizedEmail })
+      if (foundUser) {
+        user = foundUser
+        userRole = role
+        break
+      }
+    }
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found.' })
+    }
+
+    // Verify temporary password and check if status is Inactive
+    let isTempPasswordValid = false
+    
+    try {
+      isTempPasswordValid = await bcrypt.compare(tempPassword, user.password)
+    } catch (error) {
+      console.warn('bcrypt.compare failed for temp password:', error)
+    }
+
+    if (!isTempPasswordValid && tempPassword === user.password) {
+      console.warn('Legacy plaintext temp password detected')
+      isTempPasswordValid = true
+    }
+
+    if (!isTempPasswordValid) {
+      return res.status(401).json({ message: 'Invalid temporary password.' })
+    }
+
+    if (user.status !== 'Inactive') {
+      return res.status(400).json({ message: 'Account is already active.' })
+    }
+
+    // Hash new password and update user
+    const salt = await bcrypt.genSalt(10)
+    const hashedNewPassword = await bcrypt.hash(newPassword, salt)
+
+    await UserModel.findByIdAndUpdate(user._id, {
+      password: hashedNewPassword,
+      status: 'Active',
+      updatedAt: new Date()
+    })
+
+    return res.status(200).json({
+      success: true,
+      message: 'Account activated successfully. You can now login with your new password.'
+    })
+
+  } catch (error) {
+    console.error('Activate account error:', error)
+    return res.status(500).json({ message: 'Unable to activate account.' })
+  }
+}
+
 module.exports = {
   signup,
   login,
   createUsers,
   createToken,
   sanitizeUser,
+  activateAccount,
   AUTHENTICATABLE_ROLES,
 }
- 

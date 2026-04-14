@@ -4,6 +4,7 @@ import StatCard from '../../components/user/dashboard/StatCard'
 import ProfileApprovedPopup from '../../components/user/ProfileApprovedPopup'
 import ProfilePendingPopup from '../../components/user/ProfilePendingPopup'
 import ProfileRejectedPopup from '../../components/user/ProfileRejectedPopup'
+import WelcomeNotification from '../../components/user/WelcomeNotification'
 import useProfileCompletion from '../../hooks/useProfileCompletion'
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
@@ -211,6 +212,11 @@ const Dashboard = () => {
   return (
 
     <>
+      {/* Welcome Notification for admin-created users */}
+      <WelcomeNotification 
+        firstName={user?.firstName || user?.name?.split(' ')[0] || 'User'} 
+      />
+
       {user?.role === 'student' ? (
         <StudentDashboard />
       ) : user?.role === 'alumni' ? (

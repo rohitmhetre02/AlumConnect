@@ -129,6 +129,13 @@ export const AuthProvider = ({ children }) => {
 
       setUser(enrichedUser)
       persistUser(enrichedUser)
+      
+      // Check if this is first login after password reset
+      if (userData.isFirstLogin === false && !localStorage.getItem('hasSeenWelcomeNotification')) {
+        // Don't show welcome notification immediately - let the dashboard handle it
+        // The WelcomeNotification component will handle showing it
+      }
+      
       navigate('/dashboard', { replace: true })
       return enrichedUser
     },

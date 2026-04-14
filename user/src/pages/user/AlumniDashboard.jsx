@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import useAlumniDashboard from '../../hooks/useAlumniDashboard'
 import InteractiveCalendar from '../../components/shared/InteractiveCalendar'
 import useCalendarNotes from '../../hooks/useCalendarNotes'
+import WelcomeNotification from '../../components/user/WelcomeNotification'
 import { User, Mail, Phone, MapPin, Calendar, Briefcase, GraduationCap, CheckCircle } from 'lucide-react'
 
 const CATEGORY_COLORS = {
@@ -198,6 +199,10 @@ const AlumniDashboard = () => {
   return (
 
     <div className="min-h-screen bg-slate-50">
+      {/* Welcome Notification for admin-created users */}
+      <WelcomeNotification 
+        firstName={user?.firstName || user?.name?.split(' ')[0] || 'User'} 
+      />
 
       <div className="max-w-7xl mx-auto px-4 py-8">
 

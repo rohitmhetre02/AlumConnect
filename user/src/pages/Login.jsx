@@ -212,6 +212,22 @@ const Login = () => {
         throw primaryError
       }
 
+      // Check if user is inactive (first-time login from admin-created account)
+      if (response.user?.status === 'Inactive') {
+        // Store credentials temporarily for password reset page
+        localStorage.setItem('tempLoginEmail', form.email.trim())
+        localStorage.setItem('tempLoginPassword', form.password)
+        
+        // Redirect to set new password page
+        navigate('/set-new-password', { 
+          state: { 
+            email: form.email.trim(), 
+            tempPassword: form.password 
+          } 
+        })
+        return
+      }
+
       // Check if user registration is pending approval
       if (response.user?.profileApprovalStatus === 'IN_REVIEW' ||
         response.user?.profileApprovalStatus === 'pending' ||

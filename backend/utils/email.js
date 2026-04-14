@@ -35,84 +35,51 @@ const buildCredentialEmailContent = ({ name, email, password, role }) => {
   const capitalizedRole = role ? role.charAt(0).toUpperCase() + role.slice(1) : 'Member'
   const loginUrl = process.env.EMAIL_URL
 
-  const subject = `🎉 Welcome to APCOER Alumni Portal - Your ${capitalizedRole} Account is Ready!`
+  const subject = `Access to Alumni Portal – APCOER`
 
   const text = `
-Hello ${displayName},
+Dear ${displayName},
 
-🎓 Your ${capitalizedRole} account has been successfully created in the APCOER Alumni Portal.
+Greetings from Anantrao Pawar College of Engineering & Research!
 
-📌 Account Details:
-Email: ${email}
+We are pleased to share that the Alumni Portal of the institute is now available. As part of our alumni outreach, an account has been created for you.
+
+You may access the portal using the following credentials:
+
+Email ID: ${email}
 Password: ${password}
 
-⚠️ Important:
-This is a temporary password. Please change it after your first login.
+For security purposes, we recommend updating your password after your first login.
 
-🔗 Login here:
-${loginUrl}
+Login here: ${loginUrl}
 
-Next Steps:
-- Login using your credentials
-- Complete your profile
-- Change your password
-- Start connecting with alumni
+This platform helps you stay connected with the institute and fellow alumni, keep up with updates and opportunities, and offer mentorship to students.
 
-If you need help, contact support.
+If you have any questions or require assistance, please feel free to contact us at rohit.mhetre@abmspcoerpune.org.
 
-Best regards,  
-APCOER Alumni Portal Team
+Warm regards,
+Alumni Relations Cell
+APCOER, Parvati, Pune – 411009
 `
 
-  const html = `
-<div style="font-family: Arial; max-width:600px; margin:auto; padding:20px;">
-  <h2 style="color:#2563eb;">🎉 Welcome to APCOER Alumni Portal</h2>
-  <p>Hello <strong>${displayName}</strong>,</p>
-
-  <p>Your <strong>${capitalizedRole}</strong> account has been created successfully.</p>
-
-  <div style="background:#f9fafb; padding:15px; border-radius:8px;">
-    <p><strong>Email:</strong> ${email}</p>
-    <p><strong>Temporary Password:</strong> ${password}</p>
-  </div>
-
-  <p style="color:#b45309;"><strong>⚠️ Please change your password after login.</strong></p>
-
-  <div style="text-align:center; margin:20px;">
-    <a href="${loginUrl}" style="background:#2563eb; color:white; padding:12px 20px; text-decoration:none; border-radius:6px;">
-      Login to Portal
-    </a>
-  </div>
-
-  <p><strong>Next Steps:</strong></p>
-  <ul>
-    <li>Login to your account</li>
-    <li>Complete profile</li>
-    <li>Update password</li>
-    <li>Connect with alumni</li>
-  </ul>
-
-  <p>Regards,<br/>APCOER Alumni Portal Team</p>
-</div>
-`
-
-  return { subject, text, html }
+  return { subject, text }
 }
 
 const buildProfileApprovalEmailContent = ({ name, status, reason, role }) => {
   const displayName = name || 'User'
   const isApproved = String(status).toLowerCase() === 'approved'
+  const loginUrl = process.env.EMAIL_URL
 
   const subject = isApproved
-    ? '🎉 Your Profile is Approved - APCOER Alumni Portal'
-    : '⚠️ Profile Update Required - APCOER Alumni Portal'
+    ? 'Profile Approved - APCOER Alumni Portal'
+    : 'Profile Update Required - APCOER Alumni Portal'
 
   const text = `
-Hello ${displayName},
+Dear ${displayName},
 
 ${
   isApproved
-    ? 'Your profile has been approved successfully. You now have full access.'
+    ? 'Your profile has been approved successfully. You now have full access to the APCOER Alumni Portal.'
     : 'Your profile needs some updates before approval.'
 }
 
@@ -120,54 +87,27 @@ ${!isApproved && reason ? `Reviewer Feedback: ${reason}` : ''}
 
 ${
   isApproved
-    ? 'You can now login and explore the portal.'
-    : 'Please login, update your profile, and resubmit.'
+    ? `You can now login and explore the portal: ${loginUrl}`
+    : `Please login, update your profile, and resubmit: ${loginUrl}`
 }
 
-Best regards,  
-APCOER Alumni Portal Team
+If you have any questions, please contact us at rohit.mhetre@abmspcoerpune.org.
+
+Warm regards,
+Alumni Relations Cell
+APCOER, Parvati, Pune – 411009
 `
 
-  const html = `
-<p>Hello <strong>${displayName}</strong>,</p>
-
-<p>
-${
-  isApproved
-    ? '🎉 Your profile has been approved successfully.'
-    : '⚠️ Your profile requires updates.'
-}
-</p>
-
-${
-  !isApproved && reason
-    ? `<div style="background:#fee2e2; padding:10px; border-left:4px solid red;">
-        <strong>Feedback:</strong> ${reason}
-      </div>`
-    : ''
-}
-
-<p>
-${
-  isApproved
-    ? 'You can now login and use all features.'
-    : 'Please update your profile and resubmit.'
-}
-</p>
-
-<p>Regards,<br/>APCOER Alumni Portal Team</p>
-`
-
-  return { subject, text, html }
+  return { subject, text }
 }
 
 const buildPasswordResetEmailContent = ({ code, expiresInMinutes = 10 }) => {
-  const subject = '🔐 APCOER Alumni Portal Password Reset'
+  const subject = 'Password Reset - APCOER Alumni Portal'
 
   const text = `
-Hello,
+Dear User,
 
-We received a request to reset your password.
+We received a request to reset your password for the APCOER Alumni Portal.
 
 Your OTP Code: ${code}
 
@@ -175,25 +115,14 @@ This code will expire in ${expiresInMinutes} minutes.
 
 If you did not request this, please ignore this email.
 
-Regards,  
-APCOER Alumni Portal Team
+For assistance, please contact us at rohit.mhetre@abmspcoerpune.org.
+
+Warm regards,
+Alumni Relations Cell
+APCOER, Parvati, Pune – 411009
 `
 
-  const html = `
-<p>Hello,</p>
-
-<p>We received a request to reset your password.</p>
-
-<h2 style="letter-spacing:4px;">${code}</h2>
-
-<p>This code will expire in ${expiresInMinutes} minutes.</p>
-
-<p>If you did not request this, please ignore.</p>
-
-<p>Regards,<br/>APCOER Alumni Portal Team</p>
-`
-
-  return { subject, text, html }
+  return { subject, text }
 }
 
 const sendUserCredentialsEmail = async ({ to, name, email, password, role }) => {
@@ -204,14 +133,13 @@ const sendUserCredentialsEmail = async ({ to, name, email, password, role }) => 
 
   try {
     const transporter = getTransporter()
-    const { subject, text, html } = buildCredentialEmailContent({ name, email, password, role })
+    const { subject, text } = buildCredentialEmailContent({ name, email, password, role })
 
     const info = await transporter.sendMail({
       from: process.env.SMTP_FROM,
       to,
       subject,
       text,
-      html,
     })
 
     return { sent: true, info }
@@ -229,14 +157,13 @@ const sendPasswordResetCodeEmail = async ({ to, code, expiresInMinutes }) => {
 
   try {
     const transporter = getTransporter()
-    const { subject, text, html } = buildPasswordResetEmailContent({ code, expiresInMinutes })
+    const { subject, text } = buildPasswordResetEmailContent({ code, expiresInMinutes })
 
     const info = await transporter.sendMail({
       from: process.env.SMTP_FROM,
       to,
       subject,
       text,
-      html,
     })
 
     return { sent: true, info }
@@ -254,14 +181,13 @@ const sendProfileApprovalStatusEmail = async ({ to, name, status, reason, role }
 
   try {
     const transporter = getTransporter()
-    const { subject, text, html } = buildProfileApprovalEmailContent({ name, status, reason, role })
+    const { subject, text } = buildProfileApprovalEmailContent({ name, status, reason, role })
 
     const info = await transporter.sendMail({
       from: process.env.SMTP_FROM,
       to,
       subject,
       text,
-      html,
     })
 
     return { sent: true, info }

@@ -1,5 +1,5 @@
 const express = require('express')
-const { signup, login } = require('../controllers/authController')
+const { signup, login, activateAccount } = require('../controllers/authController')
 const {
   requestPasswordReset,
   verifyPasswordResetCode,
@@ -30,6 +30,7 @@ const router = express.Router()
 
 router.post('/signup', signup)
 router.post('/login', login)
+router.post('/activate-account', activateAccount)
 router.post('/password/reset/request', requestPasswordReset)
 router.post('/password/reset/verify', verifyPasswordResetCode)
 router.post('/password/reset/complete', resetPassword)

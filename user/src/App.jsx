@@ -16,6 +16,7 @@ import Login from './pages/Login'
 import Signup from './pages/Signup'
 import SignupForm from './pages/SignupForm'
 import ForgotPassword from './pages/ForgotPassword'
+import SetNewPassword from './pages/SetNewPassword'
 import { AuthProvider } from './context/AuthContext'
 import Dashboard from './pages/user/Dashboard'
 import UserLayout from './layouts/UserLayout'
@@ -207,6 +208,12 @@ function App() {
                 <RedirectIfAuthenticated>
                   <ForgotPassword />
                 </RedirectIfAuthenticated>
+              }
+            />
+            <Route
+              path="set-new-password"
+              element={
+                <SetNewPassword />
               }
             />
           </Route>
