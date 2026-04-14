@@ -2,9 +2,8 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import useCampaigns from '../../hooks/useCampaigns'
 import { useAuth } from '../../context/AuthContext'
-
-const DEFAULT_IMAGE =
-  'https://images.unsplash.com/photo-1469474968028-56623f02e42e?auto=format&fit=crop&w=1200&q=80'
+import FileUpload from '../../components/common/FileUpload'
+import { uploadFile } from '../../utils/upload'
 
 const formatCurrency = (value) => {
   const numeric = Number(value)
@@ -47,49 +46,46 @@ const PostDonationCampaign = () => {
     setForm((prev) => ({ ...prev, [field]: value }))
   }
 
-  const handleImageUpload = async (event) => {
-    const file = event.target.files[0]
-    if (!file) return
-
-    // Validate file type
-    if (!file.type.startsWith('image/')) {
-      alert('Please select an image file')
-      return
-    }
-
-    // Validate file size (max 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      alert('Image size should be less than 5MB')
-      return
-    }
-
-    setUploadingImage(true)
+  const handleImageUpload = async (file) => {
+    console.log('=== DEBUG: handleImageUpload called ===')
+    console.log('File:', file)
+    console.log('File name:', file?.name)
+    console.log('File type:', file?.type)
+    console.log('File size:', file?.size)
+    
     try {
-      // Create preview URL for the selected file
-      const previewUrl = URL.createObjectURL(file)
-      setImagePreview(previewUrl)
+      console.log('Calling uploadFile with type: campaign')
+      const result = await uploadFile(file, 'campaign')
+      console.log('Upload result:', result)
+      console.log('Upload result URL:', result?.url)
       
-      // For now, store the file info and use default image
-      // In production, you would upload to a service like Cloudinary
-      // For demo purposes, we'll use the default image but show the preview
-      setForm((prev) => ({ ...prev, coverImage: DEFAULT_IMAGE }))
+      if (result?.url) {
+        setForm((prev) => ({ ...prev, coverImage: result.url }))
+        setImagePreview(result.url)
+        alert('Image uploaded successfully!')
+        console.log('Form updated with Cloudinary URL:', result.url)
+      } else {
+        throw new Error('No URL returned from upload')
+      }
       
-      // Simulate upload delay
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      
+      return result
     } catch (error) {
-      console.error('Image upload failed:', error)
-      alert('Image upload failed. Using default image.')
-      setForm((prev) => ({ ...prev, coverImage: DEFAULT_IMAGE }))
-      setImagePreview(DEFAULT_IMAGE)
-    } finally {
-      setUploadingImage(false)
+      console.error('=== UPLOAD ERROR ===')
+      console.error('Error details:', error)
+      console.error('Error message:', error.message)
+      alert(`Image upload failed: ${error.message || 'Please try again.'}`)
+      throw error
     }
   }
 
   const handleSubmit = async (event) => {
     event.preventDefault()
     if (isSubmitting) return
+
+    console.log('=== DEBUG: handleSubmit called ===')
+    console.log('Form data:', form)
+    console.log('Cover image URL:', form.coverImage)
+    console.log('Is blob URL?', form.coverImage?.startsWith('blob:'))
 
     const numericGoal = Number(form.goalAmount)
     if (Number.isNaN(numericGoal) || numericGoal <= 0) {
@@ -99,17 +95,23 @@ const PostDonationCampaign = () => {
 
     setIsSubmitting(true)
     try {
-      const result = await createCampaign({
+      const campaignData = {
         title: form.title.trim(),
         description: form.description.trim(),
         goalAmount: numericGoal,
-        coverImage: form.coverImage.trim() || DEFAULT_IMAGE,
+        coverImage: form.coverImage.trim(),
         deadline: form.deadline ? new Date(form.deadline).toISOString() : undefined,
         category: form.category,
         tags: form.tags.split(',').map(tag => tag.trim()).filter(tag => tag),
         featured: form.featured,
         priority: Number(form.priority) || 0,
-      })
+      }
+      
+      console.log('Campaign data to be sent:', campaignData)
+      
+      const result = await createCampaign(campaignData)
+      
+      console.log('Campaign created successfully:', result)
       
       // Show approval message based on user role
       const userRole = user?.role?.toLowerCase()
@@ -129,7 +131,7 @@ const PostDonationCampaign = () => {
   }
 
   const handleCancel = () => {
-    navigate('/dashboard/campaigns')
+    navigate(-1)
   }
 
   return (
@@ -236,43 +238,53 @@ const PostDonationCampaign = () => {
                       <label className="block text-sm font-medium text-slate-600 mb-2">
                         Upload Image
                       </label>
-                      <div className="flex items-center gap-4">
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={handleImageUpload}
-                          className="hidden"
-                          id="image-upload"
-                        />
-                        <label
-                          htmlFor="image-upload"
-                          className="cursor-pointer inline-flex items-center gap-2 rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:border-primary hover:text-primary transition-colors"
-                        >
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                      <FileUpload
+                        onFileSelect={handleImageUpload}
+                        accept="image/*"
+                        className="w-full"
+                      >
+                        <div className="text-center">
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mx-auto mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                           </svg>
-                          {uploadingImage ? 'Uploading...' : 'Choose File'}
-                        </label>
-                        {imagePreview && (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setImagePreview('')
-                              setForm(prev => ({ ...prev, coverImage: '' }))
-                            }}
-                            className="text-sm text-red-600 hover:text-red-700"
-                          >
-                            Remove Image
-                          </button>
-                        )}
-                      </div>
+                          <p className="text-sm font-medium text-slate-700">Upload Campaign Image</p>
+                          <p className="text-xs text-slate-500">Images up to 5MB</p>
+                        </div>
+                      </FileUpload>
                       {imagePreview && (
                         <div className="mt-3">
-                          <img
-                            src={imagePreview}
-                            alt="Campaign preview"
-                            className="h-32 w-48 object-cover rounded-lg border border-slate-200"
-                          />
+                          <div className="flex items-center justify-between p-3 border border-slate-200 rounded-lg bg-slate-50">
+                            <div className="flex items-center space-x-3">
+                              <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">
+                                <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                </svg>
+                              </div>
+                              <div>
+                                <p className="text-sm font-medium text-slate-900">Campaign image uploaded</p>
+                                <p className="text-xs text-slate-500">Ready to publish</p>
+                              </div>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setImagePreview('')
+                                setForm(prev => ({ ...prev, coverImage: '' }))
+                              }}
+                              className="text-slate-400 hover:text-red-500 transition-colors"
+                            >
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                              </svg>
+                            </button>
+                          </div>
+                          <div className="mt-3">
+                            <img
+                              src={imagePreview}
+                              alt="Campaign preview"
+                              className="h-32 w-full object-cover rounded-lg border border-slate-200"
+                            />
+                          </div>
                         </div>
                       )}
                     </div>
@@ -297,7 +309,7 @@ const PostDonationCampaign = () => {
                     </div>
                   </div>
                   <p className="mt-2 text-xs text-slate-500">
-                    Upload an image or enter a URL. Leave blank to use default image.
+                    Upload an image or enter a URL. Campaigns without images will show a placeholder.
                   </p>
                 </div>
 

@@ -74,18 +74,21 @@ const PublicNavbar = () => {
             {/* Logo and Founder Images Row */}
             <div className="flex items-center justify-between w-full sm:w-auto gap-4">
               
-              {/* Logo */}
-              <div className="flex items-center justify-center">
+              {/* Logo - Links to Home Path */}
+              <Link 
+                to="/"
+                className="flex items-center justify-center hover:opacity-80 transition-opacity"
+              >
                 <img src="/images/apcoer-logo.webp" alt="College Logo" className="h-16 sm:h-20 w-auto object-contain" />
-              </div>
+              </Link>
 
-              {/* Founder Image */}
+              {/* Founder Image - Right Side */}
               <div className="flex items-center justify-center">
                 <img src="/images/founder.png" alt="Founder" className="h-16 sm:h-20 w-auto object-contain" />
               </div>
             </div>
 
-            {/* College Info */}
+            {/* College Info */}  {/* College Info */}
             <div className="text-center flex-1">
               <p className="text-xs sm:text-sm text-red-700 font-semibold">
                 AKHIL BHARATIYA MARATHA SHIKSHAN PARISHAD'S

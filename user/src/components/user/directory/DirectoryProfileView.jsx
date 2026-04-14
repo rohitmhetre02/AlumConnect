@@ -30,7 +30,7 @@ const DirectoryProfileView = ({ profile, onBack }) => {
         </div>
       </header>
 
-      <ProfileHeader profile={profile} showConnectButtons={true} />
+      <ProfileHeader profile={profile} showConnectButtons={true} targetUser={profile} />
       
       <div className="grid gap-8 lg:grid-cols-[320px_1fr] xl:gap-10">
         {role === 'faculty' ? (

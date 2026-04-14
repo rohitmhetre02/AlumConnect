@@ -11,8 +11,7 @@ const useCalendarNotes = () => {
   // Fetch notes for the current user
   const fetchNotes = useCallback(async () => {
     const userId = user?.id || user?._id || user?.profile?.id || user?.profile?._id
-    console.log('Calendar Notes - User data:', user)
-    console.log('Calendar Notes - Extracted userId:', userId)
+    
     if (!userId) return
     
     setLoading(true)

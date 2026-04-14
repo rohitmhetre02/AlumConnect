@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { api } from '../utils/api'
+import { uploadFile } from '../utils/upload'
 
 function InputField({ label, type = 'text', value, onChange, placeholder, required, min }) {
   return (
@@ -144,6 +145,9 @@ const AdminPostArticle = () => {
     const file = event.target.files?.[0]
     if (!file) return
 
+    console.log('=== DEBUG: AdminPostArticle handleImageUpload called ===')
+    console.log('File:', file)
+
     if (!file.type.startsWith('image/')) {
       alert('Please select a valid image file (JPG, PNG, GIF).')
       return
@@ -156,14 +160,22 @@ const AdminPostArticle = () => {
 
     setUploadingImage(true)
     try {
-      // For now, create a preview URL (in production, you'd upload to Cloudinary)
-      const previewUrl = URL.createObjectURL(file)
-      setForm((prev) => ({ ...prev, coverImage: previewUrl }))
-      setImagePreview(previewUrl)
-      alert('Article image uploaded successfully.')
+      console.log('Calling uploadFile with type: news')
+      const result = await uploadFile(file, 'news')
+      console.log('Upload result:', result)
+      
+      if (result?.url) {
+        setForm((prev) => ({ ...prev, coverImage: result.url }))
+        setImagePreview(result.url)
+        alert('Article image uploaded successfully!')
+        console.log('Admin article image uploaded successfully:', result.url)
+      } else {
+        throw new Error('No URL returned from upload')
+      }
     } catch (error) {
-      console.error('Image upload failed:', error)
-      alert('Failed to upload image. Please try again.')
+      console.error('=== ADMIN ARTICLE UPLOAD ERROR ===')
+      console.error('Error:', error)
+      alert(`Image upload failed: ${error.message || 'Please try again.'}`)
     } finally {
       setUploadingImage(false)
     }
@@ -363,17 +375,33 @@ const AdminPostArticle = () => {
                     disabled={uploadingImage}
                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
                   />
-                  <div className="flex items-center justify-center w-full rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50 px-4 py-8 text-center transition hover:border-primary hover:bg-primary/5">
+                  <div className={`flex items-center justify-center w-full rounded-2xl border-2 border-dashed px-4 py-8 text-center transition ${
+                    uploadingImage 
+                      ? 'border-primary bg-primary/5' 
+                      : 'border-slate-300 bg-slate-50 hover:border-primary hover:bg-primary/5'
+                  }`}>
                     <div className="space-y-2">
-                      <svg className="mx-auto h-8 w-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                      </svg>
-                      <div className="text-sm text-slate-600">
-                        {uploadingImage ? 'Uploading...' : 'Click to upload or drag and drop'}
-                      </div>
-                      <div className="text-xs text-slate-500">
-                        PNG, JPG, GIF up to 5MB
-                      </div>
+                      {uploadingImage ? (
+                        <>
+                          <div className="mx-auto w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                            <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+                          </div>
+                          <div className="text-sm font-medium text-primary">Uploading image...</div>
+                          <div className="text-xs text-slate-500">Please wait</div>
+                        </>
+                      ) : (
+                        <>
+                          <svg className="mx-auto h-8 w-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                          </svg>
+                          <div className="text-sm font-medium text-slate-700">
+                            Click to upload or drag and drop
+                          </div>
+                          <div className="text-xs text-slate-500">
+                            PNG, JPG, GIF up to 5MB
+                          </div>
+                        </>
+                      )}
                     </div>
                   </div>
                 </div>

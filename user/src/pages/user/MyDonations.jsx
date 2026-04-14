@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
 
-import { useAllCampaignDonations } from '../../hooks/useAllCampaignDonations.js'
+import { useMyDonations } from '../../hooks/useMyDonations.js'
 
 const formatCurrency = (value) => {
   const numeric = Number(value)
@@ -31,7 +31,7 @@ const formatDate = (date) => {
 }
 
 const MyDonations = () => {
-  const { items: donations, loading, error, refresh } = useAllCampaignDonations()
+  const { items: donations, loading, error, refresh } = useMyDonations()
 
   const sortedDonations = useMemo(() => {
     return [...donations].sort((a, b) => {
@@ -44,9 +44,9 @@ const MyDonations = () => {
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold text-slate-900">My Campaigns</h1>
+          <h1 className="text-2xl font-semibold text-slate-900">My Donations</h1>
           <p className="text-sm text-slate-500">
-            View all donation history across all campaigns.
+            View your donation history across all campaigns.
           </p>
         </div>
         <Link
@@ -95,9 +95,6 @@ const MyDonations = () => {
                     Campaign
                   </th>
                   <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-700">
-                    Donor Name
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-700">
                     Amount
                   </th>
                   <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-700">
@@ -132,14 +129,6 @@ const MyDonations = () => {
                             </div>
                           </div>
                         </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="text-sm font-medium text-slate-900">
-                          {donation.anonymous ? 'Anonymous' : (donation.donorName || 'Unknown')}
-                        </div>
-                        {!donation.anonymous && donation.donorEmail && (
-                          <div className="text-xs text-slate-500">{donation.donorEmail}</div>
-                        )}
                       </td>
                       <td className="px-6 py-4">
                         <div className="text-sm font-medium text-emerald-600">{formatCurrency(donation.amount)}</div>
@@ -198,7 +187,7 @@ const MyDonations = () => {
             </div>
             <h3 className="text-lg font-semibold text-slate-900 mb-2">No donations found</h3>
             <p className="text-sm text-slate-500 mb-4">
-              No donation history available. When donations are made to campaigns, they will appear here.
+              You haven't made any donations yet. When you donate to campaigns, they will appear here.
             </p>
             <Link
               to="/dashboard/campaigns"

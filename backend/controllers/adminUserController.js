@@ -232,7 +232,7 @@ const extractUsersFromRows = (rows = [], normalizedRole = '') => {
     // Add role-specific fields
     if (normalizedRole === 'student') {
       userPayload.prnNumber = normalized.prn || ''
-      userPayload.year = normalized.year || ''
+      userPayload.currentYear = normalized.year || ''  // Fixed: use currentYear to match schema
     } else if (normalizedRole === 'alumni') {
       userPayload.prnNumber = normalized.prn || ''
       userPayload.passoutYear = normalized.passoutyear || normalized['passout year'] || ''

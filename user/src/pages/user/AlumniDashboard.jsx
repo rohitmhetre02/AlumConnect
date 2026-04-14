@@ -166,7 +166,7 @@ const AlumniDashboard = () => {
       setNoteText('')
       setEditingNote(null)
     } catch (error) {
-      console.error('Failed to save note:', error)
+      // Failed to save note
     }
   }
 
@@ -178,7 +178,7 @@ const AlumniDashboard = () => {
         setNoteText('')
         setEditingNote(null)
       } catch (error) {
-        console.error('Failed to delete note:', error)
+        // Failed to delete note
       }
     }
   }
@@ -340,7 +340,7 @@ const AlumniDashboard = () => {
                   desc="Share job opportunities with students"
                   btn="Post Opportunity"
                   color="bg-blue-100 text-blue-700"
-                  link="/#/dashboard/opportunities/post"
+                  onClick={() => navigate('/dashboard/opportunities/post')}
                 />
 
                 <ActionCard
@@ -348,7 +348,7 @@ const AlumniDashboard = () => {
                   desc="Organize networking events"
                   btn="Create Event"
                   color="bg-purple-100 text-purple-700"
-                  link="/#/dashboard/events/post"
+                  onClick={() => navigate('/dashboard/events/post')}
                 />
 
                 <ActionCard
@@ -356,7 +356,7 @@ const AlumniDashboard = () => {
                   desc="Support institutional development"
                   btn="Donate"
                   color="bg-green-100 text-green-700"
-                  link="/#/dashboard/campaigns/create"
+                  onClick={() => navigate('/dashboard/campaigns/create')}
                 />
 
               </div>
@@ -403,14 +403,14 @@ const AlumniDashboard = () => {
 
                       <div className="flex gap-2">
                         <button 
-                          onClick={() => window.location.href = `/dashboard/events/${e.id}`}
-                          className="px-3 -1 text-sm border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
+                          onClick={() => navigate(`/dashboard/events/${e.id}`)}
+                          className="px-3 py-1 text-sm border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
                         >
                           View Details
                         </button>
                         <button 
-                          onClick={() => window.location.href = `/dashboard/events/${e.id}`}
-                          className={`px-3 -1 text-sm rounded-lg transition-colors ${
+                          onClick={() => navigate(`/dashboard/events/${e.id}`)}
+                          className={`px-3 py-1 text-sm rounded-lg transition-colors ${
                             e.isCreator 
                               ? 'bg-green-600 text-white hover:bg-green-700' 
                               : 'bg-purple-600 text-white hover:bg-purple-700'
@@ -431,7 +431,7 @@ const AlumniDashboard = () => {
                 <div className="bg-white rounded-xl border border-slate-200 p-8 text-center">
                   <p className="text-slate-600 mb-4">No upcoming events</p>
                   <button 
-                    onClick={() => window.location.href = '/dashboard/events/post'}
+                    onClick={() => navigate('/dashboard/events/post')}
                     className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
                   >
                     Create an Event
@@ -503,13 +503,13 @@ const AlumniDashboard = () => {
                   <p className="text-slate-600 mb-4">No recent activity</p>
                   <div className="flex gap-3 justify-center">
                     <button 
-                      onClick={() => window.location.href = '/dashboard/opportunities/post'}
+                      onClick={() => navigate('/dashboard/opportunities/post')}
                       className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                     >
                       Post Opportunity
                     </button>
                     <button 
-                      onClick={() => window.location.href = '/dashboard/events/post'}
+                      onClick={() => navigate('/dashboard/events/post')}
                       className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
                     >
                       Create Event
@@ -668,7 +668,7 @@ function StatCard({title,value}){
 }
 
 
-function ActionCard({title,desc,btn,color,link}){
+function ActionCard({title,desc,btn,color,onClick}){
 
   return(
 
@@ -683,7 +683,7 @@ function ActionCard({title,desc,btn,color,link}){
       </p>
 
       <button
-        onClick={()=>window.location.href=link}
+        onClick={onClick}
         className={`mt-4 px-4 py-2 text-sm rounded ${color}`}
       >
         {btn}

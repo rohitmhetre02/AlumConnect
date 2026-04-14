@@ -8,6 +8,8 @@ const Campaign = require('../models/Campaign')
 const News = require('../models/News')
 const Coordinator = require('../models/Coordinator')
 const Admin = require('../models/Admin')
+const Alumni = require('../models/Alumni')
+const { notifyContentApproval } = require('../services/notificationService')
 
 const ensureObjectId = (value) => {
   return new mongoose.Types.ObjectId(String(value))
@@ -348,6 +350,24 @@ const decideOnPost = async (req, res) => {
       : [decisionEntry]
 
     await doc.save()
+
+    // Send immediate notification to alumni if content is approved
+    if (nextStatus === CONTENT_APPROVAL_STATUS.APPROVED && doc.createdBy) {
+      try {
+        console.log(`Sending approval notification for ${normalizedType} "${doc.title}" to alumni: ${doc.createdBy}`)
+        
+        await notifyContentApproval(
+          doc.createdBy,
+          normalizedType,
+          doc.title || 'Untitled Content'
+        );
+        
+        console.log(`Approval notification sent successfully for ${normalizedType}: ${doc.title}`)
+      } catch (notificationError) {
+        console.error('Error sending approval notification:', notificationError);
+        // Don't fail the approval process if notification fails
+      }
+    }
 
     const mapped = mapPost(doc, normalizedType)
 

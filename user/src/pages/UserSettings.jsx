@@ -73,11 +73,16 @@ const UserSettings = () => {
 
     setLoading(true)
     try {
+      console.log('=== DEBUG: Verifying password for email update ===')
+      console.log('Email:', currentEmail)
+      
       // First verify password using current email
       const response = await post('/api/auth/verify-password', {
         password: emailPassword,
         email: currentEmail
       })
+
+      console.log('Verify password response:', response)
 
       if (response?.success) {
         setIsEmailVerified(true)
@@ -86,7 +91,12 @@ const UserSettings = () => {
         showToast(response?.error || 'Invalid password', 'error')
       }
     } catch (error) {
-      showToast('Failed to verify password', 'error')
+      console.error('=== VERIFY PASSWORD ERROR ===')
+      console.error('Error:', error)
+      console.error('Error response:', error?.response?.data)
+      
+      const errorMessage = error?.response?.data?.error || error?.response?.data?.message || 'Failed to verify password'
+      showToast(errorMessage, 'error')
     } finally {
       setLoading(false)
     }
@@ -105,10 +115,24 @@ const UserSettings = () => {
 
     setLoading(true)
     try {
-      const response = await put('/api/auth/update-email', {
+      console.log('=== DEBUG: Updating email ===')
+      console.log('Current email:', currentEmail)
+      console.log('New email:', newEmail)
+      
+      // Check if user is authenticated
+      const token = localStorage.getItem('userToken')
+      console.log('Auth token exists:', !!token)
+      console.log('Auth token length:', token?.length)
+      
+      const requestData = {
         currentPassword: emailPassword,
         newEmail: newEmail
-      }, { includeAuth: true })
+      }
+      console.log('Request data:', { currentPassword: '***', newEmail: newEmail })
+      
+      const response = await put('/api/auth/update-email', requestData, { includeAuth: true })
+
+      console.log('Update email response:', response)
 
       if (response?.success) {
         // Update frontend state immediately
@@ -139,10 +163,28 @@ const UserSettings = () => {
           fetchUserData()
         }, 1000)
       } else {
-        showToast(response?.message || 'Failed to update email', 'error')
+        console.error('Failed to update email:', response)
+        const errorMessage = response?.message || response?.error || 'Failed to update email'
+        showToast(errorMessage, 'error')
       }
     } catch (error) {
-      showToast('Failed to update email', 'error')
+      console.error('=== UPDATE EMAIL ERROR ===')
+      console.error('Error:', error)
+      console.error('Error response:', error?.response?.data)
+      console.error('Error status:', error?.response?.status)
+      console.error('Error message:', error?.message)
+      
+      // Try to get more detailed error information
+      let errorMessage = 'Failed to update email'
+      if (error?.response?.data?.error) {
+        errorMessage = error.response.data.error
+      } else if (error?.response?.data?.message) {
+        errorMessage = error.response.data.message
+      } else if (error?.message) {
+        errorMessage = error.message
+      }
+      
+      showToast(errorMessage, 'error')
     } finally {
       setLoading(false)
     }
@@ -187,10 +229,14 @@ const UserSettings = () => {
 
     setLoading(true)
     try {
+      console.log('=== DEBUG: Updating password ===')
+      
       const response = await post('/api/auth/update-password', {
         currentPassword,
         newPassword
       }, { includeAuth: true })
+      
+      console.log('Update password response:', response)
       
       if (response?.success) {
         setCurrentPassword('')
@@ -198,46 +244,62 @@ const UserSettings = () => {
         setConfirmPassword('')
         showToast('Password updated successfully', 'success')
       } else {
-        showToast(response?.message || 'Failed to update password', 'error')
+        const errorMessage = response?.message || response?.error || 'Failed to update password'
+        showToast(errorMessage, 'error')
       }
     } catch (error) {
-      showToast('Failed to update password', 'error')
+      console.error('=== UPDATE PASSWORD ERROR ===')
+      console.error('Error:', error)
+      console.error('Error response:', error?.response?.data)
+      
+      const errorMessage = error?.response?.data?.error || error?.response?.data?.message || 'Failed to update password'
+      showToast(errorMessage, 'error')
     } finally {
       setLoading(false)
     }
   }
 
   // Forgot Password Functions
-  const handleSendForgotOtp = async () => {
-    if (!forgotEmail) {
-      showToast('Please enter your email address', 'error')
+  const handleForgotPassword = async () => {
+    if (!user?.email) {
+      showToast('Unable to retrieve your email address', 'error')
       return
     }
 
     setLoading(true)
     try {
+      console.log('=== DEBUG: Auto-sending forgot password OTP ===')
+      console.log('Using profile email:', user.email)
+      
       const response = await post('/api/auth/forgot-password', {
-  email: forgotEmail
-})
+        email: user.email
+      })
 
-console.log('Forgot password response:', response);
+      console.log('Forgot password response:', response)
 
-if (response?.success) {
-  setForgotOtpSent(true)
-  setTempToken(response.tempToken) // ⭐ IMPORTANT
-  
-  // Show OTP if available (development mode)
-  if (response.otp) {
-    showToast(`OTP sent to your email. For development: ${response.otp}`, 'success')
-  } else {
-    showToast('OTP sent to your email', 'success')
-  }
-} else {
-  showToast(response?.error || response?.message || 'Failed to send OTP', 'error')
-}
+      if (response?.success) {
+        setForgotEmail(user.email)
+        setForgotOtpSent(true)
+        setTempToken(response.tempToken)
+        
+        // Directly show OTP and password fields
+        setOtpVerified(true)
+        setShowForgotPassword(true)
+        
+        showToast(`OTP has been sent to your email: ${user.email}`, 'success')
+        
+        console.log('OTP sent successfully to:', user.email)
+      } else {
+        const errorMessage = response?.error || response?.message || 'Failed to send OTP'
+        console.error('Failed to send OTP:', errorMessage)
+        showToast(errorMessage, 'error')
+      }
     } catch (error) {
-      console.error('Forgot password error:', error);
-      const errorMessage = error?.response?.data?.error || error?.response?.data?.message || 'Failed to send OTP';
+      console.error('=== FORGOT PASSWORD ERROR ===')
+      console.error('Error:', error)
+      console.error('Error response:', error?.response?.data)
+      
+      const errorMessage = error?.response?.data?.error || error?.response?.data?.message || 'Failed to send OTP'
       showToast(errorMessage, 'error')
     } finally {
       setLoading(false)
@@ -275,8 +337,13 @@ if (response?.success) {
   }
 
   const handleResetPassword = async () => {
+  if (!forgotOtp || forgotOtp.length !== 6) {
+    showToast('Please enter the 6-digit OTP sent to your email', 'error')
+    return
+  }
+
   if (!resetPassword || !confirmResetPassword) {
-    showToast('Fill all password fields', 'error')
+    showToast('Please fill all password fields', 'error')
     return
   }
 
@@ -314,16 +381,22 @@ if (response?.success) {
   setLoading(true)
 
   try {
+    console.log('=== DEBUG: Resetting password with OTP ===')
+    console.log('Email:', forgotEmail)
+    console.log('OTP:', forgotOtp)
+    
+    // Use the combined endpoint that verifies OTP and resets password
     const response = await post('/api/auth/verify-forgot-password-otp', {
       tempToken,
       otp: forgotOtp,
       newPassword: resetPassword
     })
 
-    console.log('Reset password response:', response);
+    console.log('Reset password response:', response)
  
     if (response?.success) {
       showToast('Password reset successfully! You can now login with your new password.', 'success')
+      
       // Reset all forgot password states
       setShowForgotPassword(false)
       setForgotEmail('')
@@ -334,11 +407,15 @@ if (response?.success) {
       setConfirmResetPassword('')
       setTempToken('')
     } else {
-      showToast(response?.error || response?.message || 'Failed to reset password', 'error')
+      const errorMessage = response?.error || response?.message || 'Failed to reset password'
+      showToast(errorMessage, 'error')
     }
   } catch (error) {
-    console.error('Reset password error:', error);
-    const errorMessage = error?.response?.data?.error || error?.response?.data?.message || 'Failed to reset password';
+    console.error('=== RESET PASSWORD ERROR ===')
+    console.error('Error:', error)
+    console.error('Error response:', error?.response?.data)
+    
+    const errorMessage = error?.response?.data?.error || error?.response?.data?.message || 'Failed to reset password'
     showToast(errorMessage, 'error')
   } finally {
     setLoading(false)
@@ -353,26 +430,58 @@ if (response?.success) {
       return
     }
 
+    if (deletePassword.length < 6) {
+      showToast('Password must be at least 6 characters', 'error')
+      return
+    }
+
     setLoading(true)
+    let deleteSuccess = false
+    
     try {
+      console.log('=== DEBUG: Attempting to delete account ===')
+      console.log('User ID:', user?.id)
+      
       const response = await post('/api/auth/delete-account', {
         password: deletePassword
       }, { includeAuth: true })
 
+      console.log('Delete account response:', response)
+
       if (response?.success) {
-        showToast('Account deleted successfully', 'success')
+        deleteSuccess = true
+        showToast('Account deleted successfully. Redirecting to login...', 'success')
+        
+        // Clear all local storage
         localStorage.removeItem('userToken')
         localStorage.removeItem('user')
-        navigate('/login')
+        
+        // Clear any session data
+        sessionStorage.clear()
+        
+        // Wait a moment for user to see the message, then redirect
+        setTimeout(() => {
+          window.location.href = '/login'
+        }, 2000)
       } else {
-        showToast(response?.message || 'Failed to delete account', 'error')
+        const errorMessage = response?.error || response?.message || 'Failed to delete account'
+        console.error('Delete account failed:', errorMessage)
+        showToast(errorMessage, 'error')
       }
     } catch (error) {
-      showToast('Failed to delete account', 'error')
+      console.error('=== DELETE ACCOUNT ERROR ===')
+      console.error('Error:', error)
+      console.error('Error response:', error?.response?.data)
+      
+      const errorMessage = error?.response?.data?.error || error?.response?.data?.message || 'Failed to delete account'
+      showToast(errorMessage, 'error')
     } finally {
       setLoading(false)
-      setShowDeleteModal(false)
-      setDeletePassword('')
+      // Only close modal and clear password if deletion was successful
+      if (deleteSuccess) {
+        setShowDeleteModal(false)
+        setDeletePassword('')
+      }
     }
   }
 
@@ -749,7 +858,7 @@ if (response?.success) {
       {showForgotPassword && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4">
-            <h3 className="text-lg font-semibold text-slate-900 mb-4">Reset Password</h3>
+            <h3 className="text-lg font-semibold text-slate-900 mb-4">Forgot Password</h3>
 
             {!forgotOtpSent ? (
               <div className="space-y-4">
@@ -767,7 +876,7 @@ if (response?.success) {
                 </div>
                 <div className="flex gap-3">
                   <button
-                    onClick={handleSendForgotOtp}
+                    onClick={handleForgotPassword}
                     disabled={loading}
                     className="flex-1 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 disabled:opacity-50 transition-colors"
                   >
@@ -779,6 +888,10 @@ if (response?.success) {
                       setForgotEmail('')
                       setForgotOtp('')
                       setForgotOtpSent(false)
+                      setOtpVerified(false)
+                      setResetPassword('')
+                      setConfirmResetPassword('')
+                      setTempToken('')
                     }}
                     className="flex-1 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors"
                   >
@@ -788,115 +901,133 @@ if (response?.success) {
               </div>
             ) : (
               <div className="space-y-4">
+                {/* Show email for confirmation */}
+                <div className="bg-slate-50 p-3 rounded-lg">
+                  <p className="text-sm text-slate-600">
+                    OTP sent to: <span className="font-medium text-slate-900">{forgotEmail}</span>
+                  </p>
+                
+                </div>
+<p style={{
+    color: "#ef6c00",
+backgroundColor: "#fff3e0",        // red alert color
+    fontWeight: "bold",
+    padding: "10px",
+    borderRadius: "6px",
+    marginTop: "10px"
+  }}>
+    OTP not received? Use the login page to reset your password.
+  </p>
+                {/* OTP Input */}
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">
-                    Enter OTP
+                    Enter 6-digit OTP
                   </label>
                   <input
                     type="text"
                     value={forgotOtp}
-                    onChange={(e) => setForgotOtp(e.target.value)}
-                    placeholder="Enter 6-digit OTP"
+                    onChange={(e) => setForgotOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                    placeholder="123456"
                     maxLength={6}
-                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
+                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary text-center text-lg font-mono"
                   />
                 </div>
-                <button
-                  onClick={handleVerifyForgotOtp}
-                  disabled={loading}
-                  className="w-full px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 disabled:opacity-50 transition-colors"
-                >
-                  {loading ? 'Verifying...' : 'Verify OTP'}
-                </button>
-                <div className="space-y-3">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">
-                      New Password
-                    </label>
-                    <div className="relative">
-                      <input
-                        type={showResetPassword ? "text" : "password"}
-                        value={resetPassword}
-                        onChange={(e) => setResetPassword(e.target.value)}
-                        placeholder="Enter new password"
-                        className="w-full px-4 py-2 pr-10 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowResetPassword(!showResetPassword)}
-                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none"
-                      >
-                        {showResetPassword ? (
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 2.076M3 12l3-9m4.5 9l4.5-9" />
-                          </svg>
-                        ) : (
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7a10.05 10.05 0 01-9.542 7z" />
-                          </svg>
-                        )}
-                      </button>
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">
-                      Confirm New Password
-                    </label>
-                    <div className="relative">
-                      <input
-                        type={showConfirmResetPassword ? "text" : "password"}
-                        value={confirmResetPassword}
-                        onChange={(e) => setConfirmResetPassword(e.target.value)}
-                        placeholder="Confirm new password"
-                        className="w-full px-4 py-2 pr-10 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowConfirmResetPassword(!showConfirmResetPassword)}
-                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none"
-                      >
-                        {showConfirmResetPassword ? (
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 2.076M3 12l3-9m4.5 9l4.5-9" />
-                          </svg>
-                        ) : (
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7a10.05 10.05 0 01-9.542 7z" />
-                          </svg>
-                        )}
-                      </button>
-                    </div>
-                  </div>
-                  <div className="flex gap-3">
+
+                {/* New Password */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    New Password
+                  </label>
+                  <div className="relative">
+                    <input
+                      type={showResetPassword ? "text" : "password"}
+                      value={resetPassword}
+                      onChange={(e) => setResetPassword(e.target.value)}
+                      placeholder="Enter new password"
+                      className="w-full px-4 py-2 pr-10 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
+                    />
                     <button
-                      onClick={handleResetPassword}
-                      disabled={loading}
-                      className="flex-1 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 disabled:opacity-50 transition-colors"
+                      type="button"
+                      onClick={() => setShowResetPassword(!showResetPassword)}
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none"
                     >
-                      {loading ? 'Resetting...' : 'Reset Password'}
-                    </button>
-                    <button
-                      onClick={() => {
-                        setShowForgotPassword(false)
-                        setForgotEmail('')
-                        setForgotOtp('')
-                        setForgotOtpSent(false)
-                        setResetPassword('')
-                        setConfirmResetPassword('')
-                      }}
-                      className="flex-1 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors"
-                    >
-                      Cancel
+                      {showResetPassword ? (
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 2.076M3 12l3-9m4.5 9l4.5-9" />
+                        </svg>
+                      ) : (
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7a10.05 10.05 0 01-9.542 7z" />
+                        </svg>
+                      )}
                     </button>
                   </div>
+                </div>
+
+                {/* Confirm New Password */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    Confirm New Password
+                  </label>
+                  <div className="relative">
+                    <input
+                      type={showConfirmResetPassword ? "text" : "password"}
+                      value={confirmResetPassword}
+                      onChange={(e) => setConfirmResetPassword(e.target.value)}
+                      placeholder="Confirm new password"
+                      className="w-full px-4 py-2 pr-10 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmResetPassword(!showConfirmResetPassword)}
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none"
+                    >
+                      {showConfirmResetPassword ? (
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 2.076M3 12l3-9m4.5 9l4.5-9" />
+                        </svg>
+                      ) : (
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7a10.05 10.05 0 01-9.542 7z" />
+                        </svg>
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex gap-3 pt-4">
+                  <button
+                    onClick={handleResetPassword}
+                    disabled={loading}
+                    className="flex-1 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 disabled:opacity-50 transition-colors"
+                  >
+                    {loading ? 'Resetting...' : 'Reset Password'}
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowForgotPassword(false)
+                      setForgotEmail('')
+                      setForgotOtp('')
+                      setForgotOtpSent(false)
+                      setOtpVerified(false)
+                      setResetPassword('')
+                      setConfirmResetPassword('')
+                      setTempToken('')
+                    }}
+                    className="flex-1 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors"
+                  >
+                    Cancel
+                  </button>
                 </div>
               </div>
             )}
           </div>
         </div>
-      )}
+      )}  
+
     </div>
   )
 }

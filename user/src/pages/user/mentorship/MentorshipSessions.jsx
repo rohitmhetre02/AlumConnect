@@ -16,14 +16,23 @@ const MentorshipSessions = () => {
   const [sessionStatusModalOpen, setSessionStatusModalOpen] = useState(false)
   const [sessionOutcome, setSessionOutcome] = useState('')
   const [sessionRemark, setSessionRemark] = useState('')
+  const [reviewModalOpen, setReviewModalOpen] = useState(false)
+  const [selectedReviewRequest, setSelectedReviewRequest] = useState(null)
 
   // Filter sessions by status
   const upcomingSessions = sessions?.filter(s => s.status === 'scheduled') || []
   const completedSessions = sessions?.filter(s => s.status === 'completed') || []
   
-  // Get accepted requests from mentor requests
-  const acceptedRequests = requests?.filter(r => r.status === 'accepted') || []
-  const completedRequests = requests?.filter(r => r.status === 'completed') || []
+  // Filter requests where current user is the mentor (requests received)
+  const mentorRequests = requests?.filter(request => {
+    const mentorId = request?.mentor?._id || request?.mentor || request?.mentorId
+    const userId = user?.id || user?._id
+    return String(mentorId) === String(userId)
+  }) || []
+  
+  // Get accepted and completed requests from mentor requests
+  const acceptedRequests = mentorRequests?.filter(r => r.status === 'accepted') || []
+  const completedRequests = mentorRequests?.filter(r => r.status === 'completed') || []
 
   const handleViewDetails = async (sessionId) => {
     try {
@@ -60,8 +69,8 @@ const MentorshipSessions = () => {
   }
 
   const handleViewReview = (request) => {
-    // Show review details in modal or alert
-    alert(`Review from ${request.menteeName}:\nRating: ${request.rating ? '⭐'.repeat(request.rating) : 'N/A'}\nFeedback: ${request.feedback || 'No feedback provided'}`)
+    setSelectedReviewRequest(request)
+    setReviewModalOpen(true)
   }
 
   const closeRequestModal = () => {
@@ -662,6 +671,63 @@ const MentorshipSessions = () => {
                   className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Update Status
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Review Modal */}
+      {reviewModalOpen && selectedReviewRequest && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl max-w-md w-full">
+            <div className="p-6">
+              <h3 className="text-lg font-semibold text-slate-900 mb-4">Review Details</h3>
+              
+              <div className="mb-4">
+                <p className="text-sm text-slate-600 mb-2">
+                  <span className="font-medium">Mentee:</span> {selectedReviewRequest.menteeName}
+                </p>
+                <p className="text-sm text-slate-600 mb-2">
+                  <span className="font-medium">Email:</span> {selectedReviewRequest.menteeEmail}
+                </p>
+                <p className="text-sm text-slate-600 mb-2">
+                  <span className="font-medium">Service:</span> {selectedReviewRequest.serviceName || 'General Mentorship'}
+                </p>
+              </div>
+
+              {selectedReviewRequest.rating && (
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Rating</label>
+                  <div className="flex gap-1">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <span
+                        key={star}
+                        className={`text-2xl ${star <= selectedReviewRequest.rating ? 'text-yellow-400' : 'text-gray-300'}`}
+                      >
+                        ★
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {selectedReviewRequest.feedback && (
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Feedback</label>
+                  <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
+                    <p className="text-sm text-slate-700">{selectedReviewRequest.feedback}</p>
+                  </div>
+                </div>
+              )}
+
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setReviewModalOpen(false)}
+                  className="flex-1 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50"
+                >
+                  Close
                 </button>
               </div>
             </div>

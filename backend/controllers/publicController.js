@@ -3,6 +3,7 @@ const Alumni = require('../models/Alumni')
 const Gallery = require('../models/Gallery')
 const Event = require('../models/Event')
 const Campaign = require('../models/Campaign')
+const MentorRequest = require('../models/MentorRequest')
 
 // GET /api/public/students - Show all approved students
 const getPublicStudents = async (req, res) => {
@@ -70,77 +71,60 @@ const getPublicAlumni = async (req, res) => {
 // GET /api/public/memories - Show latest 12 images
 const getPublicMemories = async (req, res) => {
   try {
-    // First try to get approved gallery images
-    let memories = await Gallery.find({ 
-      type: 'image',
-      approvalStatus: 'APPROVED' 
-    })
-      .select('url title description createdAt')
+    console.log('=== [DEBUG] Public Memories ===')
+    
+    // Get gallery images from database
+    let memories = await Gallery.find({})
+      .select('imageUrl imageName department folder createdAt uploadedByName')
       .sort({ createdAt: -1 })
       .limit(12)
       .lean()
 
-    // If no approved images, get any images for development
-    if (memories.length === 0) {
-      memories = await Gallery.find({ 
-        type: 'image'
-      })
-        .select('url title description createdAt')
-        .sort({ createdAt: -1 })
-        .limit(12)
-        .lean()
-    }
+    console.log('Total gallery images found:', memories.length)
+    
+    memories.forEach((memory, index) => {
+      console.log(`${index + 1}. Image: "${memory.imageName}"`)
+      console.log(`   URL: ${memory.imageUrl}`)
+      console.log(`   Department: ${memory.department}`)
+      console.log(`   Folder: ${memory.folder}`)
+      console.log('---')
+    })
 
-    // If still no memories, create sample data with working image URLs
+    // If no images in database, create sample data
     if (memories.length === 0) {
+      console.log('No images found in database, creating sample data...')
       memories = [
         {
           _id: 'memory1',
-          url: 'https://picsum.photos/seed/festival2024/400/300.jpg',
-          title: 'College Festival 2024',
-          description: 'Annual cultural festival celebrations with students showcasing their talents in various cultural events'
+          imageUrl: 'https://picsum.photos/seed/festival2024/400/300.jpg',
+          imageName: 'College Festival 2024',
+          department: 'General',
+          folder: 'Events',
+          createdAt: new Date()
         },
         {
           _id: 'memory2',
-          url: 'https://picsum.photos/seed/graduation2023/400/300.jpg',
-          title: 'Graduation Day 2023',
-          description: 'Convocation ceremony celebrating the achievements of our graduating students'
+          imageUrl: 'https://picsum.photos/seed/graduation2023/400/300.jpg',
+          imageName: 'Graduation Day 2023',
+          department: 'General',
+          folder: 'Events',
+          createdAt: new Date()
         },
         {
           _id: 'memory3',
-          url: 'https://picsum.photos/seed/sportsmeet2024/400/300.jpg',
-          title: 'Annual Sports Meet',
-          description: 'Inter-college sports competition promoting teamwork and healthy competition'
+          imageUrl: 'https://picsum.photos/seed/sportsmeet2024/400/300.jpg',
+          imageName: 'Annual Sports Meet',
+          department: 'General',
+          folder: 'Events',
+          createdAt: new Date()
         },
         {
           _id: 'memory4',
-          url: 'https://picsum.photos/seed/alumnimeet2024/400/300.jpg',
-          title: 'Alumni Homecoming 2024',
-          description: 'Alumni reunion event connecting graduates across different batches'
-        },
-        {
-          _id: 'memory5',
-          url: 'https://picsum.photos/seed/workshop2024/400/300.jpg',
-          title: 'Technical Workshop',
-          description: 'Hands-on technical workshop on emerging technologies and industry practices'
-        },
-        {
-          _id: 'memory6',
-          url: 'https://picsum.photos/seed/seminar2024/400/300.jpg',
-          title: 'Guest Lecture Series',
-          description: 'Industry experts sharing insights and experiences with students'
-        },
-        {
-          _id: 'memory7',
-          url: 'https://picsum.photos/seed/projectexpo2024/400/300.jpg',
-          title: 'Project Exhibition',
-          description: 'Students showcasing their innovative projects and research work'
-        },
-        {
-          _id: 'memory8',
-          url: 'https://picsum.photos/seed/culturalnight2024/400/300.jpg',
-          title: 'Cultural Night',
-          description: 'Evening filled with music, dance, and cultural performances'
+          imageUrl: 'https://picsum.photos/seed/alumnimeet2024/400/300.jpg',
+          imageName: 'Alumni Homecoming 2024',
+          department: 'General',
+          folder: 'Alumni Meet',
+          createdAt: new Date()
         }
       ]
     }
@@ -149,9 +133,9 @@ const getPublicMemories = async (req, res) => {
       success: true,
       memories: memories.map(memory => ({
         _id: memory._id,
-        url: memory.url,
-        title: memory.title || 'Memory',
-        description: memory.description,
+        url: memory.imageUrl, // Map imageUrl to url for frontend
+        title: memory.imageName, // Map imageName to title for frontend
+        description: `${memory.department} - ${memory.folder}`, // Create description from available fields
         createdAt: memory.createdAt
       }))
     })
@@ -170,13 +154,18 @@ const getPublicEvents = async (req, res) => {
     const events = await Event.find({ 
       approvalStatus: 'APPROVED' 
     })
-      .select('title date location description imageUrl registrationDeadline')
-      .sort({ date: 1 })
+      .select('title startAt location description coverImage registrationDeadline mode approvalStatus')
+      .sort({ startAt: 1 })
       .lean()
 
-    console.log('🔍 [DEBUG] Found approved events:', events.length)
+    console.log('=== [DEBUG] Public Events ===')
+    console.log('Total events found:', events.length)
     events.forEach(event => {
-      console.log('🔍 [DEBUG] Event:', event.title, 'Date:', event.date, 'Status:', event.approvalStatus)
+      console.log(`Event: "${event.title}"`)
+      console.log(`  Date: ${event.startAt}`)
+      console.log(`  Status: ${event.approvalStatus}`)
+      console.log(`  Mode: ${event.mode || 'Not specified'}`)
+      console.log('---')
     })
 
     res.json({
@@ -184,10 +173,11 @@ const getPublicEvents = async (req, res) => {
       data: events.map(event => ({
         _id: event._id,
         title: event.title,
-        date: event.date,
+        date: event.startAt, // Map startAt to date for frontend compatibility
         location: event.location,
         description: event.description,
-        imageUrl: event.imageUrl,
+        imageUrl: event.coverImage,
+        mode: event.mode,
         registrationDeadline: event.registrationDeadline
       }))
     })
@@ -234,10 +224,53 @@ const getPublicCampaigns = async (req, res) => {
   }
 }
 
+// GET /api/public/stats - Get platform statistics
+const getPublicStats = async (req, res) => {
+  try {
+    console.log('=== [DEBUG] Fetching Public Stats ===')
+    
+    // Get total alumni count
+    const totalAlumni = await Alumni.countDocuments({ profileApprovalStatus: 'APPROVED' })
+    
+    // Get total students count  
+    const studentsConnected = await Student.countDocuments({ profileApprovalStatus: 'APPROVED' })
+    
+    // Get mentorship sessions count (confirmed mentor requests)
+    const mentorshipSessions = await MentorRequest.countDocuments({ status: 'confirmed' })
+    
+    // Get events hosted count (approved events)
+    const eventsHosted = await Event.countDocuments({ approvalStatus: 'APPROVED' })
+    
+    console.log(`Total Alumni: ${totalAlumni}`)
+    console.log(`Students Connected: ${studentsConnected}`)
+    console.log(`Mentorship Sessions: ${mentorshipSessions}`)
+    console.log(`Events Hosted: ${eventsHosted}`)
+    
+    res.json({
+      success: true,
+      totalAlumni: totalAlumni || 12500, // Fallback to demo values if no data
+      studentsConnected: studentsConnected || 4200,
+      mentorshipSessions: mentorshipSessions || 1800,
+      eventsHosted: eventsHosted || 350
+    })
+  } catch (error) {
+    console.error('Error fetching public stats:', error)
+    // Return fallback values on error
+    res.json({
+      success: true,
+      totalAlumni: 12500,
+      studentsConnected: 4200,
+      mentorshipSessions: 1800,
+      eventsHosted: 350
+    })
+  }
+}
+
 module.exports = {
   getPublicStudents,
   getPublicAlumni,
   getPublicMemories,
   getPublicEvents,
-  getPublicCampaigns
+  getPublicCampaigns,
+  getPublicStats
 }

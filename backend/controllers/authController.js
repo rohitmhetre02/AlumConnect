@@ -271,7 +271,7 @@ const createUsers = async (payloads = [], role, adminCreated = false) => {
       email: normalizedEmail,
       firstName: String(firstName).trim(),
       lastName: String(lastName).trim(),
-      password: hashedPassword,
+      password: hashedPassword, // Ensure this is always hashed
       isProfileApproved: isAutoApproved,
       profileApprovalStatus: isAutoApproved ? PROFILE_STATUS.APPROVED : PROFILE_STATUS.IN_REVIEW,
       registrationStatus: isAutoApproved ? REGISTRATION_STATUS.APPROVED : 

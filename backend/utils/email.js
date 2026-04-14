@@ -33,7 +33,7 @@ const getTransporter = () => {
 const buildCredentialEmailContent = ({ name, email, password, role }) => {
   const displayName = name || 'User'
   const capitalizedRole = role ? role.charAt(0).toUpperCase() + role.slice(1) : 'Member'
-  const loginUrl = process.env.USER_FRONTEND_URL || process.env.FRONTEND_URL || 'http://localhost:5173'
+  const loginUrl = process.env.EMAIL_URL
 
   const subject = `🎉 Welcome to APCOER Alumni Portal - Your ${capitalizedRole} Account is Ready!`
 

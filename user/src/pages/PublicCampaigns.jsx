@@ -13,13 +13,19 @@ const PublicCampaigns = () => {
   const fetchCampaigns = async () => {
     try {
       setLoading(true)
-      const response = await fetch("/api/public/campaigns")
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/public/campaigns`)
       const data = await response.json()
       
-      if (data.success) {
-        setCampaigns(data.campaigns || [])
+      if (data.success && data.campaigns) {
+        // Show only latest 3 campaigns
+        const latestCampaigns = data.campaigns.slice(0, 3)
+        setCampaigns(latestCampaigns)
+        console.log('✅ Successfully loaded campaigns from public API:', latestCampaigns)
+        latestCampaigns.forEach(campaign => {
+          
+        })
       } else {
-        console.error('API Error:', data.error)
+        console.error('API Error:', data.error || 'No campaigns found')
         setCampaigns([])
       }
     } catch (err) {
@@ -82,13 +88,13 @@ const PublicCampaigns = () => {
           </h2>
 
           <p className="text-gray-700 leading-relaxed mb-4">
-            Join us in making a difference through our campaigns supporting
+            Join us in making a difference through our latest campaigns supporting
             student scholarships, infrastructure development, research
             initiatives, and community programs.
           </p>
 
           <p className="text-gray-700 leading-relaxed">
-            Every contribution helps strengthen our institution and empowers
+            Browse our top 3 active campaigns below. Every contribution helps strengthen our institution and empowers
             future generations of students.
           </p>
         </div>
@@ -104,24 +110,25 @@ const PublicCampaigns = () => {
               >
 
                 {/* IMAGE */}
-                <div className="h-48 bg-gray-200 rounded-t-lg overflow-hidden">
+                <div className="h-48 bg-gray-100 rounded-t-lg overflow-hidden">
                   {campaign.imageUrl ? (
                     <img
                       src={campaign.imageUrl}
                       alt={campaign.title}
                       className="w-full h-full object-cover"
                       onError={(e) => {
-                        e.target.src = `https://picsum.photos/seed/${campaign._id}/400/300.jpg`;
+                        console.log(`Failed to load image for campaign: ${campaign.title}`)
+                        e.target.style.display = 'none';
+                        e.target.nextElementSibling.style.display = 'flex';
                       }}
                     />
-                  ) : (
-                    <div className="flex items-center justify-center h-full bg-gradient-to-br from-red-100 to-red-200">
-                      <div className="text-center">
-                        <div className="text-4xl mb-2">❤️</div>
-                        <p className="text-red-600 text-sm font-medium">Campaign Image</p>
-                      </div>
+                  ) : null}
+                  <div className={`w-full h-full items-center justify-center ${campaign.imageUrl ? 'hidden' : 'flex'}`}>
+                    <div className="text-center">
+                      <div className="text-3xl mb-2">📋</div>
+                      <p className="text-gray-500 text-sm">No Image Available</p>
                     </div>
-                  )}
+                  </div>
                 </div>
 
                 {/* DETAILS */}
@@ -182,7 +189,7 @@ const PublicCampaigns = () => {
                       <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                       </svg>
-                      {Math.floor(Math.random() * 50) + 10} donors
+                      Supporters
                     </span>
                     <span className="flex items-center">
                       <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -215,7 +222,9 @@ const PublicCampaigns = () => {
           <div className="text-center py-20 text-gray-600">
             {error
               ? "Unable to load campaigns."
-              : "No campaigns available."}
+              : campaigns.length === 0
+                ? "No active campaigns available at the moment. Check back later for new fundraising opportunities!"
+                : "No campaigns found."}
           </div>
         )}
 

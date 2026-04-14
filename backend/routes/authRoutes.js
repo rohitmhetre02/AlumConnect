@@ -46,7 +46,7 @@ router.put('/verify-email-otp', verifyEmailOTP)
 router.put('/resend-email-otp', resendEmailOTP)
 router.post('/update-password', authMiddleware, updatePassword) // POST route for password update
 router.post('/verify-password', verifyPassword) // POST route for password verification
-router.delete('/delete-account', authMiddleware, deleteAccount)
+router.post('/delete-account', authMiddleware, deleteAccount)
 router.post('/forgot-password', forgotPassword)
 router.post('/verify-forgot-password-otp', verifyForgotPasswordOTP)
 router.post('/resend-forgot-password-otp', resendForgotPasswordOTP)

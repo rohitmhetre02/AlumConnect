@@ -68,7 +68,7 @@ const useOpportunityReferral = (opportunityId, { autoFetch = true } = {}) => {
   }, [autoFetch, normalizedId])
 
   const submitReferral = useCallback(
-    async ({ proposal, resumeFile }) => {
+    async ({ proposal, resumeFile, userProfile }) => {
       if (!normalizedId) {
         throw new Error('An opportunity must be selected before submitting a referral.')
       }
@@ -88,6 +88,15 @@ const useOpportunityReferral = (opportunityId, { autoFetch = true } = {}) => {
         formData.append('proposal', trimmedProposal)
         if (resumeFile instanceof File) {
           formData.append('resume', resumeFile)
+        }
+        
+        // Add user profile data
+        if (userProfile) {
+          formData.append('firstName', userProfile.firstName || '')
+          formData.append('lastName', userProfile.lastName || '')
+          formData.append('email', userProfile.email || '')
+          formData.append('department', userProfile.department || '')
+          formData.append('role', userProfile.role || '')
         }
 
         const response = await post(`/api/opportunities/${normalizedId}/referrals`, formData, { includeAuth: true })

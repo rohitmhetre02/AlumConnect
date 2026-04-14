@@ -34,6 +34,33 @@ const opportunityReferralSchema = new mongoose.Schema(
       trim: true,
       default: '',
     },
+    userProfile: {
+      firstName: {
+        type: String,
+        trim: true,
+        default: '',
+      },
+      lastName: {
+        type: String,
+        trim: true,
+        default: '',
+      },
+      email: {
+        type: String,
+        trim: true,
+        default: '',
+      },
+      department: {
+        type: String,
+        trim: true,
+        default: '',
+      },
+      role: {
+        type: String,
+        trim: true,
+        default: '',
+      },
+    },
     status: {
       type: String,
       enum: ['submitted', 'reviewed', 'accepted', 'declined'],

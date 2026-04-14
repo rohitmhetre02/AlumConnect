@@ -8,11 +8,9 @@ import PublicAlumniDirectory from './pages/PublicAlumniDirectory'
 import PublicStudentDirectory from './pages/PublicStudentDirectory'
 import PublicContact from './pages/PublicContact'
 import PublicCareerOpportunities from "./pages/PublicCareerOpportunities";
-import PublicMentorAStudent from "./pages/PublicMentorAStudent";
 import PublicCampaigns from "./pages/PublicCampaigns";
 import PublicMemories from "./pages/PublicMemories";
 import PublicEvents from './pages/PublicEvents'
-import PublicEventDetail from './pages/PublicEventDetail'
 import Gallery from './pages/Gallery'
 import Login from './pages/Login'
 import Signup from './pages/Signup'
@@ -170,11 +168,10 @@ function App() {
             <Route path="student-directory" element={<PublicStudentDirectory />} />
             <Route path="contact" element={<PublicContact />} />
             <Route path="opportunities" element={<PublicCareerOpportunities />} />
-            <Route path="mentor-student" element={<PublicMentorAStudent />} />
+          
             <Route path="campaigns" element={<PublicCampaigns />} />
             <Route path="memories" element={<PublicMemories />} />
             <Route path="events" element={<PublicEvents />} />
-            <Route path="events/:eventId" element={<PublicEventDetail />} />
             <Route path="directory" element={<Navigate to="/dashboard/directory/students" replace />} />
             <Route path="directory/:profileId" element={<DirectoryProfile />} />
             <Route path="gallery" element={<Gallery />} />

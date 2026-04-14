@@ -82,7 +82,7 @@ const OpportunityDetail = () => {
       {/* Back button */}
 
       <button
-        onClick={() => navigate('/dashboard/opportunities')}
+        onClick={() => navigate(-1)}
         className="text-sm text-slate-600 hover:text-primary flex items-center gap-2"
       >
         ← Back to Opportunities

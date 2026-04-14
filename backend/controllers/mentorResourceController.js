@@ -228,9 +228,44 @@ const deleteResource = async (req, res) => {
   }
 }
 
+const downloadResource = async (req, res) => {
+  try {
+    const { resourceId } = req.body
+    const userId = req.user?.id
+
+    if (!resourceId) {
+      return res.status(400).json({ message: 'Resource ID is required.' })
+    }
+
+    if (!userId) {
+      return res.status(401).json({ message: 'Authentication required.' })
+    }
+
+    // Find and increment download count
+    const resource = await MentorResource.findByIdAndUpdate(
+      resourceId,
+      { $inc: { downloadCount: 1 } },
+      { new: true }
+    )
+
+    if (!resource) {
+      return res.status(404).json({ message: 'Resource not found.' })
+    }
+
+    return res.status(200).json({ 
+      message: 'Download count updated successfully.',
+      downloadCount: resource.downloadCount 
+    })
+  } catch (error) {
+    console.error('downloadResource error:', error)
+    return res.status(500).json({ message: 'Unable to update download count.' })
+  }
+}
+
 module.exports = {
   listMyResources,
   createResource,
   updateResource,
   deleteResource,
+  downloadResource,
 }

@@ -245,9 +245,9 @@ const UserSidebar = ({ isMobile = false, onClose }) => {
     { label: 'Applications', path: '/dashboard/applications', icon: <Clipboard size={18} /> },
     { label: 'Mentorship Requests', path: '/dashboard/mentorship-requests', icon: <MessageSquare size={18} /> },
     { label: 'Registered Events', path: '/dashboard/registered-events', icon: <Calendar size={18} /> },
-    // { label: 'Connections', path: '/dashboard/connections', icon: <Connections size={18} /> },
+    { label: 'Connections', path: '/dashboard/connections', icon: <Connections size={18} /> },
     { label: 'My Campaigns', path: '/dashboard/my-campaigns', icon: <Heart size={18} /> },
-    { label: 'Insights', path: '/dashboard/insights', icon: <BarChart size={18} /> }
+    // { label: 'Insights', path: '/dashboard/insights', icon: <BarChart size={18} /> }
   ]
 
   // Add Content Posted for alumni and faculty

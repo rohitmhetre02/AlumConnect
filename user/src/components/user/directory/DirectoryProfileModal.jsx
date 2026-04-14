@@ -80,7 +80,7 @@ const DirectoryProfileModal = ({ isOpen, onClose, person }) => {
 
     setLoading(true)
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/user/send-connection-request`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/user/send-connection-request`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -138,7 +138,7 @@ const DirectoryProfileModal = ({ isOpen, onClose, person }) => {
         console.log('🔍 [Modal] Checking connection status for user:', user.id, 'target:', targetId)
         
         // Check if there's a pending request
-        const requestsResponse = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/user/requests`, {
+        const requestsResponse = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/user/requests`, {
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('token')}`
           }
@@ -166,7 +166,7 @@ const DirectoryProfileModal = ({ isOpen, onClose, person }) => {
         }
         
         // Check if already connected
-        const connectionsResponse = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/user/my-connections`, {
+        const connectionsResponse = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/user/my-connections`, {
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('token')}`
           }
@@ -262,7 +262,7 @@ const DirectoryProfileModal = ({ isOpen, onClose, person }) => {
               {user && targetId && user.id !== targetId && (
                 <button
                   type="button"
-                  onClick={handleMessageClick}
+                  // onClick={handleMessageClick}
                   className="rounded-full border border-slate-200 px-5 py-2 text-sm font-semibold text-slate-700 transition hover:border-primary hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                 >
                   Message

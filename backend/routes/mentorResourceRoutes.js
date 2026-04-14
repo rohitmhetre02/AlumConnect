@@ -6,6 +6,7 @@ const {
   createResource,
   updateResource,
   deleteResource,
+  downloadResource,
 } = require('../controllers/mentorResourceController')
 
 const router = express.Router()
@@ -16,5 +17,6 @@ router.get('/me/resources', listMyResources)
 router.post('/me/resources', upload.single('file'), createResource)
 router.put('/me/resources/:resourceId', upload.single('file'), updateResource)
 router.delete('/me/resources/:resourceId', deleteResource)
+router.post('/resources/download', downloadResource)
 
 module.exports = router

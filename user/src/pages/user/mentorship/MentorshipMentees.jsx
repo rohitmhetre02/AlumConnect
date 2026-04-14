@@ -1,9 +1,18 @@
 import { useState } from 'react'
 import { useMentorRequests } from '../../../hooks/useMentorRequests'
+import { useAuth } from '../../../context/AuthContext'
 import { get } from '../../../utils/api'
 
 const MentorshipMentees = () => {
+  const { user } = useAuth()
   const { requests, loading, error, acceptRequest, rejectRequest, reviewRequest, refresh, completeSession } = useMentorRequests()
+  
+  // Filter requests where current user is the mentor (requests received)
+  const mentorRequests = requests?.filter(request => {
+    const mentorId = request?.mentor?._id || request?.mentor || request?.mentorId
+    const userId = user?.id || user?._id
+    return String(mentorId) === String(userId)
+  }) || []
   const [selectedDetails, setSelectedDetails] = useState(null)
   const [detailsModalOpen, setDetailsModalOpen] = useState(false)
   const [detailsLoading, setDetailsLoading] = useState(false)
@@ -79,7 +88,13 @@ const MentorshipMentees = () => {
       console.log('Using requestId:', requestId)
       
       if (!requestId) {
+        console.error('Request ID is missing from request object:', request)
         throw new Error('Request ID is missing')
+      }
+
+      if (requestId === 'me') {
+        console.error('Invalid requestId "me" - this should not happen')
+        throw new Error('Invalid request ID')
       }
       
       const data = await get(`/api/mentors/me/requests/${requestId}`)
@@ -167,9 +182,9 @@ const MentorshipMentees = () => {
     })
   }
 
-  const pendingRequests = requests?.filter(r => r.status === 'pending') || []
-  const acceptedRequests = requests?.filter(r => r.status === 'accepted') || []
-  const completedRequests = requests?.filter(r => r.status === 'completed') || []
+  const pendingRequests = mentorRequests?.filter(r => r.status === 'pending') || []
+  const acceptedRequests = mentorRequests?.filter(r => r.status === 'accepted') || []
+  const completedRequests = mentorRequests?.filter(r => r.status === 'completed') || []
 
   return (
     <div className="p-6">

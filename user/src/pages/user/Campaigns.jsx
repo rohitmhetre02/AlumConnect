@@ -4,9 +4,6 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import useCampaigns from '../../hooks/useCampaigns'
 
-const DEFAULT_IMAGE =
-  'https://images.unsplash.com/photo-1469474968028-56623f02e42e?auto=format&fit=crop&w=1200&q=80'
-
 const formatCurrency = (value) => {
   const numeric = Number(value)
   if (Number.isNaN(numeric)) return '₹0'
@@ -124,7 +121,16 @@ const Campaigns = () => {
 
 const CampaignCard = ({ campaign }) => {
 
-  const image = campaign.coverImage || DEFAULT_IMAGE
+  const handleImageError = (e) => {
+    // Hide broken image and show placeholder
+    e.target.style.display = 'none'
+    e.target.nextSibling.style.display = 'flex'
+  }
+
+  // Check if coverImage exists and is not a blob URL
+  const isValidImage = campaign.coverImage && 
+                      !campaign.coverImage.startsWith('blob:') && 
+                      campaign.coverImage.trim() !== ''
 
   const progress = calculateProgress(
     campaign.raisedAmount,
@@ -135,11 +141,35 @@ const CampaignCard = ({ campaign }) => {
 
     <article className="flex h-full flex-col overflow-hidden rounded-3xl bg-white shadow-sm hover:shadow-lg transition">
 
-      <img
-        src={image}
-        alt={campaign.title}
-        className="h-48 w-full object-cover"
-      />
+      <div className="relative h-48 w-full overflow-hidden">
+        {isValidImage ? (
+          <>
+            <img
+              src={campaign.coverImage}
+              alt={campaign.title}
+              className="h-full w-full object-cover"
+              onError={handleImageError}
+            />
+            {/* No Image Placeholder */}
+            <div 
+              className="absolute inset-0 flex flex-col items-center justify-center bg-slate-100 text-slate-400"
+              style={{ display: 'none' }}
+            >
+              <svg className="h-12 w-12 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              <p className="text-sm font-medium">No Image Available</p>
+            </div>
+          </>
+        ) : (
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-100 text-slate-400">
+            <svg className="h-12 w-12 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+            <p className="text-sm font-medium">No Image Available</p>
+          </div>
+        )}
+      </div>
 
       <div className="flex flex-1 flex-col gap-4 p-6">
 

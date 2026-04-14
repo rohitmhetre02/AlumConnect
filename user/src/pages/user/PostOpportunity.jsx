@@ -61,7 +61,7 @@ const PostOpportunity = () => {
   }
 
   const handleCancel = () => {
-    navigate('/dashboard/opportunities')
+    navigate(-1)
   }
 
   return (

@@ -37,12 +37,57 @@ const MentorshipRequestsPage = () => {
   const userRequests = useMemo(() => {
     if (!Array.isArray(requests) || !user?.id) return []
 
-    return requests.filter((request) => {
-      const menteeId = request?.mentee?._id || request?.mentee || request?.menteeId
+
+    const filtered = requests.filter((request) => {
+      // Get current user info
       const userId = user?.id || user?._id
-      return String(menteeId) === String(userId)
+      const userEmail = user?.email
+
+      // Check all possible mentee ID fields
+      const menteeIdFromObject = request?.mentee?._id
+      const menteeIdDirect = request?.mentee
+      const menteeIdField = request?.menteeId
+      const menteeIdUnderscore = request?.mentee_id
+
+      // Check email and name matching
+      const menteeEmail = request?.menteeEmail
+      const menteeName = request?.menteeName
+
+      // Determine if this request belongs to current user
+      let isMatch = false
+
+      // Check ObjectId matches
+      if (menteeIdFromObject && String(menteeIdFromObject) === String(userId)) {
+        isMatch = true
+      } else if (menteeIdDirect && String(menteeIdDirect) === String(userId)) {
+        isMatch = true
+      } else if (menteeIdField && String(menteeIdField) === String(userId)) {
+        isMatch = true
+      } else if (menteeIdUnderscore && String(menteeIdUnderscore) === String(userId)) {
+        isMatch = true
+      }
+
+      // Check email match
+      if (!isMatch && menteeEmail && userEmail && menteeEmail === userEmail) {
+        isMatch = true
+      }
+
+      // Check name match
+      if (!isMatch && menteeName && user?.firstName && user?.lastName) {
+        const userName = `${user.firstName} ${user.lastName}`.toLowerCase()
+        if (menteeName.toLowerCase() === userName) {
+          isMatch = true
+        }
+      }
+
+
+
+      return isMatch
     })
 
+
+
+    return filtered
   }, [requests, user?.id, user?._id])
 
 
@@ -130,12 +175,7 @@ const MentorshipRequestsPage = () => {
   const handleSubmitReview = async () => {
     if (!selectedReviewRequest) return
 
-    console.log('Submitting review for request:', selectedReviewRequest)
-    console.log('Review data:', reviewData)
-    console.log('Request ID:', selectedReviewRequest.id)
-    console.log('Full URL:', `/mentors/my-requests/${selectedReviewRequest.id}/review`)
-    console.log('User token:', localStorage.getItem('token') ? 'Token exists' : 'No token')
-    console.log('Token preview:', localStorage.getItem('token')?.substring(0, 20) + '...')
+
 
     try {
       const response = await fetch(`${import.meta.env.VITE_API_URL}/mentors/my-requests/${selectedReviewRequest.id}/review`, {
@@ -147,9 +187,7 @@ const MentorshipRequestsPage = () => {
         body: JSON.stringify(reviewData)
       })
 
-      console.log('Response status:', response.status)
-      console.log('Response ok:', response.ok)
-      console.log('Response headers:', Object.fromEntries(response.headers.entries()))
+
 
       if (!response.ok) {
         let errorMessage = 'Failed to submit review'
@@ -164,13 +202,13 @@ const MentorshipRequestsPage = () => {
       }
 
       const result = await response.json()
-      console.log('Review submitted successfully:', result)
+
 
       setReviewModalOpen(false)
       setSelectedReviewRequest(null)
       refresh() // Refresh the requests list
     } catch (error) {
-      console.error('Error submitting review:', error)
+
       alert(`Error: ${error.message}`)
     }
   }
@@ -181,10 +219,7 @@ const MentorshipRequestsPage = () => {
 
   const renderRequestCard = (request) => {
 
-    console.log('Request data:', request)
-    console.log('Mentor name from request:', request.mentorName)
-    console.log('Mentor email from request:', request.mentorEmail)
-    console.log('Mentor object:', request.mentor)
+
 
     const status = String(request?.status ?? '').toLowerCase()
     const tone = STATUS_TONE[status] || STATUS_TONE.pending
@@ -200,8 +235,7 @@ const MentorshipRequestsPage = () => {
       mentorId = request.mentor._id || request.mentor.id || mentorId
     }
 
-    console.log('Final mentor name:', mentorName)
-    console.log('Final mentor email:', mentorEmail)
+
 
     const mentorAvatar = request?.mentor?.avatar || request.mentorAvatar || ''
 
@@ -308,7 +342,7 @@ const MentorshipRequestsPage = () => {
 
                 <div>
                   <b>Time:</b>
-                  {new Date(request.sessionDetails.sessionStartTime).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}
+                  {new Date(request.sessionDetails.sessionStartTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </div>
 
                 {request.sessionDetails.meetingLink && (
@@ -334,15 +368,7 @@ const MentorshipRequestsPage = () => {
           {status === 'completed' && (
             <div className="mt-3 p-3 bg-gray-50 border border-gray-200 rounded-lg text-sm">
 
-              {/* Debug logging */}
-              {console.log('Completed request data:', {
-                id: request.id,
-                status: request.status,
-                sessionOutcome: request.sessionOutcome,
-                reviewSubmitted: request.reviewSubmitted,
-                rating: request.rating,
-                feedback: request.feedback
-              })}
+
 
               {request.sessionOutcome && !(request.sessionOutcome === 'completed' && request.reviewSubmitted) && (
                 <div>
@@ -451,17 +477,16 @@ const MentorshipRequestsPage = () => {
           {/* Tabs */}
           <div className="flex gap-3 mt-6">
 
-            {['all','pending','accepted','rejected','completed'].map(tab => (
+            {['all', 'pending', 'accepted', 'rejected', 'completed'].map(tab => (
 
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
                 className={`px-4 py-2 rounded-full text-sm border transition
-                ${
-                  activeTab === tab
+                ${activeTab === tab
                     ? 'bg-primary text-white border-primary'
                     : 'bg-white text-slate-600 hover:border-primary hover:text-primary'
-                }`}
+                  }`}
               >
                 {tab.charAt(0).toUpperCase() + tab.slice(1)}
               </button>
@@ -514,7 +539,7 @@ const MentorshipRequestsPage = () => {
           <div className="bg-white rounded-xl max-w-md w-full">
             <div className="p-6">
               <h3 className="text-lg font-semibold text-slate-900 mb-4">Write Review</h3>
-              
+
               <div className="mb-4">
                 <p className="text-sm text-slate-600 mb-2">
                   Review for: {selectedReviewRequest.mentorName || 'Mentor'}
@@ -531,7 +556,7 @@ const MentorshipRequestsPage = () => {
                     <button
                       key={star}
                       type="button"
-                      onClick={() => setReviewData({...reviewData, rating: star})}
+                      onClick={() => setReviewData({ ...reviewData, rating: star })}
                       className={`text-2xl ${star <= reviewData.rating ? 'text-yellow-400' : 'text-gray-300'}`}
                     >
                       ★
@@ -544,7 +569,7 @@ const MentorshipRequestsPage = () => {
                 <label className="block text-sm font-medium text-slate-700 mb-2">Feedback</label>
                 <textarea
                   value={reviewData.feedback}
-                  onChange={(e) => setReviewData({...reviewData, feedback: e.target.value})}
+                  onChange={(e) => setReviewData({ ...reviewData, feedback: e.target.value })}
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   rows={4}
                   placeholder="Share your experience..."

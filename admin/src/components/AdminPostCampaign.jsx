@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { api } from '../utils/api'
+import FileUpload from './common/FileUpload'
+import { uploadFile } from '../utils/upload'
 
 const DEFAULT_IMAGE =
   'https://images.unsplash.com/photo-1469474968028-56623f02e42e?auto=format&fit=crop&w=1200&q=80'
@@ -85,13 +87,14 @@ const AdminPostCampaign = () => {
     const file = event.target.files[0]
     if (!file) return
 
-    // Validate file type
+    console.log('=== DEBUG: AdminPostCampaign handleImageUpload called ===')
+    console.log('File:', file)
+    
     if (!file.type.startsWith('image/')) {
       alert('Please select an image file')
       return
     }
 
-    // Validate file size (max 5MB)
     if (file.size > 5 * 1024 * 1024) {
       alert('Image size should be less than 5MB')
       return
@@ -99,14 +102,22 @@ const AdminPostCampaign = () => {
 
     setUploadingImage(true)
     try {
-      // For now, create a preview URL (in production, you'd upload to Cloudinary)
-      const previewUrl = URL.createObjectURL(file)
-      setForm((prev) => ({ ...prev, coverImage: previewUrl }))
-      setImagePreview(previewUrl)
-      alert('Campaign image uploaded successfully.')
+      console.log('Calling uploadFile with type: campaign')
+      const result = await uploadFile(file, 'campaign')
+      console.log('Upload result:', result)
+      
+      if (result?.url) {
+        setForm((prev) => ({ ...prev, coverImage: result.url }))
+        setImagePreview(result.url)
+        alert('Image uploaded successfully!')
+        console.log('Admin campaign image uploaded successfully:', result.url)
+      } else {
+        throw new Error('No URL returned from upload')
+      }
     } catch (error) {
-      console.error('Upload failed:', error)
-      alert('Failed to upload image. Please try again.')
+      console.error('=== ADMIN CAMPAIGN UPLOAD ERROR ===')
+      console.error('Error:', error)
+      alert(`Image upload failed: ${error.message || 'Please try again.'}`)
     } finally {
       setUploadingImage(false)
     }
@@ -134,7 +145,7 @@ const AdminPostCampaign = () => {
         title: form.title.trim(),
         description: form.description.trim(),
         goalAmount: numericGoal,
-        coverImage: form.coverImage.trim() || DEFAULT_IMAGE,
+        coverImage: form.coverImage.trim(),
         deadline: form.deadline ? new Date(form.deadline).toISOString() : undefined,
         category: form.category,
         tags: form.tags ? form.tags.split(',').map(tag => tag.trim()).filter(tag => tag) : [],
@@ -340,17 +351,33 @@ const AdminPostCampaign = () => {
                         disabled={uploadingImage}
                         className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
                       />
-                      <div className="flex items-center justify-center w-full rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50 px-4 py-8 text-center transition hover:border-primary hover:bg-primary/5">
+                      <div className={`flex items-center justify-center w-full rounded-2xl border-2 border-dashed px-4 py-8 text-center transition ${
+                        uploadingImage 
+                          ? 'border-primary bg-primary/5' 
+                          : 'border-slate-300 bg-slate-50 hover:border-primary hover:bg-primary/5'
+                      }`}>
                         <div className="space-y-2">
-                          <svg className="mx-auto h-8 w-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                          </svg>
-                          <div className="text-sm text-slate-600">
-                            {uploadingImage ? 'Uploading...' : 'Click to upload or drag and drop'}
-                          </div>
-                          <div className="text-xs text-slate-500">
-                            PNG, JPG, GIF up to 5MB
-                          </div>
+                          {uploadingImage ? (
+                            <>
+                              <div className="mx-auto w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                                <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+                              </div>
+                              <div className="text-sm font-medium text-primary">Uploading image...</div>
+                              <div className="text-xs text-slate-500">Please wait</div>
+                            </>
+                          ) : (
+                            <>
+                              <svg className="mx-auto h-8 w-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                              </svg>
+                              <div className="text-sm font-medium text-slate-700">
+                                Click to upload or drag and drop
+                              </div>
+                              <div className="text-xs text-slate-500">
+                                PNG, JPG, GIF up to 5MB
+                              </div>
+                            </>
+                          )}
                         </div>
                       </div>
                     </div>

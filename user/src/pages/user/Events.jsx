@@ -5,9 +5,6 @@ import { useAuth } from '../../context/AuthContext'
 import useToast from '../../hooks/useToast'
 import useEvents from '../../hooks/useEvents'
 
-const DEFAULT_IMAGE =
-  'https://images.unsplash.com/photo-1489515217757-5fd1be406fef?auto=format&fit=crop&w=1200&q=80'
-
 const capitalize = (value = '') => value.charAt(0).toUpperCase() + value.slice(1)
 
 const formatDateBadge = (isoString) => {
@@ -142,13 +139,13 @@ const EventCard = ({ event }) => {
     return null
   }
 
-  const coverImage =
-    event.coverImage && !event.coverImage.startsWith('blob:')
-      ? event.coverImage
-      : DEFAULT_IMAGE
+  const handleImageError = (e) => {
+    // Hide broken image and show placeholder
+    e.target.style.display = 'none'
+    e.target.nextSibling.style.display = 'flex'
+  }
 
   const schedule = formatSchedule(event.startAt, event.endAt)
-
   const modeLabel = capitalize(event.mode ?? 'in-person')
 
   return (
@@ -158,11 +155,33 @@ const EventCard = ({ event }) => {
     >
       <div className="relative h-44 w-full overflow-hidden">
 
-        <img
-          src={coverImage}
-          alt={`${event.title} banner`}
-          className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
-        />
+        {event.coverImage && !event.coverImage.startsWith('blob:') ? (
+          <>
+            <img
+              src={event.coverImage}
+              alt={`${event.title} banner`}
+              className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
+              onError={handleImageError}
+            />
+            {/* No Image Placeholder */}
+            <div 
+              className="absolute inset-0 flex flex-col items-center justify-center bg-slate-100 text-slate-400"
+              style={{ display: 'none' }}
+            >
+              <svg className="h-12 w-12 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              <p className="text-sm font-medium">No Image Available</p>
+            </div>
+          </>
+        ) : (
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-100 text-slate-400">
+            <svg className="h-12 w-12 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+            <p className="text-sm font-medium">No Image Available</p>
+          </div>
+        )}
 
         <span className="absolute left-4 top-4 rounded-full bg-white/90 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-slate-800">
           {modeLabel}

@@ -7,7 +7,13 @@ const router = express.Router()
 // Upload single file
 router.post('/upload', authMiddleware, upload.single('file'), async (req, res) => {
   try {
+    console.log('=== DEBUG: Backend upload route called ===')
+    console.log('Request file:', req.file)
+    console.log('Request query:', req.query)
+    console.log('Request user:', req.user)
+    
     if (!req.file) {
+      console.log('No file uploaded')
       return res.status(400).json({
         success: false,
         message: 'No file uploaded'
@@ -22,12 +28,22 @@ router.post('/upload', authMiddleware, upload.single('file'), async (req, res) =
       folder = 'covers'
     } else if (req.query.type === 'certification') {
       folder = 'certifications'
+    } else if (req.query.type === 'campaign') {
+      folder = 'campaigns'
+    } else if (req.query.type === 'news') {
+      folder = 'news'
+    } else if (req.query.type === 'event') {
+      folder = 'events'
     }
 
-    // Upload to Cloudinary
-    const result = await uploadToCloudinary(req.file, folder)
+    console.log('Using folder:', folder)
 
-    res.status(200).json({
+    // Upload to Cloudinary
+    console.log('Starting Cloudinary upload...')
+    const result = await uploadToCloudinary(req.file, folder)
+    console.log('Cloudinary upload result:', result)
+
+    const responseData = {
       success: true,
       data: {
         url: result.url,
@@ -38,9 +54,14 @@ router.post('/upload', authMiddleware, upload.single('file'), async (req, res) =
         file_name: req.file.originalname,
         file_type: req.file.mimetype
       }
-    })
+    }
+    
+    console.log('Sending response:', responseData)
+    res.status(200).json(responseData)
   } catch (error) {
+    console.error('=== BACKEND UPLOAD ERROR ===')
     console.error('Upload error:', error)
+    console.error('Error stack:', error.stack)
     res.status(500).json({
       success: false,
       message: error.message || 'Upload failed'

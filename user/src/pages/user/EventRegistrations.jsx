@@ -51,7 +51,7 @@ const UserEventRegistrations = () => {
   }, [eventId])
 
   const handleBack = () => {
-    navigate('/user/my-posts')
+    navigate(-1)
   }
 
   if (loading) {

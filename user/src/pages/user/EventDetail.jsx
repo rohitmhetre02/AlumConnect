@@ -5,9 +5,6 @@ import useToast from '../../hooks/useToast'
 import { useEvent } from '../../hooks/useEvents'
 import { useAuth } from '../../context/AuthContext'
 
-const FALLBACK_BANNER =
-  'https://images.unsplash.com/photo-1475724017904-b712052c192a?auto=format&fit=crop&w=1600&q=80'
-
 const formatSchedule = (startAt, endAt) => {
   if (!startAt) return 'Schedule to be announced'
   const start = new Date(startAt)
@@ -60,24 +57,31 @@ const EventDetail = () => {
   })
 
   useEffect(() => {
+    const currentYear = new Date().getFullYear()
+    const studentYears = ['1st year', '2nd year', '3rd year', '4th year', '5th year']
     setFormValues((prev) => ({
       ...prev,
       name: user?.name || user?.profile?.fullName || prev.name,
-      department: user?.profile?.department || prev.department,
+      department: user?.department || user?.profile?.department || prev.department,
+      academicYear: normalizedRole === 'student' ? studentYears[0] : prev.academicYear, // Default to 1st year for students
+      graduationYear: String(currentYear), // Current year for both students and alumni
       role: prev.role || (normalizedRole && ['student', 'alumni', 'faculty'].includes(normalizedRole) ? normalizedRole : prev.role),
     }))
-  }, [user?.name, user?.profile?.fullName, user?.profile?.department, normalizedRole])
+  }, [user?.name, user?.profile?.fullName, user?.department, user?.profile?.department, normalizedRole])
 
   const schedule = useMemo(() => formatSchedule(data?.startAt, data?.endAt), [data?.startAt, data?.endAt])
   const modeLabel = useMemo(() => capitalize(data?.mode ?? 'in-person'), [data?.mode])
 
   const banner = useMemo(() => {
     const cover = data?.coverImage?.trim()
-    if (!cover || cover.startsWith('blob:')) {
-      return FALLBACK_BANNER
-    }
-    return cover
+    return cover && !cover.startsWith('blob:') ? cover : null
   }, [data?.coverImage])
+
+  const handleImageError = (e) => {
+    // Hide broken image and show placeholder
+    e.target.style.display = 'none'
+    e.target.nextSibling.style.display = 'flex'
+  }
 
   const handleRegistrationClick = () => {
     if (data?.registrationLink) {
@@ -185,15 +189,9 @@ const EventDetail = () => {
 
     const errors = []
     if (!formValues.name.trim()) errors.push('Name is required.')
-    if (!formValues.department.trim()) errors.push('Department is required.')
 
-    if (isModalStudent && !formValues.academicYear.trim()) {
-      errors.push('Select your current academic year.')
-    }
-
-    if (isModalAlumni && !formValues.graduationYear.trim()) {
-      errors.push('Select your graduation year.')
-    }
+    // No validation for academic year since it's read-only
+    // No validation for graduation year since it's read-only for both students and alumni
 
     if (errors.length) {
       addToast?.({
@@ -210,7 +208,7 @@ const EventDetail = () => {
         name: formValues.name.trim(),
         department: formValues.department.trim(),
         academicYear: isModalStudent ? formValues.academicYear.trim() : undefined,
-        graduationYear: isModalAlumni ? formValues.graduationYear.trim() : undefined,
+        graduationYear: isModalAlumni ? formValues.graduationYear.trim() : undefined, // Only for alumni
       })
 
       addToast?.({
@@ -254,17 +252,45 @@ const EventDetail = () => {
       <div className="container mx-auto px-4 py-8 max-w-4xl">
         {/* Back Navigation */}
         <button
-          onClick={() => navigate('/dashboard/events')}
+          onClick={() => navigate(-1)}
           className="inline-flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-primary transition-colors mb-8"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
-          Back to Events
+          Back
         </button>
 
         <section className="overflow-hidden rounded-3xl bg-white shadow-xl">
-          <img src={banner} alt={`${data.title} banner`} className="h-72 w-full object-cover" />
+          <div className="relative h-72 w-full overflow-hidden">
+            {banner ? (
+              <>
+                <img 
+                  src={banner} 
+                  alt={`${data.title} banner`} 
+                  className="h-full w-full object-cover"
+                  onError={handleImageError}
+                />
+                {/* No Image Placeholder */}
+                <div 
+                  className="absolute inset-0 flex flex-col items-center justify-center bg-slate-100 text-slate-400"
+                  style={{ display: 'none' }}
+                >
+                  <svg className="h-16 w-16 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  <p className="text-lg font-medium">No Image Available</p>
+                </div>
+              </>
+            ) : (
+              <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-100 text-slate-400">
+                <svg className="h-16 w-16 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                <p className="text-lg font-medium">No Image Available</p>
+              </div>
+            )}
+          </div>
           <div className="space-y-6 p-8">
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div className="space-y-1">
@@ -412,54 +438,42 @@ const RegistrationModal = ({
         </label>
 
         <label className="block text-sm font-semibold text-slate-700">
-          Department
-          <select
+          Department <span className="ml-2 text-xs text-slate-500">(Read-only)</span>
+          <input
+            type="text"
             value={formValues.department}
-            onChange={onFieldChange('department')}
-            className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-          >
-            <option value="">Select department</option>
-            {departmentOptions.map((option) => (
-              <option key={option} value={option}>
-                {option}
-              </option>
-            ))}
-          </select>
+            className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 cursor-not-allowed"
+            placeholder="Department information"
+            disabled
+            readOnly
+          />
         </label>
 
         {isStudent && (
           <label className="block text-sm font-semibold text-slate-700">
-            Current academic year
-            <select
+            Current Year <span className="ml-2 text-xs text-slate-500">(Read-only)</span>
+            <input
+              type="text"
               value={formValues.academicYear}
-              onChange={onFieldChange('academicYear')}
-              className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-            >
-              <option value="">Select current year</option>
-              {studentYearOptions.map((option) => (
-                <option key={option} value={option}>
-                  {option}
-                </option>
-              ))}
-            </select>
+              className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 cursor-not-allowed"
+              placeholder="Current year"
+              disabled
+              readOnly
+            />
           </label>
         )}
 
         {isAlumni && (
           <label className="block text-sm font-semibold text-slate-700">
-            Graduation year
-            <select
+            Passout Year <span className="ml-2 text-xs text-slate-500">(Read-only)</span>
+            <input
+              type="text"
               value={formValues.graduationYear}
-              onChange={onFieldChange('graduationYear')}
-              className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-            >
-              <option value="">Select graduation year</option>
-              {graduationYearOptions.map((option) => (
-                <option key={option} value={option}>
-                  {option}
-                </option>
-              ))}
-            </select>
+              className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 cursor-not-allowed"
+              placeholder="Passout year"
+              disabled
+              readOnly
+            />
           </label>
         )}
 

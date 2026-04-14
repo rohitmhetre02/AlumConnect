@@ -2,17 +2,31 @@ import { post } from './api'
 
 // Upload single file
 export const uploadFile = async (file, type = 'general') => {
+  console.log('=== DEBUG: uploadFile called ===')
+  console.log('File:', file)
+  console.log('Type:', type)
+  
   const formData = new FormData()
   formData.append('file', file)
+  console.log('FormData created with file')
 
   try {
-    const response = await post(`/upload/upload?type=${type}`, formData, {
+    const endpoint = `/upload/upload?type=${type}`
+    console.log('Calling endpoint:', endpoint)
+    
+    const response = await post(endpoint, formData, {
       includeAuth: true,
       // Don't set any fetchOptions to avoid header conflicts
     })
 
+    console.log('Upload response:', response)
+    console.log('Response data:', response.data)
+    
     return response.data
   } catch (error) {
+    console.error('=== UPLOAD UTILITY ERROR ===')
+    console.error('Error:', error)
+    console.error('Error message:', error.message)
     throw new Error(error.message || 'Upload failed')
   }
 }

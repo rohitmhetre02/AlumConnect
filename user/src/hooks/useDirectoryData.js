@@ -30,11 +30,11 @@ export const useDirectoryData = (role) => {
       setLoading(true)
       setError(null)
       try {
-        console.log(`Fetching members for role: ${role}, endpoint: ${endpoint}`)
+       
         const response = await get(endpoint)
-        console.log(`Directory response for ${role}:`, response)
+        
         const members = Array.isArray(response?.data) ? response.data : []
-        console.log(`Parsed ${members.length} members for ${role}:`, members)
+        
         if (!isMounted) return
         setMembers(members)
       } catch (fetchError) {

@@ -91,6 +91,7 @@ const calendarRoutes = require('./routes/calendarRoutes')
 const studentRoutes = require('./routes/studentRoutes')
 const connectionRoutes = require('./routes/connectionRoutes')
 const messageRoutes = require('./routes/messageRoutes')
+const notificationRoutes = require('./routes/notificationRoutes')
 
 // Debug helper
 const { debugMentorRequest } = require('./debug-mentorship')
@@ -213,6 +214,7 @@ app.use('/api/students', studentRoutes)
 
 app.use('/api/user', connectionRoutes)
 app.use('/api/messages', messageRoutes)
+app.use('/api/notifications', notificationRoutes)
 
 app.use('/api/conversations', require('./routes/conversationRoutes'))
 
@@ -279,7 +281,10 @@ app.use('/api/conversations', require('./routes/conversationRoutes'))
 
     const httpServer = http.createServer(app)
 
-    initSocket(httpServer)
+    const io = initSocket(httpServer)
+    
+    // Set global.io for notifications
+    global.io = io
 
 
 

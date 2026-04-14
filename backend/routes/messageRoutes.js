@@ -106,4 +106,57 @@ router.put("/:messageId/read", ensureAuthenticated, async (req, res) => {
   }
 });
 
+// GET /api/messages/conversations - Get all conversations for user
+router.get("/conversations", ensureAuthenticated, async (req, res) => {
+  try {
+    const userId = req.user?.id || req.user?._id;
+    
+    if (!userId) {
+      return res.status(400).json({
+        success: false,
+        message: "User ID is required"
+      });
+    }
+
+    // Find all conversations where user is either sender or recipient
+    const conversations = await Message.aggregate([
+      {
+        $match: {
+          $or: [
+            { senderId: userId },
+            { recipientId: userId }
+          ]
+        }
+      },
+      {
+        $group: {
+          _id: "$conversationId",
+          messages: { $push: "$$ROOT" },
+          lastMessage: { $last: "$$ROOT" }
+        }
+      },
+      {
+        $sort: { "lastMessage.timestamp": -1 }
+      }
+    ]);
+
+    console.log(`📨 [Backend] Retrieved ${conversations.length} conversations for user ${userId}`);
+    
+    res.json({
+      success: true,
+      data: conversations.map(conv => ({
+        conversationId: conv._id,
+        messages: conv.messages,
+        lastMessage: conv.lastMessage
+      }))
+    });
+  } catch (error) {
+    console.error('❌ [Backend] Error fetching conversations:', error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch conversations"
+    });
+  }
+});
+
 module.exports = router;

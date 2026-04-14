@@ -68,10 +68,6 @@ const ContentPosted = () => {
         get('/api/campaigns/mine')
       ])
 
-      console.log('🔍 [DEBUG] Opportunities data:', opportunitiesRes?.data)
-      console.log('🔍 [DEBUG] Events data:', eventsRes?.data)
-      console.log('🔍 [DEBUG] Campaigns data:', campaignsRes?.data)
-
       setOpportunities(opportunitiesRes?.data || [])
       setEvents(eventsRes?.data || [])
       setCampaigns(campaignsRes?.data || [])
@@ -433,7 +429,7 @@ const ContentPosted = () => {
                     </td>
                     <td className="px-6 py-4">
                       <span className={`inline-flex rounded-full px-3 py-1 text-xs font-medium ${getApprovalStatusBadgeClass(content.approvalStatus || 'PENDING')}`}>
-                        {content.approvalStatus === 'APPROVED' ? '✅ ' : content.approvalStatus === 'REJECTED' ? '❌ ' : '🟡 '}
+                        {content.approvalStatus === 'APPROVED' ? '' : content.approvalStatus === 'REJECTED' ? ' ' : ''}
                         {content.approvalStatus || 'PENDING'}
                       </span>
                     </td>

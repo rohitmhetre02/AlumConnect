@@ -1,70 +1,44 @@
 import React, { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 
 const PublicMemories = () => {
   const [memories, setMemories] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [selectedImage, setSelectedImage] = useState(null);
 
   useEffect(() => {
     const fetchMemories = async () => {
       try {
         setLoading(true)
-        console.log('🔍 Fetching memories from /api/public/memories...')
-        const response = await fetch("/api/public/memories")
+        console.log('🔍 Fetching memories from public API...')
+        const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/public/memories`)
         const data = await response.json()
         
         console.log('📤 Memories API Response:', data)
         
-        if (data.success) {
-          setMemories(data.memories || [])
-          console.log(`✅ Loaded ${data.memories?.length || 0} memories`)
+        if (data.success && data.memories) {
+          // Show only latest 4 memories
+          const latestMemories = data.memories.slice(0, 4)
+          setMemories(latestMemories)
+          console.log(`✅ Loaded ${latestMemories.length} memories from database`)
+          
+          // Log each memory details
+          latestMemories.forEach(memory => {
+            console.log(`Memory: "${memory.title}"`)
+            console.log(`  URL: ${memory.url}`)
+            console.log(`  Description: ${memory.description || 'No description'}`)
+            console.log('---')
+          })
         } else {
-          console.error('❌ API Error:', data.error)
-          // Use sample data if API fails
-          setMemories([
-            {
-              _id: "fallback1",
-              url: "https://picsum.photos/seed/fallback1/400/300.jpg",
-              title: "College Festival 2024",
-              description: "Annual cultural festival celebrations"
-            },
-            {
-              _id: "fallback2", 
-              url: "https://picsum.photos/seed/fallback2/400/300.jpg",
-              title: "Graduation Day",
-              description: "Convocation ceremony 2023"
-            },
-            {
-              _id: "fallback3",
-              url: "https://picsum.photos/seed/fallback3/400/300.jpg", 
-              title: "Sports Meet",
-              description: "Annual sports competition"
-            },
-            {
-              _id: "fallback4",
-              url: "https://picsum.photos/seed/fallback4/400/300.jpg",
-              title: "Alumni Meet",
-              description: "Homecoming event 2024"
-            }
-          ])
+          console.error('❌ API Error:', data.error || 'No memories found')
+          setError(data.error || 'No memories found')
+          setMemories([])
         }
       } catch (error) {
         console.error("❌ Error fetching memories:", error)
-        // Use sample data if API fails
-        setMemories([
-          {
-            _id: "error1",
-            url: "https://picsum.photos/seed/error1/400/300.jpg",
-            title: "College Festival 2024",
-            description: "Annual cultural festival celebrations"
-          },
-          {
-            _id: "error2", 
-            url: "https://picsum.photos/seed/error2/400/300.jpg",
-            title: "Graduation Day",
-            description: "Convocation ceremony 2023"
-          }
-        ])
+        setError(error.message)
+        setMemories([])
       } finally {
         setLoading(false)
       }
@@ -95,7 +69,7 @@ const PublicMemories = () => {
         }}
       >
         <h1 className="text-5xl font-bold">Memories</h1>
-        <p className="text-xl mt-4 opacity-90">Captured moments from our journey</p>
+        <p className="text-xl mt-4 opacity-90">Featured moments from our journey</p>
       </div>
 
       {/* MEMORIES GALLERY */}
@@ -149,18 +123,26 @@ const PublicMemories = () => {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
             </div>
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">No Memories Yet</h3>
+            <h3 className="text-xl font-semibold text-gray-900 mb-2">
+              {error ? "Unable to Load Memories" : "No Memories Yet"}
+            </h3>
             <p className="text-gray-600 mb-6">
-              Memories will appear here once they are added to the gallery.
+              {error 
+                ? "There was an error loading memories. Please try again later."
+                : "Featured memories will appear here once they are added to the gallery."
+              }
             </p>
           </div>
         )}
 
-        {/* LOGIN PROMPT */}
+        {/* LOGIN TO VIEW MORE */}
         <div className="text-center mt-12">
-          <button className="px-8 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700">
-            Login to Add Your Memories
-          </button>
+          <Link
+            to="/login"
+            className="inline-block px-8 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors"
+          >
+            Login to View More Memories
+          </Link>
         </div>
 
       </div>

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 
 import Modal from '../../ui/Modal'
 import useOpportunityReferral from '../../../hooks/useOpportunityReferral'
+import { useAuth } from '../../../context/AuthContext'
 
 const formatDateTime = (value) => {
   if (!value) return null
@@ -26,6 +27,7 @@ const OpportunityReferralModal = ({
 }) => {
   const opportunityId = opportunity?.id ?? opportunity?._id ?? null
   const title = opportunity?.title ?? 'Request referral'
+  const { user } = useAuth()
 
   const { referral, loading, submitting, setReferral, submitReferral } = useOpportunityReferral(
     opportunityId,
@@ -44,6 +46,15 @@ const OpportunityReferralModal = ({
   const [resumeFile, setResumeFile] = useState(null)
   const [resumeFileName, setResumeFileName] = useState('')
   const [localError, setLocalError] = useState('')
+  
+  // User profile editable fields
+  const [userProfile, setUserProfile] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    department: '',
+    role: ''
+  })
 
   useEffect(() => {
     if (!isOpen) {
@@ -51,13 +62,31 @@ const OpportunityReferralModal = ({
       setResumeFile(null)
       setResumeFileName('')
       setLocalError('')
+      setUserProfile({
+        firstName: '',
+        lastName: '',
+        email: '',
+        department: '',
+        role: ''
+      })
       return
     }
 
     if (initialReferral) {
       setReferral(initialReferral)
     }
-  }, [isOpen, initialReferral, setReferral])
+
+    // Populate user profile when modal opens
+    if (user) {
+      setUserProfile({
+        firstName: user.firstName || user.profile?.firstName || '',
+        lastName: user.lastName || user.profile?.lastName || '',
+        email: user.email || user.profile?.email || '',
+        department: user.department || user.profile?.department || '',
+        role: user.role || user.profile?.role || ''
+      })
+    }
+  }, [isOpen, initialReferral, setReferral, user])
 
   useEffect(() => {
     if (!isOpen) return
@@ -70,6 +99,13 @@ const OpportunityReferralModal = ({
     }
     setResumeFile(null)
   }, [isOpen, activeReferral])
+
+  const handleProfileChange = (field, value) => {
+    setUserProfile(prev => ({
+      ...prev,
+      [field]: value
+    }))
+  }
 
   const handleFileChange = (event) => {
     const file = event.target.files?.[0]
@@ -86,8 +122,19 @@ const OpportunityReferralModal = ({
       return
     }
 
+    // Validate required profile fields
+    if (!userProfile.firstName.trim() || !userProfile.lastName.trim()) {
+      setLocalError('Please provide your first name and last name.')
+      return
+    }
+
+    if (!userProfile.email.trim()) {
+      setLocalError('Please provide your email address.')
+      return
+    }
+
     try {
-      const result = await submitReferral({ proposal, resumeFile })
+      const result = await submitReferral({ proposal, resumeFile, userProfile })
       if (result) {
         onSubmitted?.(result)
       }
@@ -105,13 +152,14 @@ const OpportunityReferralModal = ({
   }
 
   return (
-    <Modal isOpen={isOpen} onClose={handleClose} title={`Request referral • ${title}`} width="max-w-2xl">
+    <Modal isOpen={isOpen} onClose={handleClose} title={`Request referral for ${title}`} width="max-w-3xl">
       {!opportunityId ? (
         <div className="space-y-2 text-sm text-slate-500">
           <p>Select an opportunity to request a referral.</p>
         </div>
       ) : (
         <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Opportunity Info Section */}
           <section className="space-y-3 rounded-2xl border border-slate-100 bg-slate-50/70 px-4 py-3 text-sm text-slate-600">
             <header className="flex items-center justify-between gap-3">
               <div>
@@ -145,6 +193,99 @@ const OpportunityReferralModal = ({
             ) : (
               <p className="text-xs text-slate-500">Craft a short note explaining why you’re a great fit.</p>
             )}
+          </section>
+
+          {/* User Profile Section */}
+          <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6">
+            <header>
+              <h3 className="text-lg font-semibold text-slate-900">Your Information</h3>
+              <p className="text-sm text-slate-600 mt-1">Please review and update your profile information.</p>
+            </header>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="block text-sm font-semibold text-slate-700" htmlFor="firstName">
+                  First Name <span className="ml-1 text-red-500">*</span>
+                </label>
+                <input
+                  id="firstName"
+                  name="firstName"
+                  type="text"
+                  value={userProfile.firstName}
+                  onChange={(e) => handleProfileChange('firstName', e.target.value)}
+                  className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-700 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10"
+                  placeholder="Enter your first name"
+                  disabled={loading || submitting}
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="block text-sm font-semibold text-slate-700" htmlFor="lastName">
+                  Last Name <span className="ml-1 text-red-500">*</span>
+                </label>
+                <input
+                  id="lastName"
+                  name="lastName"
+                  type="text"
+                  value={userProfile.lastName}
+                  onChange={(e) => handleProfileChange('lastName', e.target.value)}
+                  className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-700 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10"
+                  placeholder="Enter your last name"
+                  disabled={loading || submitting}
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="block text-sm font-semibold text-slate-700" htmlFor="email">
+                  Email Address <span className="ml-1 text-red-500">*</span>
+                </label>
+                <input
+                  id="email"
+                  name="email"
+                  type="email"
+                  value={userProfile.email}
+                  onChange={(e) => handleProfileChange('email', e.target.value)}
+                  className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-700 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10"
+                  placeholder="Enter your email address"
+                  disabled={loading || submitting}
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="block text-sm font-semibold text-slate-700" htmlFor="department">
+                  Department <span className="ml-2 text-xs text-slate-500">(Read-only)</span>
+                </label>
+                <input
+                  id="department"
+                  name="department"
+                  type="text"
+                  value={userProfile.department}
+                  className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-700 bg-slate-50 cursor-not-allowed"
+                  placeholder="Department information"
+                  disabled
+                  readOnly
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="block text-sm font-semibold text-slate-700" htmlFor="role">
+                  Role <span className="ml-2 text-xs text-slate-500">(Read-only)</span>
+                </label>
+                <input
+                  id="role"
+                  name="role"
+                  type="text"
+                  value={userProfile.role ? userProfile.role.charAt(0).toUpperCase() + userProfile.role.slice(1) : ''}
+                  className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-700 bg-slate-50 cursor-not-allowed"
+                  placeholder="Role information"
+                  disabled
+                  readOnly
+                />
+              </div>
+            </div>
           </section>
 
           <div className="space-y-2">

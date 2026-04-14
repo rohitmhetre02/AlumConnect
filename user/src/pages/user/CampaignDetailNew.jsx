@@ -180,8 +180,8 @@ const CampaignDetail = () => {
           donorEmail: donorEmail.trim(),
           message: donorMessage.trim(),
           anonymous,
-          success_url: `${window.location.origin}/dashboard/campaigns/${campaignId}?payment=success`,
-          cancel_url: `${window.location.origin}/dashboard/campaigns/${campaignId}?payment=cancelled`,
+          success_url: `${window.location.origin}/#/dashboard/campaigns/${campaignId}?payment=success`,
+          cancel_url: `${window.location.origin}/#/dashboard/campaigns/${campaignId}?payment=cancelled`,
         }),
       })
 
@@ -247,12 +247,13 @@ const CampaignDetail = () => {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <Link to="/dashboard/campaigns" className="inline-flex items-center gap-2 rounded-full bg-black/20 px-4 py-2 text-sm font-semibold text-white transition mb-4">
+      <button 
+      onClick={() => navigate(-1)} className="inline-flex items-center gap-2 rounded-full bg-black/20 px-4 py-2 text-sm font-semibold text-white transition mb-4">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
               <path d="M15 18l-6-6 6-6" />
             </svg>
             Back to Campaigns
-          </Link>
+          </button>
       {/* Hero Section */}
       <div className="relative h-64 w-full overflow-hidden">
         <img 

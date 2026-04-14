@@ -4,7 +4,8 @@ const {
   getPublicAlumni, 
   getPublicMemories, 
   getPublicEvents, 
-  getPublicCampaigns 
+  getPublicCampaigns,
+  getPublicStats 
 } = require('../controllers/publicController')
 
 const router = express.Router()
@@ -15,5 +16,6 @@ router.get('/alumni', getPublicAlumni)
 router.get('/memories', getPublicMemories)
 router.get('/events', getPublicEvents)
 router.get('/campaigns', getPublicCampaigns)
+router.get('/stats', getPublicStats)
 
 module.exports = router

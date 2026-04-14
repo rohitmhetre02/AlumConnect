@@ -109,29 +109,24 @@ export const useMentorRequests = () => {
   const listEndpoint = MENTEE_REQUESTS_ENDPOINT
   const mentorEndpoint = MENTOR_REQUESTS_ENDPOINT
 
-  console.log('useMentorRequests Debug - User Role:', normalizedRole)
-  console.log('useMentorRequests Debug - Is Mentor:', isMentor)
-  console.log('useMentorRequests Debug - Is Student:', isStudent)
-  console.log('useMentorRequests Debug - Is Alumni-Student:', isAlumniStudent)
-  console.log('useMentorRequests Debug - Using Endpoint (always mentee requests):', listEndpoint)
 
   const fetchRequests = useCallback(async () => {
     setLoading(true)
     setError(null)
-    console.log('useMentorRequests Debug - Fetching from:', listEndpoint)
+   
     try {
       const response = await get(listEndpoint)
-      console.log('useMentorRequests Debug - API Response:', response)
+      
       
       const rawData = Array.isArray(response?.data) ? response.data : Array.isArray(response) ? response : []
-      console.log('useMentorRequests Debug - Raw Data:', rawData)
+      
       
       const data = rawData.map(normalizeRequest).filter(Boolean)
-      console.log('useMentorRequests Debug - Normalized Data:', data)
+      
       
       setItems(sortRequests(data))
     } catch (err) {
-      console.error('useMentorRequests Debug - Error:', err)
+      
       setError(err)
       toast?.({
         title: 'Unable to load requests',
@@ -163,11 +158,11 @@ export const useMentorRequests = () => {
   const acceptRequest = useCallback(
     async (requestId, payload = {}) => {
       try {
-        console.log('acceptRequest called with:', { requestId, payload })
+        
         const endpoint = `${mentorEndpoint}/${requestId}/accept`
-        console.log('Calling endpoint:', endpoint)
+        
         const response = await post(endpoint, payload)
-        console.log('Accept response:', response)
+        
         const request = normalizeRequest(response?.data ?? response)
         if (request) {
           setItems((prev) => sortRequests(prev.map((item) => (item.id === request.id ? request : item))))

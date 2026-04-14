@@ -4,6 +4,13 @@ const nodemailer = require('nodemailer');
 const crypto = require('crypto');
 const { getModelByRole } = require('../utils/roleModels');
 
+// Import user models for deletion
+const Student = require('../models/Student');
+const Alumni = require('../models/Alumni');
+const Faculty = require('../models/Faculty');
+const Admin = require('../models/Admin');
+const Coordinator = require('../models/Coordinator');
+
 // Generate 6-digit OTP
 const generateOTP = () => {
   return Math.floor(100000 + Math.random() * 900000).toString();
@@ -97,9 +104,10 @@ const sendEmailOTP = async (email, otp, purpose) => {
   try {
     // Check if email configuration is available
     if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-      console.warn('Email configuration missing. OTP would be:', otp);
+      console.warn('Email configuration missing. Please set EMAIL_USER and EMAIL_PASS in .env file');
+      console.log('OTP would be sent to:', email, 'with code:', otp);
       // For development, return true and include OTP flag
-      return { success: true, otp: otp };
+      return { success: true, otp: otp, devMode: true };
     }
 
     const transporter = nodemailer.createTransport({
@@ -111,7 +119,7 @@ const sendEmailOTP = async (email, otp, purpose) => {
     });
 
     const mailOptions = {
-      from: process.env.EMAIL_USER,
+      from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
       to: email,
       subject: `${purpose} - APCOER Alumni Portal OTP`,
       html: `
@@ -125,21 +133,21 @@ const sendEmailOTP = async (email, otp, purpose) => {
               <div style="background: #f0f0f0; padding: 15px; border-radius: 5px; display: inline-block; margin: 10px 0;">
                 <span style="font-size: 24px; font-weight: bold; color: #007bff; letter-spacing: 3px;">${otp}</span>
               </div>
-              <p style="color: #999; font-size: 14px; margin: 20px 0 0;">This code will expire in 5 minutes.</p>
-              <p style="color: #999; font-size: 12px;">If you didn't request this, please ignore this email.</p>
+              <p style="color: #666; margin: 20px 0 0 0;">This OTP will expire in 5 minutes.</p>
+              <p style="color: #999; margin: 10px 0 0 0; font-size: 12px;">If you didn't request this, please ignore this email.</p>
             </div>
           </div>
         </div>
       `
     };
 
-    await transporter.sendMail(mailOptions);
-    return { success: true };
+    const result = await transporter.sendMail(mailOptions);
+    console.log('Email sent successfully:', result.messageId);
+    return { success: true, devMode: false };
+
   } catch (error) {
-    console.error('Email send error:', error);
-    // For development, don't fail the entire process if email fails
-    console.warn('Email failed but continuing process. OTP would be:', otp);
-    return { success: true, otp: otp };
+    console.error('Email sending failed:', error);
+    return { success: false, error: error.message };
   }
 };
 
@@ -627,25 +635,52 @@ const deleteAccount = async (req, res) => {
   try {
     const { password } = req.body;
 
+    console.log('=== DEBUG: Delete account request ===');
+    console.log('User ID:', req.user.id);
+
     const user = await getUserById(req.user.id);
 
     if (!user) {
+      console.log('User not found');
       return res.status(404).json({ success: false, error: 'User not found' });
     }
 
     // Verify password
     const isValid = await bcrypt.compare(password, user.password);
     if (!isValid) {
+      console.log('Invalid password provided');
       return res.status(400).json({ success: false, error: 'Incorrect password' });
     }
 
-    // Delete user
-    await user.deleteOne();
+    console.log('Password verified, proceeding with deletion');
 
+    // Delete user from the appropriate collection
+    const UserModels = [Student, Alumni, Faculty, Admin, Coordinator];
+    let deleted = false;
+
+    for (const UserModel of UserModels) {
+      try {
+        const result = await UserModel.deleteOne({ _id: req.user.id });
+        if (result.deletedCount > 0) {
+          console.log(`User deleted from ${UserModel.modelName} collection`);
+          deleted = true;
+          break;
+        }
+      } catch (error) {
+        console.log(`Error deleting from ${UserModel.modelName}:`, error.message);
+      }
+    }
+
+    if (!deleted) {
+      console.log('User not found in any collection');
+      return res.status(404).json({ success: false, error: 'User not found in any collection' });
+    }
+
+    console.log('Account deleted successfully');
     res.json({ success: true, message: 'Account deleted successfully' });
 
   } catch (error) {
-    console.error(error);
+    console.error('Delete account error:', error);
     res.status(500).json({ success: false, error: 'Delete failed' });
   }
 };

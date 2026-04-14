@@ -327,6 +327,24 @@ const submitOpportunityReferral = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Proposal is required to request a referral.' })
     }
 
+    // Extract user profile data from FormData
+    const userProfile = {
+      firstName: String(req.body?.firstName || '').trim(),
+      lastName: String(req.body?.lastName || '').trim(),
+      email: String(req.body?.email || '').trim(),
+      department: String(req.body?.department || '').trim(),
+      role: String(req.body?.role || '').trim()
+    }
+
+    // Validate required profile fields
+    if (!userProfile.firstName || !userProfile.lastName) {
+      return res.status(400).json({ success: false, message: 'First name and last name are required.' })
+    }
+
+    if (!userProfile.email) {
+      return res.status(400).json({ success: false, message: 'Email address is required.' })
+    }
+
     let referral = await OpportunityReferral.findOne({ opportunity: opportunityId, student: userId })
 
     let uploadedAsset
@@ -342,9 +360,12 @@ const submitOpportunityReferral = async (req, res) => {
         resumeUrl: uploadedAsset?.url || '',
         resumePublicId: uploadedAsset?.public_id || '',
         resumeFileName: req.file?.originalname || '',
+        // Store user profile data
+        userProfile: userProfile
       })
     } else {
       referral.proposal = proposal
+      referral.userProfile = userProfile // Update user profile data
 
       if (uploadedAsset) {
         if (referral.resumePublicId) {
@@ -601,12 +622,38 @@ const getOpportunityApplicants = async (req, res) => {
     const referrals = await OpportunityReferral.find({ opportunity: id })
       .populate({
         path: 'student',
-        select: 'firstName lastName email department avatar'
+        select: 'firstName lastName email department avatar role'
       })
       .sort({ createdAt: -1 })
 
     const data = referrals.map((referral) => {
-      // Handle cases where student might not exist
+      // First try to use userProfile data from referral
+      if (referral.userProfile) {
+        const profile = referral.userProfile;
+        return {
+          id: referral._id,
+          student: {
+            id: referral.student?._id || '',
+            name: profile.firstName && profile.lastName 
+              ? `${profile.firstName} ${profile.lastName}` 
+              : profile.email || 'Unknown Applicant',
+            email: profile.email || 'No email',
+            department: profile.department || 'Not specified',
+            role: profile.role || 'applicant',
+            avatar: referral.student?.avatar || '',
+            profilePicture: referral.student?.avatar || ''
+          },
+          proposal: referral.proposal || '',
+          resumeUrl: referral.resumeUrl || '',
+          resumeFileName: referral.resumeFileName || '',
+          status: referral.status || 'submitted',
+          submittedAt: referral.createdAt,
+          reviewedAt: referral.reviewedAt || null,
+          reviewerNote: referral.reviewerNote || ''
+        }
+      }
+      
+      // Fallback to student data if no userProfile
       const student = referral.student || {}
       return {
         id: referral._id,
@@ -618,6 +665,7 @@ const getOpportunityApplicants = async (req, res) => {
           email: student.email || 'No email',
           department: student.department || 'Not specified',
           role: student.role || 'student',
+          avatar: student.avatar || '',
           profilePicture: student.avatar || ''
         },
         proposal: referral.proposal || '',

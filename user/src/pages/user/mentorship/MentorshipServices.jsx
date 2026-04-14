@@ -116,7 +116,7 @@ const MentorshipServices = () => {
                   value={formData.duration}
                   onChange={(e) => setFormData({...formData, duration: e.target.value})}
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="e.g., 1 hour"
+                  placeholder="e.g. 30 "
                   required
                 />
               </div>

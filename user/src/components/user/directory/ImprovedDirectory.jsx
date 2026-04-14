@@ -13,31 +13,49 @@ const roleLabels = {
 const FILTER_OPTIONS = {
   students: {
     departments: [
-      'Computer Engineering',
-      'Information Technology', 
-      'Mechanical Engineering',
-      'Electronics & Telecommunication Engineering',
       'Civil Engineering',
-      'Electrical Engineering'
+      'Computer Engineering',
+      'Information Technology',
+      'Mechanical Engineering',
+      'Artificial Intelligence & Data Science',
+      'Electronics Engineering (VLSI Design And Technology)',
+      'Electronics & Communication (Advanced Communication Technology)'
     ],
-    currentYears: ['1st Year', '2nd Year', '3rd Year', '4th Year', 'Final Year']
+    currentYears: ['First Year', 'Second Year', 'Third Year', 'Final Year']
   },
   alumni: {
     departments: [
-      'Computer Engineering',
-      'Information Technology', 
-      'Mechanical Engineering',
-      'Electronics & Telecommunication Engineering',
       'Civil Engineering',
-      'Electrical Engineering'
+      'Computer Engineering',
+      'Information Technology',
+      'Mechanical Engineering',
+      'Artificial Intelligence & Data Science',
+      'Electronics Engineering (VLSI Design And Technology)',
+      'Electronics & Communication (Advanced Communication Technology)'
     ],
-    passoutYears: ['2020', '2021', '2022', '2023', '2024']
+    passoutYears: ['2012', '2013', '2014', '2015', '2016', '2017', '2018', '2019', '2020', '2021', '2022', '2023', '2024']
   },
   faculty: {
-    departments: ['Computer Science', 'Engineering', 'Business', 'Medicine', 'Arts', 'Science']
+    departments: [
+      'Civil Engineering',
+      'Computer Engineering',
+      'Information Technology',
+      'Mechanical Engineering',
+      'Artificial Intelligence & Data Science',
+      'Electronics Engineering (VLSI Design And Technology)',
+      'Electronics & Communication (Advanced Communication Technology)'
+    ]
   },
   coordinators: {
-    departments: ['Computer Science', 'Engineering', 'Business', 'Medicine', 'Arts', 'Science']
+    departments: [
+      'Civil Engineering',
+      'Computer Engineering',
+      'Information Technology',
+      'Mechanical Engineering',
+      'Artificial Intelligence & Data Science',
+      'Electronics Engineering (VLSI Design And Technology)',
+      'Electronics & Communication (Advanced Communication Technology)'
+    ]
   }
 }
 

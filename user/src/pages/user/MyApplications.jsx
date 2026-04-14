@@ -169,59 +169,69 @@ const MyApplications = () => {
         )}
 
         {!loading && !error && applications.length > 0 && (
-          <div className="mt-8 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          <div className="mt-8 space-y-4">
             {applications.map(({ id, opportunity, status, submittedAt, updatedAt, reviewerNote }) => {
               const tone = statusToneClasses[status] ?? 'bg-slate-100 text-slate-600'
 
               return (
                 <article
                   key={id}
-                  onClick={() => handleCardClick({ id, opportunity, status, submittedAt, updatedAt, reviewerNote })}
-                  className="bg-white rounded-2xl shadow-md p-5 cursor-pointer hover:shadow-lg transition-all duration-200 hover:scale-[1.02] border border-slate-200"
+                  className="bg-white rounded-2xl shadow-md p-6 border border-slate-200 hover:shadow-lg transition-all duration-200"
                 >
-                  {/* Header with Company and Status */}
-                  <div className="flex justify-between items-center mb-3">
-                    <p className="text-xs text-gray-500 font-semibold uppercase tracking-wider">
-                      {opportunity.company}
-                    </p>
-                    <span className={`text-xs px-3 py-1 rounded-full font-medium ${tone}`}>
-                      {status.replace(/_/g, ' ').charAt(0).toUpperCase() + status.replace(/_/g, ' ').slice(1)}
-                    </span>
-                  </div>
+                  <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                    {/* Main Content */}
+                    <div className="flex-1">
+                      {/* Header with Company and Status */}
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3">
+                        <p className="text-xs text-gray-500 font-semibold uppercase tracking-wider">
+                          {opportunity.company}
+                        </p>
+                        <span className={`text-xs px-3 py-1 rounded-full font-medium ${tone}`}>
+                          {status.replace(/_/g, ' ').charAt(0).toUpperCase() + status.replace(/_/g, ' ').slice(1)}
+                        </span>
+                      </div>
 
-                  {/* Job Title */}
-                  <h2 className="text-lg font-semibold text-slate-900 mb-2 line-clamp-2">
-                    {opportunity.title}
-                  </h2>
+                      {/* Job Title */}
+                      <h2 className="text-xl font-semibold text-slate-900 mb-2">
+                        {opportunity.title}
+                      </h2>
 
-                  {/* Location and Type */}
-                  <p className="text-gray-500 text-sm mb-2">
-                    {opportunity.location || 'Location Flexible'} • {opportunity.type.charAt(0).toUpperCase() + opportunity.type.slice(1)}
-                  </p>
+                      {/* Location and Type */}
+                      <p className="text-gray-500 text-sm mb-2">
+                        {opportunity.location || 'Location Flexible'} · {opportunity.type.charAt(0).toUpperCase() + opportunity.type.slice(1)}
+                      </p>
 
-                  {/* Deadline */}
-                  {opportunity.deadline && (
-                    <p className="text-gray-400 text-sm mb-3">
-                      Deadline: {formatDate(opportunity.deadline)}
-                    </p>
-                  )}
+                      {/* Additional Info Row */}
+                      <div className="flex flex-wrap items-center gap-4 text-sm text-gray-400">
+                        {opportunity.deadline && (
+                          <span>Deadline: {formatDate(opportunity.deadline)}</span>
+                        )}
+                        <span>Applied: {formatDate(submittedAt)}</span>
+                      </div>
 
-                  {/* Status Message */}
-                  <p className="text-blue-600 text-sm font-medium mb-2">
-                    {statusMessages[status] || statusMessages.submitted}
-                  </p>
+                      {/* Status Message */}
+                      <p className="text-blue-600 text-sm font-medium mt-2">
+                        {statusMessages[status] || statusMessages.submitted}
+                      </p>
 
-                  {/* Applied Date */}
-                  <p className="text-gray-400 text-xs">
-                    Applied on: {formatDate(submittedAt)}
-                  </p>
-
-                  {/* Reviewer Note (if any) */}
-                  {reviewerNote && status === 'declined' && (
-                    <div className="mt-3 p-2 bg-rose-50 rounded-lg">
-                      <p className="text-rose-600 text-xs">Feedback: {reviewerNote}</p>
+                      {/* Reviewer Note (if any) */}
+                      {reviewerNote && status === 'declined' && (
+                        <div className="mt-3 p-3 bg-rose-50 rounded-lg">
+                          <p className="text-rose-600 text-sm font-medium">Feedback: {reviewerNote}</p>
+                        </div>
+                      )}
                     </div>
-                  )}
+
+                    {/* Track Button */}
+                    <div className="flex lg:flex-col lg:items-end gap-3">
+                      <button
+                        onClick={() => handleCardClick({ id, opportunity, status, submittedAt, updatedAt, reviewerNote })}
+                        className="w-full sm:w-auto lg:w-full px-6 py-3 bg-primary text-white rounded-xl font-semibold text-sm shadow-md hover:bg-primary-dark transition-all duration-200 hover:shadow-lg"
+                      >
+                        Track Application
+                      </button>
+                    </div>
+                  </div>
                 </article>
               )
             })}
