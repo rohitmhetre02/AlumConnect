@@ -505,7 +505,7 @@ function App() {
                 <UserSettings />
               </ProfilePendingGuardWithFallback>
             } />
-            <Route path="connections" element={
+            <Route path="messages" element={
               <ProfilePendingGuardWithFallback>
                 <Connections />
               </ProfilePendingGuardWithFallback>

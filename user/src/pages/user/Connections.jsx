@@ -1,422 +1,362 @@
-import { useState, useEffect } from "react";
-import { useNavigate, useSearchParams, useLocation } from "react-router-dom";
+import { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import toast from "react-hot-toast";
-import { 
-  MessageCircle, 
-  Check, 
-  CheckCheck,
-  X
-} from "lucide-react";
+import { MessageCircle, Send, Search, X, Check, CheckCheck } from "lucide-react";
+import io from "socket.io-client";
 
-const Connections = () => {
+const API = () => import.meta.env.VITE_API_URL || "http://localhost:5000";
+
+const MessagesPage = () => {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const location = useLocation();
   const { user } = useAuth();
-
-  const [activeTab, setActiveTab] = useState("requests");
-  const [connections, setConnections] = useState([]);
-  const [connectionRequests, setConnectionRequests] = useState([]);
+  const [conversations, setConversations] = useState([]);
+  const [messages, setMessages] = useState({});
+  const [selected, setSelected] = useState(null);
+  const [text, setText] = useState("");
+  const [socket, setSocket] = useState(null);
+  const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(false);
-  const [requestFilter, setRequestFilter] = useState("all");
+  const messagesEndRef = useRef(null);
+  const inputRef = useRef(null);
 
+  const userId = user?.id || user?._id;
+  const userDept = user?.profile?.department || user?.department || "";
   const isCoordinator = user?.role === "coordinator";
 
   useEffect(() => {
-    // Load connection requests and connections from API
-    const loadData = async () => {
-      try {
-        // Load connection requests
-        const requestsResponse = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/user/requests`, {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          }
-        })
-        const requestsData = await requestsResponse.json()
-        
-        setConnectionRequests(requestsData.data || [])
-        
-        // Load connections
-        const connectionsResponse = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/user/connections`, {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          }
-        })
-        const connectionsData = await connectionsResponse.json()
-        
-        setConnections(connectionsData.data || [])
-      } catch (error) {
-        console.error('Failed to load data:', error)
-        // Start with empty state on error
-        setConnections([]);
-        setConnectionRequests([]);
-      }
-    }
+    const token = localStorage.getItem("token");
+    if (!token) return;
 
-    loadData();
-  }, [user?.id]); // Only depend on user ID to prevent duplicate calls
+    const s = io(API(), { auth: { token }, transports: ["websocket", "polling"] });
+    setSocket(s);
 
-  const handleAcceptRequest = async (requestId) => {
+    s.on("receiveMessage", (data) => {
+      const isMe = data.senderId === userId;
+      setMessages((prev) => {
+        const list = prev[data.conversationId] || [];
+        if (list.some((m) => m._id === data._id || (m.text === data.text && m.timestamp === data.timestamp))) return prev;
+        return { ...prev, [data.conversationId]: [...list, { ...data, type: isMe ? "sent" : "received" }] };
+      });
+      setConversations((prev) => {
+        const updated = prev.map((c) =>
+          c.conversationId === data.conversationId
+            ? { ...c, lastMessage: data.text, time: formatTime(data.timestamp), unread: !isMe ? (c.unread || 0) + 1 : c.unread }
+            : c
+        );
+        localStorage.setItem("conversations", JSON.stringify(updated));
+        return updated;
+      });
+      if (!isMe) toast(`New message from ${data.senderName}`);
+    });
+
+    s.on("connect", () => s.emit("getConversations", { userId }));
+    s.on("conversationsList", (list) => {
+      setConversations(list);
+      localStorage.setItem("conversations", JSON.stringify(list));
+    });
+
+    loadConversations();
+
+    return () => s.close();
+  }, [userId]);
+
+  const loadConversations = async () => {
     try {
-      const response = await fetch(
-        `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/user/accept-request/${requestId}`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
-          },
-        }
-      );
-      const data = await response.json();
-
+      const res = await fetch(`${API()}/api/conversations/conversations`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+      });
+      const data = await res.json();
       if (data.success) {
-        toast.success("Connection accepted");
-
-        const acceptedUser = connectionRequests.find(
-          (r) => (r.id === requestId || r._id === requestId)
-        );
-
-        setConnectionRequests((prev) =>
-          prev.filter((req) => req.id !== requestId && req._id !== requestId)
-        );
-
-        const connectionUser = {
-          id: acceptedUser?.fromUserId || requestId,
-          _id: acceptedUser?._id || requestId,
-          name: acceptedUser?.fromUserName || 'User',
-          role: acceptedUser?.fromRole || 'User',
-          department: acceptedUser?.fromDepartment || 'Computer Science',
-          currentYear: acceptedUser?.fromCurrentYear,
-          passoutYear: acceptedUser?.fromPassoutYear,
-          avatar: acceptedUser?.fromUserAvatar || 'https://i.pravatar.cc/150?img=1',
-          acceptedAt: new Date().toISOString()
-        };
-
-        setConnections((prev) => [...prev, connectionUser]);
-      } else {
-        toast.error(data.message || "Failed to accept request");
+        setConversations(data.data);
+        localStorage.setItem("conversations", JSON.stringify(data.data));
       }
     } catch {
-      toast.error("Error accepting request");
+      const stored = localStorage.getItem("conversations");
+      if (stored) setConversations(JSON.parse(stored));
     }
   };
 
-const handleRejectRequest = async (requestId) => {
-  try {
-    const response = await fetch(
-      `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/user/reject-request/${requestId}`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-        },
+  const loadMessages = async (convId) => {
+    try {
+      const res = await fetch(`${API()}/api/conversations/conversations/${convId}/messages`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+      });
+      const data = await res.json();
+      if (data.success) {
+        const mapped = (data.data || []).map((m) => ({
+          ...m,
+          type: (m.senderId === userId || m.senderId === user?.id) ? "sent" : "received",
+        }));
+        setMessages((prev) => ({ ...prev, [convId]: mapped }));
       }
-    );
-    const data = await response.json();
-
-    if (data.success) {
-      toast.success("Connection request rejected");
-      setConnectionRequests((prev) =>
-        prev.filter((req) => req.id !== requestId && req._id !== requestId)
-      );
-    } else {
-      toast.error(data.message || "Failed to reject request");
-    }
-  } catch {
-    toast.error("Error rejecting request");
-  }
-};
-
-  // Filter connection requests based on selected filter
-  const getFilteredRequests = () => {
-    if (requestFilter === "all") return connectionRequests;
-    if (requestFilter === "sent") return connectionRequests.filter(req => req.fromUserId === user?.id);
-    if (requestFilter === "received") return connectionRequests.filter(req => req.toUserId === user?.id);
-    return connectionRequests;
+    } catch {}
   };
 
-  const filteredRequests = getFilteredRequests();
-  const sentCount = connectionRequests.filter(req => req.fromUserId === user?.id).length;
-  const receivedCount = connectionRequests.filter(req => req.toUserId === user?.id).length;
+  const selectConversation = async (conv) => {
+    setSelected(conv);
+    if (socket) {
+      socket.emit("joinConversation", conv.conversationId);
+    }
+    if (messages[conv.conversationId]?.length) return;
+    await loadMessages(conv.conversationId);
+    // Reset unread count locally and in backend
+    if (socket && conv.unread > 0) {
+      socket.emit("markMessagesAsRead", { conversationId: conv.conversationId });
+    }
+    setConversations((prev) => {
+      const updated = prev.map((c) =>
+        c.conversationId === conv.conversationId ? { ...c, unread: 0 } : c
+      );
+      localStorage.setItem("conversations", JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  const getRecipientId = (conv) => {
+    if (conv.id) return conv.id;
+    const parts = conv.participants;
+    if (Array.isArray(parts)) return parts.find((p) => p.userId !== userId)?.userId;
+    if (parts && typeof parts === "object") {
+      const keys = Object.keys(parts);
+      return keys.find((k) => k !== userId) || keys[0];
+    }
+    return "";
+  };
+
+  const sendMessage = () => {
+    if (!text.trim() || !selected || !socket) return;
+    const data = {
+      conversationId: selected.conversationId,
+      senderId: userId,
+      senderName: user?.name || ([user?.firstName, user?.lastName].filter(Boolean).join(" ") || user?.email?.split('@')[0] || "User"),
+      senderRole: user?.role || "User",
+      recipientId: getRecipientId(selected),
+      recipientName: selected.name,
+      text: text.trim(),
+      timestamp: new Date().toISOString(),
+    };
+    socket.emit("sendMessage", data);
+    setConversations((prev) => {
+      const updated = prev.map((c) =>
+        c.conversationId === selected.conversationId ? { ...c, lastMessage: text.trim(), time: "Just now" } : c
+      );
+      localStorage.setItem("conversations", JSON.stringify(updated));
+      return updated;
+    });
+    setText("");
+    setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
+  };
+
+  const startConversation = async (conv) => {
+    setSelected(conv);
+    if (socket) socket.emit("joinConversation", conv.conversationId);
+    setMessages((prev) => ({ ...prev, [conv.conversationId]: [] }));
+  };
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, selected]);
+
+  const formatTime = (ts) => {
+    if (!ts) return "";
+    const d = new Date(ts);
+    const now = new Date();
+    const diff = now - d;
+    if (diff < 60000) return "Just now";
+    if (diff < 3600000) return Math.floor(diff / 60000) + "m ago";
+    if (diff < 86400000) return Math.floor(diff / 3600000) + "h ago";
+    if (diff < 604800000) {
+      const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+      return days[d.getDay()] + " " + d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
+    }
+    return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  };
+
+  const conversationsList = Array.isArray(conversations) ? conversations : [];
+  const filtered = conversationsList.filter((c) => {
+    const otherDept = c.department || c.participants?.find((p) => p.userId !== userId)?.department || "";
+    const matchDept = !otherDept || !userDept || otherDept.toLowerCase() === userDept.toLowerCase();
+    return matchDept && (c.name || "").toLowerCase().includes(search.toLowerCase());
+  });
 
   return (
-  <div className="min-h-screen bg-slate-50 py-8">
-    <div className="max-w-7xl mx-auto px-4">
-      {/* Header with Back Button */}
-      <div className="flex items-center gap-4 mb-8">
-        <button
-          onClick={() => navigate(-1)}
-          className="flex items-center gap-2 px-4 py-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors"
-        >
-          <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M19 12H5M12 19l-7-7 7-7" />
-          </svg>
-          Back
-        </button>
-        <h1 className="text-3xl font-bold">Connections</h1>
-      </div>
-
-      <div className="bg-white rounded-xl shadow border">
-        {/* TABS */}
-        <div className="flex border-b">
+    <div className="min-h-screen bg-slate-50 py-8">
+      <div className="max-w-7xl mx-auto px-4">
+        <div className="flex items-center gap-4 mb-8">
           <button
-            onClick={() => setActiveTab("requests")}
-            className={`flex-1 py-3 relative ${
-              activeTab === "requests"
-                ? "border-b-2 border-blue-600 text-blue-600"
-                : "text-gray-500"
-            }`}
+            onClick={() => navigate(-1)}
+            className="flex items-center gap-2 px-4 py-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors"
           >
-            Requests
-            {connectionRequests.length > 0 && (
-              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                {connectionRequests.length}
-              </span>
-            )}
+            <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M19 12H5M12 19l-7-7 7-7" />
+            </svg>
+            Back
           </button>
+          <h1 className="text-3xl font-bold">Messages</h1>
         </div>
 
-        {/* CONNECTION REQUESTS */}
-        {activeTab === "requests" && (
-          <div className="p-6">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-semibold text-gray-900">Connection Requests & Connections</h3>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setRequestFilter("all")}
-                  className={`px-3 py-1 text-sm rounded-full ${
-                    requestFilter === "all"
-                      ? "bg-blue-600 text-white"
-                      : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                  }`}
-                >
-                  All ({connectionRequests.length + connections.length})
-                </button>
-                <button
-                  onClick={() => setRequestFilter("received")}
-                  className={`px-3 py-1 text-sm rounded-full ${
-                    requestFilter === "received"
-                      ? "bg-blue-600 text-white"
-                      : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                  }`}
-                >
-                  Received ({receivedCount})
-                </button>
-                <button
-                  onClick={() => setRequestFilter("sent")}
-                  className={`px-3 py-1 text-sm rounded-full ${
-                    requestFilter === "sent"
-                      ? "bg-blue-600 text-white"
-                      : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                  }`}
-                >
-                  Sent ({sentCount})
-                </button>
-                <button
-                  onClick={() => setRequestFilter("connected")}
-                  className={`px-3 py-1 text-sm rounded-full ${
-                    requestFilter === "connected"
-                      ? "bg-green-600 text-white"
-                      : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                  }`}
-                >
-                  Connected ({connections.length})
-                </button>
+        <div className="bg-white rounded-xl shadow border h-[600px] flex overflow-hidden">
+          {/* LEFT - Conversation List */}
+          <div className="w-80 border-r border-gray-200 flex flex-col">
+
+            <div className="p-3 border-b">
+              <div className="flex items-center bg-gray-100 px-3 py-2 rounded-full">
+                <Search size={16} className="text-gray-400" />
+                <input
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Search conversations..."
+                  className="ml-2 bg-transparent outline-none w-full text-sm"
+                />
               </div>
             </div>
-
-            {/* Show Pending Requests Section */}
-            {getFilteredRequests().length > 0 && (
-              <div className="mb-8">
-                <h4 className="text-md font-semibold text-gray-700 mb-4 flex items-center gap-2">
-                  <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
-                  Pending Requests ({getFilteredRequests().length})
-                </h4>
-                <div className="space-y-4">
-                  {getFilteredRequests().map((request) => {
-                    const isReceived = request.toUserId === user?.id;
-                    const isSent = request.fromUserId === user?.id;
-                    const requestKey = request._id || request.id; // Use MongoDB _id as key
-                    
+            <div className="flex-1 overflow-y-auto">
+              {filtered.length > 0 && (
+                <div className="p-3 space-y-2">
+                  {filtered.map((conv) => {
+                    const isActive = selected?.conversationId === conv.conversationId;
+                    const other = conv.participants?.find((p) => p.userId !== userId);
+                    const name = other?.userName || conv.name || "User";
+                    const avatar = other?.userAvatar || conv.avatar || "";
+                    const role = other?.userRole || conv.role || "";
+                    const dept = other?.userDepartment || conv.department || "";
                     return (
-                      <div key={requestKey} className="bg-white border border-yellow-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-                        <div className="flex items-start gap-4">
-                          {/* Avatar */}
-                          <div className="w-12 h-12 rounded-full bg-gradient-to-r from-yellow-500 to-orange-500 flex items-center justify-center text-white font-semibold shadow-sm">
-                            {(isReceived ? request.fromUserName : request.toUserName)?.charAt(0)?.toUpperCase() || 'U'}
+                      <div
+                        key={conv.conversationId || conv._id}
+                        onClick={() => selectConversation(conv)}
+                        className={`flex items-start gap-3 p-3 rounded-xl cursor-pointer transition-all ${
+                          isActive ? "bg-blue-50 border border-blue-200" : "hover:bg-gray-50 border border-transparent"
+                        }`}
+                      >
+                        {avatar ? (
+                          <img src={avatar} alt={name} className="w-11 h-11 rounded-full object-cover" />
+                        ) : (
+                          <div className="w-11 h-11 rounded-full bg-blue-600 flex items-center justify-center text-white font-semibold text-sm">
+                            {name.charAt(0)?.toUpperCase() || "U"}
                           </div>
-                          
-                          {/* Content */}
-                          <div className="flex-1">
-                            <div className="flex items-start justify-between">
-                              <div>
-                                <h4 className="font-semibold text-gray-900">
-                                  {isReceived ? request.fromUserName : request.toUserName}
-                                </h4>
-                                <p className="text-sm text-gray-600 mb-1">
-                                  {isReceived ? request.fromRole : request.toRole}
-                                </p>
-                                <p className="text-sm text-gray-500 mb-2">
-                                  {isReceived ? request.fromDepartment : request.toDepartment}
-                                </p>
-                                {/* Show year based on role */}
-                                <p className="text-sm text-gray-500 mb-2">
-                                  {isReceived ? (
-                                    request.fromRole === 'alumni' 
-                                      ? `Passout Year: ${request.fromPassoutYear || 'N/A'}`
-                                      : request.fromRole === 'student'
-                                      ? `Current Year: ${request.fromCurrentYear || 'N/A'}`
-                                      : ''
-                                  ) : (
-                                    request.toRole === 'alumni'
-                                      ? `Passout Year: ${request.toPassoutYear || 'N/A'}`
-                                      : request.toRole === 'student'
-                                      ? `Current Year: ${request.toCurrentYear || 'N/A'}`
-                                      : ''
-                                  )}
-                                </p>
-                                <p className="text-xs text-gray-400">
-                                  {request.createdAt ? new Date(request.createdAt).toLocaleDateString() : 'Recently'}
-                                </p>
-                              </div>
-                              
-                              {/* Action Buttons */}
-                              {isReceived && (
-                                <div className="flex gap-2">
-                                  <button
-                                    onClick={() => handleAcceptRequest(requestKey)}
-                                    className="flex items-center gap-1 px-3 py-1.5 bg-green-600 text-white text-sm rounded-full hover:bg-green-700 transition-colors"
-                                  >
-                                    <Check size={16} />
-                                    Accept
-                                  </button>
-                                  <button
-                                    onClick={() => handleRejectRequest(requestKey)}
-                                    className="flex items-center gap-1 px-3 py-1.5 bg-red-600 text-white text-sm rounded-full hover:bg-red-700 transition-colors"
-                                  >
-                                    <X size={16} />
-                                    Reject
-                                  </button>
-                                </div>
-                              )}
-                              
-                              {isSent && (
-                                <div className="flex items-center gap-1 px-3 py-1.5 bg-yellow-100 text-yellow-800 text-sm rounded-full">
-                                  <div className="w-2 h-2 bg-yellow-600 rounded-full mr-1"></div>
-                                  Pending
-                                </div>
-                              )}
-                            </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between">
+                            <p className="font-semibold text-gray-900 text-sm truncate">{name}</p>
+                            <span className="text-xs text-gray-400 ml-2 whitespace-nowrap">{conv.time || formatTime(conv.updatedAt) || ""}</span>
+                          </div>
+                          <p className="text-sm text-gray-500 truncate mt-0.5">{conv.lastMessage || "No messages yet"}</p>
+                          <div className="flex items-center gap-2 mt-1">
+                            {role && <span className="text-xs px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full">{role}</span>}
+                            {dept && <span className="text-xs text-gray-400">{dept}</span>}
                           </div>
                         </div>
+                        {conv.unread > 0 && (
+                          <span className="bg-blue-600 text-white text-xs rounded-full min-w-[20px] h-5 flex items-center justify-center px-1.5">
+                            {conv.unread}
+                          </span>
+                        )}
                       </div>
                     );
                   })}
                 </div>
-              </div>
-            )}
+              )}
+            </div>
+          </div>
 
-            {/* Show Accepted Connections Section */}
-            {(requestFilter === "all" || requestFilter === "connected") && connections.length > 0 && (
-              <div>
-                <h4 className="text-md font-semibold text-gray-700 mb-4 flex items-center gap-2">
-                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                  Connected ({connections.length})
-                </h4>
-                <div className="space-y-4">
-                  {connections.map((connection) => {
-                    const connectionKey = connection._id || connection.id; // Use MongoDB _id as key
-                    
+          {/* RIGHT - Chat Area */}
+          <div className="flex-1 flex flex-col">
+            {selected ? (
+              <>
+                <div className="p-4 border-b flex items-center gap-3">
+                  {(() => {
+                    const other = selected.participants?.find((p) => p.userId !== userId);
+                    const headerName = other?.userName || selected.name || "User";
+                    const headerAvatar = other?.userAvatar || selected.avatar || "";
+                    const headerRole = other?.userRole || selected.role || "";
                     return (
-                      <div key={connectionKey} className="bg-white border border-green-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-                        <div className="flex items-start gap-4">
-                          {/* Avatar */}
-                          <div className="w-12 h-12 rounded-full bg-gradient-to-r from-green-500 to-blue-500 flex items-center justify-center text-white font-semibold shadow-sm">
-                            {connection.name?.charAt(0)?.toUpperCase() || 'U'}
+                      <>
+                        {headerAvatar ? (
+                          <img src={headerAvatar} alt={headerName} className="w-10 h-10 rounded-full object-cover" />
+                        ) : (
+                          <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-semibold text-sm">
+                            {headerName?.charAt(0)?.toUpperCase() || "U"}
                           </div>
-                          
-                          {/* Content */}
-                          <div className="flex-1">
-                            <div className="flex items-start justify-between">
-                              <div>
-                                <h4 className="font-semibold text-gray-900">
-                                  {connection.name}
-                                </h4>
-                                <p className="text-sm text-gray-600 mb-1">
-                                  {connection.role}
-                                </p>
-                                <p className="text-sm text-gray-500 mb-2">
-                                  {connection.department}
-                                </p>
-                                {/* Show year based on role */}
-                                <p className="text-sm text-gray-500 mb-2">
-                                  {connection.role === 'alumni' 
-                                    ? `Passout Year: ${connection.passoutYear || 'N/A'}`
-                                    : connection.role === 'student'
-                                    ? `Current Year: ${connection.currentYear || 'N/A'}`
-                                    : ''
-                                  }
-                                </p>
-                                <p className="text-xs text-gray-400">
-                                  Connected {connection.acceptedAt ? new Date(connection.acceptedAt).toLocaleDateString() : 'Recently'}
-                                </p>
-                              </div>
-                              
-                              {/* Action Buttons */}
-                              <div className="flex gap-2">
-                                <button
-                                  onClick={() => navigate(`/dashboard/connections?tab=messages&userId=${connectionKey}`, {
-                                    state: {
-                                      userName: connection.name,
-                                      userRole: connection.role,
-                                      userAvatar: connection.avatar,
-                                      userDepartment: connection.department
-                                    }
-                                  })}
-                                  className="flex items-center gap-1 px-3 py-1.5 bg-blue-600 text-white text-sm rounded-full hover:bg-blue-700 transition-colors"
-                                >
-                                  <MessageCircle size={16} />
-                                  Message
-                                </button>
+                        )}
+                        <div className="flex-1">
+                          <p className="font-semibold text-gray-900">{headerName}</p>
+                          <p className="text-xs text-gray-500">{headerRole}</p>
+                        </div>
+                      </>
+                    );
+                  })()}
+                  <button onClick={() => setSelected(null)} className="text-gray-400 hover:text-gray-600 p-1">
+                    <X size={20} />
+                  </button>
+                </div>
+
+                <div className="flex-1 p-4 overflow-y-auto bg-gray-50">
+                  <div className="space-y-3">
+                    {(messages[selected.conversationId] || []).length === 0 ? (
+                      <div className="text-center text-gray-400 text-sm py-12">
+                        <MessageCircle size={40} className="mx-auto mb-2 text-gray-300" />
+                        <p>Start chatting with {selected.name}</p>
+                      </div>
+                    ) : (
+                      (messages[selected.conversationId] || []).map((msg, i) => {
+                        const isSent = msg.senderId === userId || msg.senderId === user?.id;
+                        return (
+                          <div key={msg._id || i} className={`flex ${isSent ? "justify-end" : "justify-start"}`}>
+                            <div className={`max-w-[70%] rounded-2xl px-4 py-2.5 ${isSent ? "bg-blue-600 text-white" : "bg-white border"}`}>
+                              {!isSent && msg.senderName && (
+                                <p className="text-xs font-semibold text-blue-600 mb-1">{msg.senderName}</p>
+                              )}
+                              <p className="text-sm">{msg.text}</p>
+                              <div className={`flex items-center gap-1 mt-1 ${isSent ? "justify-end" : "justify-start"}`}>
+                                <span className="text-[10px] opacity-70">{formatTime(msg.timestamp)}</span>
+                                {isSent && (
+                                  <span>{msg.isRead ? <CheckCheck size={12} /> : <Check size={12} />}</span>
+                                )}
                               </div>
                             </div>
                           </div>
-                        </div>
-                      </div>
-                    );
-                  })}
+                        );
+                      })
+                    )}
+                    <div ref={messagesEndRef} />
+                  </div>
                 </div>
-              </div>
-            )}
 
-            {/* Empty State */}
-            {getFilteredRequests().length === 0 && (requestFilter === "all" || requestFilter === "connected") && connections.length === 0 && (
-              <div className="text-center py-12">
-                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <MessageCircle size={32} className="text-gray-400" />
+                <div className="p-4 border-t">
+                  <div className="flex gap-2">
+                    <input
+                      ref={inputRef}
+                      value={text}
+                      onChange={(e) => setText(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && sendMessage()}
+                      placeholder="Type a message..."
+                      className="flex-1 px-4 py-2.5 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                    />
+                    <button
+                      onClick={sendMessage}
+                      disabled={!text.trim()}
+                      className="bg-blue-600 text-white p-2.5 rounded-full hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <Send size={18} />
+                    </button>
+                  </div>
                 </div>
-                <p className="text-gray-500 text-lg mb-2">No requests or connections</p>
-                <p className="text-gray-400 text-sm">
-                  {requestFilter === "sent" 
-                    ? "You haven't sent any connection requests yet."
-                    : requestFilter === "received"
-                    ? "No pending requests to respond to."
-                    : requestFilter === "connected"
-                    ? "No connections yet. Start connecting with people!"
-                    : "No connection requests or connections at the moment."
-                  }
-                </p>
+              </>
+            ) : (
+              <div className="flex-1 flex items-center justify-center text-gray-400 bg-gray-50">
+                <div className="text-center">
+                  <MessageCircle size={64} className="mx-auto mb-4 text-gray-300" />
+                  <p className="text-lg">Select a conversation</p>
+                  <p className="text-sm mt-1">Choose from the left to start messaging</p>
+                </div>
               </div>
             )}
           </div>
-        )}
+        </div>
       </div>
     </div>
-  </div>
-);
+  );
 };
 
-export default Connections;
+export default MessagesPage;

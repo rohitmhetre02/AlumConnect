@@ -161,6 +161,21 @@ const UserManagement = () => {
     setDeleteModalMember(member)
   }
 
+  const handleMessage = (member) => {
+    const path = isCoordinator ? '/coordinator/messages' : '/admin/messages'
+    navigate(path, {
+      state: {
+        startChatWith: {
+          userId: member.id,
+          userName: member.name,
+          userAvatar: member.avatar || '',
+          userRole: 'student',
+          userDepartment: member.department || ''
+        }
+      }
+    })
+  }
+
   const confirmStatusChange = async (member, newStatus) => {
     try {
       // For coordinators, if no newStatus is provided, it means suspend action
@@ -407,6 +422,7 @@ const UserManagement = () => {
                           onProfileView={handleStudentClick}
                           onStatusChange={handleStatusChange}
                           onDelete={handleDelete}
+                          onMessage={handleMessage}
                           userRole={adminUser.role || 'admin'}
                         />
                       </div>

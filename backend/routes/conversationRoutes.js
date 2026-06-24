@@ -5,37 +5,41 @@ const Message = require('../models/Message');
 const authMiddleware = require('../middleware/authMiddleware');
 
 // Get all conversations for a user
-router.get('/conversations', async (req, res) => {
+router.get('/conversations', authMiddleware, async (req, res) => {
   try {
-    // Simple token verification for now
-    const token = req.headers.authorization?.replace('Bearer ', '');
-    if (!token) {
-      return res.status(401).json({
-        success: false,
-        message: 'No token provided'
-      });
-    }
-
-    const jwt = require('jsonwebtoken');
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret');
-    const userId = decoded.id;
+    const userId = req.user.id;
     
     console.log('📋 [Backend] Getting conversations for user:', userId);
     
-    // For now, return empty conversations array until models are properly set up
-    // TODO: Implement proper database queries once models are working
-    const conversations = [];
+    const conversations = await Conversation.find({
+      'participants.userId': userId,
+      isActive: true
+    }).sort({ updatedAt: -1 }).lean();
     
-    console.log('💬 [Backend] Found conversations:', conversations.length);
-    
-    res.json({
-      success: true,
-      data: conversations
+    const data = conversations.map((c) => {
+      const other = c.participants?.find((p) => p.userId !== userId);
+      const lm = c.lastMessage || {};
+      return {
+        id: other?.userId || '',
+        conversationId: c._id.toString(),
+        name: other?.userName || 'User',
+        avatar: other?.userAvatar || '',
+        role: other?.userRole || '',
+        department: other?.userDepartment || '',
+        lastMessage: lm.text || '',
+        time: lm.timestamp ? formatTime(lm.timestamp) : '',
+        unread: (c.unreadCounts && c.unreadCounts[userId]) || 0,
+        participants: c.participants || [],
+        updatedAt: c.updatedAt,
+      };
     });
+    
+    console.log('💬 [Backend] Found conversations:', data.length);
+    
+    res.json({ success: true, data });
     
   } catch (error) {
     console.error('❌ [Backend] Error getting conversations:', error);
-    console.error('❌ Stack trace:', error.stack);
     res.status(500).json({
       success: false,
       message: 'Failed to get conversations: ' + error.message
@@ -104,108 +108,98 @@ router.get('/conversations/:conversationId/messages', authMiddleware, async (req
 // Create or get conversation
 router.post('/conversations', async (req, res) => {
   try {
-    console.log('📝 [Backend] POST /conversations request received');
-    
     const { userId, userName, userAvatar, userRole, userDepartment } = req.body;
     
-    // Simple token verification for now
     const token = req.headers.authorization?.replace('Bearer ', '');
-    console.log('📝 [Backend] Token:', token ? 'Present' : 'Missing');
-    
-    if (!token) {
-      console.log('❌ [Backend] No token provided');
-      return res.status(401).json({
-        success: false,
-        message: 'No token provided'
-      });
-    }
+    if (!token) return res.status(401).json({ success: false, message: 'No token provided' });
 
     const jwt = require('jsonwebtoken');
-    let decoded;
-    try {
-      decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret');
-      console.log('✅ [Backend] Token verified, user ID:', decoded.id);
-      console.log('📋 [Backend] JWT decoded data:', decoded);
-    } catch (jwtError) {
-      console.log('❌ [Backend] JWT verification failed:', jwtError.message);
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid token: ' + jwtError.message
-      });
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'alumconnect-development-secret');
+    const currentUserId = decoded.id;
+
+    // Look up the current user's real name from DB
+    const Admin = require('../models/Admin');
+    const Coordinator = require('../models/Coordinator');
+    let currentUserData = await Admin.findById(currentUserId).lean();
+    if (!currentUserData) currentUserData = await Coordinator.findById(currentUserId).lean();
+    const currentUserName = currentUserData
+      ? currentUserData.name || [currentUserData.firstName, currentUserData.lastName].filter(Boolean).join(' ').trim() || decoded.name || decoded.firstName || 'Admin'
+      : decoded.name || decoded.firstName || 'Admin';
+    
+    // Check if conversation already exists between these two users
+    let existing = await Conversation.findOne({
+      'participants.userId': { $all: [currentUserId, userId] },
+      isActive: true
+    });
+    
+    if (existing) {
+      const other = existing.participants.find((p) => p.userId !== currentUserId);
+      const lm = existing.lastMessage || {};
+      const data = {
+        id: other?.userId || userId,
+        conversationId: existing._id.toString(),
+        name: other?.userName || userName || 'User',
+        avatar: other?.userAvatar || userAvatar || '',
+        role: other?.userRole || userRole || '',
+        department: other?.userDepartment || userDepartment || '',
+        lastMessage: lm.text || '',
+        time: lm.timestamp ? formatTime(lm.timestamp) : '',
+        unread: existing.unreadCounts?.get?.(currentUserId) || 0,
+        participants: existing.participants || [],
+        updatedAt: existing.updatedAt,
+      };
+      return res.json({ success: true, data });
     }
     
-    const currentUserId = decoded.id;
+    // Create new conversation
+    const conversation = await Conversation.create({
+      participants: [
+        {
+          userId: currentUserId,
+          userName: currentUserName,
+          userAvatar: decoded.avatar || currentUserData?.avatar || '',
+          userRole: decoded.role || currentUserData?.role || 'Admin',
+          userDepartment: decoded.department || currentUserData?.department || ''
+        },
+        {
+          userId,
+          userName: userName || `User ${userId}`,
+          userAvatar: userAvatar || '',
+          userRole: userRole || 'User',
+          userDepartment: userDepartment || ''
+        }
+      ],
+      lastMessage: { text: 'Start a conversation', timestamp: new Date() },
+      unreadCounts: new Map([[currentUserId, 0], [userId, 0]])
+    });
     
-    // Extract current user info from JWT
-    const currentUserInfo = {
-      name: decoded.name || 
-            (decoded.firstName && decoded.lastName ? 
-              `${decoded.firstName} ${decoded.lastName}` : 
-              decoded.firstName || 'You'),
-      role: decoded.role || 'User',
-      department: decoded.department || ''
-    };
-    
-    console.log('👤 [Backend] Current user info extracted:', currentUserInfo);
-    
-    console.log('💬 [Backend] Creating conversation between:', currentUserId, 'and', userId);
-    
-    // Create conversation object
-    const conversationId = `conv_${currentUserId}_${userId}_${Date.now()}`;
-    const conversation = {
-      id: userId,
-      name: userName || `User ${userId}`,
-      avatar: userAvatar || `https://i.pravatar.cc/150?img=${userId.slice(-2)}`,
-      role: userRole || 'User',
-      department: userDepartment || '',
+    const convId = conversation._id.toString();
+    const other = conversation.participants.find((p) => p.userId !== currentUserId);
+    const data = {
+      id: other?.userId || userId,
+      conversationId: convId,
+      name: other?.userName || userName || 'User',
+      avatar: other?.userAvatar || userAvatar || '',
+      role: other?.userRole || userRole || '',
+      department: other?.userDepartment || userDepartment || '',
       lastMessage: 'Start a conversation',
       time: 'Just now',
       unread: 0,
-      isOnline: false,
-      conversationId: conversationId,
-      createdBy: currentUserId,
-      createdAt: new Date().toISOString(),
-      // Store participant info for message display
-      participants: {
-        [currentUserId]: {
-          name: currentUserInfo.name,
-          role: currentUserInfo.role,
-          department: currentUserInfo.department
-        },
-        [userId]: {
-          name: userName || `User ${userId}`,
-          role: userRole || 'User',
-          department: userDepartment || ''
-        }
-      }
+      participants: conversation.participants,
+      updatedAt: conversation.updatedAt,
     };
     
-    // Store conversation in memory using the socket helper
+    // Store in memory for socket
     try {
-      // Get the conversation storage directly
       const { getConversationStorage } = require('../socket');
-      const conversationStorage = getConversationStorage();
-      if (conversationStorage) {
-        conversationStorage.set(conversationId, conversation);
-        console.log('✅ [Backend] Conversation stored in memory');
-      } else {
-        console.log('⚠️ [Backend] Conversation storage not available');
-      }
-    } catch (storeError) {
-      console.log('⚠️ [Backend] Error storing conversation in memory:', storeError.message);
-    }
+      const cs = getConversationStorage();
+      if (cs) cs.set(convId, data);
+    } catch {}
     
-    console.log('✅ [Backend] Created conversation:', conversationId);
-    console.log('📝 [Backend] Sending response:', conversation);
-    
-    res.json({
-      success: true,
-      data: conversation
-    });
+    res.json({ success: true, data });
     
   } catch (error) {
     console.error('❌ [Backend] Error creating conversation:', error);
-    console.error('❌ [Backend] Stack trace:', error.stack);
     res.status(500).json({
       success: false,
       message: 'Failed to create conversation: ' + error.message

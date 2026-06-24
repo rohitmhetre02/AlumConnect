@@ -62,21 +62,48 @@ const initSocket = (httpServer) => {
   ioInstance.on('connection', (socket) => {
     console.log('🔌 User connected:', socket.user.id);
 
-    socket.on('joinConversation', (conversationId) => {
+    socket.on('joinConversation', async (conversationId) => {
       if (conversationId) {
         socket.join(conversationId);
         console.log(`👥 User ${socket.user.id} joined conversation ${conversationId}`);
         
-        // Send existing messages for this conversation from memory
-        const messages = messageStorage.get(conversationId) || [];
-        messages.forEach(msg => {
-          socket.emit('receiveMessage', {
-            ...msg,
-            type: msg.senderId === socket.user.id ? 'sent' : 'received'
+        // Load messages from database
+        try {
+          const dbMessages = await Message.find({ conversationId })
+            .sort({ timestamp: 1 })
+            .lean();
+          
+          if (dbMessages.length > 0) {
+            dbMessages.forEach(msg => {
+              socket.emit('receiveMessage', {
+                ...msg,
+                type: msg.senderId === socket.user.id ? 'sent' : 'received'
+              });
+            });
+            console.log(`📨 Sent ${dbMessages.length} messages from DB to user ${socket.user.id}`);
+          } else {
+            // Fall back to memory storage
+            const memMessages = messageStorage.get(conversationId) || [];
+            memMessages.forEach(msg => {
+              socket.emit('receiveMessage', {
+                ...msg,
+                type: msg.senderId === socket.user.id ? 'sent' : 'received'
+              });
+            });
+            if (memMessages.length > 0) {
+              console.log(`📨 Sent ${memMessages.length} messages from memory to user ${socket.user.id}`);
+            }
+          }
+        } catch (err) {
+          console.error('❌ Error loading messages from DB:', err);
+          const memMessages = messageStorage.get(conversationId) || [];
+          memMessages.forEach(msg => {
+            socket.emit('receiveMessage', {
+              ...msg,
+              type: msg.senderId === socket.user.id ? 'sent' : 'received'
+            });
           });
-        });
-        
-        console.log(`📨 Sent ${messages.length} messages to user ${socket.user.id}`);
+        }
       }
     });
 
@@ -104,16 +131,18 @@ const initSocket = (httpServer) => {
         
         // Get conversation data to use participant info if available
         const conversation = conversationStorage.get(data.conversationId);
-        const participantInfo = conversation?.participants?.[socket.user.id];
+        const participantInfo = conversation?.participants?.find?.(p => p.userId === socket.user.id);
         
-        // Use the best available name source
-        const senderName = participantInfo?.name || 
-                          socket.user.fullName || 
+        // Use the JWT-authenticated user's identity, not client-provided data
+        const senderName = socket.user.fullName || 
                           socket.user.name || 
+                          participantInfo?.userName || 
+                          data.senderName || 
                           'User';
         
-        const senderRole = participantInfo?.role || 
-                          socket.user.role || 
+        const senderRole = socket.user.role || 
+                          participantInfo?.userRole || 
+                          data.senderRole || 
                           'User';
 
         // Create message object for database
@@ -134,6 +163,20 @@ const initSocket = (httpServer) => {
         const savedMessage = await Message.create(messageData);
         console.log('✅ [Socket] Message saved to database with ID:', savedMessage._id);
 
+        // Update conversation's lastMessage and unread count
+        try {
+          const Conversation = require('./models/Conversation');
+          await Conversation.findOneAndUpdate(
+            { _id: data.conversationId },
+            {
+              $set: { lastMessage: { text: data.text, timestamp: new Date() }, updatedAt: new Date() },
+              $inc: { [`unreadCounts.${data.recipientId}`]: 1 }
+            }
+          );
+        } catch (convErr) {
+          console.error('❌ [Socket] Error updating conversation:', convErr.message);
+        }
+
         // Prepare message for frontend (include _id from database)
         const messageForClient = {
           _id: savedMessage._id,
@@ -152,6 +195,12 @@ const initSocket = (httpServer) => {
         // Emit message to all clients in the conversation room
         ioInstance.to(data.conversationId).emit('receiveMessage', messageForClient);
 
+        // Also emit to recipient's personal room for reliable delivery
+        // (in case they haven't joined the conversation room yet)
+        if (data.recipientId) {
+          ioInstance.to(`user:${data.recipientId}`).emit('receiveMessage', messageForClient);
+        }
+
         // Also store in memory for backup (optional)
         if (!messageStorage.has(data.conversationId)) {
           messageStorage.set(data.conversationId, []);
@@ -166,9 +215,24 @@ const initSocket = (httpServer) => {
     });
 
     // Handle marking messages as read
-    socket.on('markMessagesAsRead', (data) => {
+    socket.on('markMessagesAsRead', async (data) => {
       try {
         console.log('📖 Messages marked as read:', data);
+        
+        // Update MongoDB: mark all incoming messages as read
+        try {
+          await Message.updateMany(
+            { conversationId: data.conversationId, recipientId: socket.user.id, isRead: false },
+            { $set: { isRead: true } }
+          );
+          
+          await require('./models/Conversation').findOneAndUpdate(
+            { _id: data.conversationId },
+            { $set: { [`unreadCounts.${socket.user.id}`]: 0 } }
+          );
+        } catch (dbErr) {
+          console.error('❌ [Socket] Error marking read in DB:', dbErr.message);
+        }
         
         // Update conversation unread count
         const conversation = conversationStorage.get(data.conversationId);

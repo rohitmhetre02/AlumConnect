@@ -68,16 +68,9 @@ const Heart = (props) => (
   </svg>
 )
 
-const Connections = (props) => (
+const MessageCircle = (props) => (
   <svg {...props} width={props.size || 20} height={props.size || 20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="9" cy="9" r="2" />
-    <path d="M21 9v6M2 9v6M14 9v6M14 4h6M4 4h6M4 4h6M4 4h6" />
-    <line x1="12" y1="1" x2="12" y2="3" />
-    <line x1="12" y1="21" x2="12" y2="23" />
-    <line x1="4.22" y1="8.22" x2="5.78" y2="16.22" />
-    <line x1="18.78" y1="8.22" x2="20.22" y2="16.22" />
-    <line x1="8" y1="12" x2="16" y2="12" />
-    <line x1="8" y1="16" x2="16" y2="16" />
+    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
   </svg>
 )
 
@@ -245,7 +238,7 @@ const UserSidebar = ({ isMobile = false, onClose }) => {
     { label: 'Applications', path: '/dashboard/applications', icon: <Clipboard size={18} /> },
     { label: 'Mentorship Requests', path: '/dashboard/mentorship-requests', icon: <MessageSquare size={18} /> },
     { label: 'Registered Events', path: '/dashboard/registered-events', icon: <Calendar size={18} /> },
-    { label: 'Connections', path: '/dashboard/connections', icon: <Connections size={18} /> },
+    { label: 'Messages', path: '/dashboard/messages', icon: <MessageCircle size={18} /> },
     { label: 'My Campaigns', path: '/dashboard/my-campaigns', icon: <Heart size={18} /> },
     // { label: 'Insights', path: '/dashboard/insights', icon: <BarChart size={18} /> }
   ]
@@ -528,6 +521,12 @@ const UserSidebar = ({ isMobile = false, onClose }) => {
                       ]
                   }
                 />
+              </div>
+            )}
+
+            {normalizedRole === 'coordinator' && (
+              <div className="">
+                <NavItem icon={<MessageCircle size={15} />} label="Messages" path="/dashboard/messages" />
               </div>
             )}
 

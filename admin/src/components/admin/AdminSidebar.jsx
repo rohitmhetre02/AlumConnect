@@ -336,6 +336,11 @@ const AdminSidebar = ({ isMobile = false, onClose }) => {
                 ]}
               />
               <NavItem 
+                icon={<MessageSquare size={18} />} 
+                label="Messages" 
+                path={`${basePath}/messages`} 
+              />
+              <NavItem 
                 icon={<Calendar size={18} />} 
                 label="Events" 
                 path={`${basePath}/events`} 

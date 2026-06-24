@@ -10,6 +10,9 @@ const UserTopbar = ({ onToggleSidebar }) => {
   const { user, logout } = useAuth();
 
   const [conversations, setConversations] = useState([]);
+  const [conversationsList, setConversationsList] = useState([]);
+  const [messageDropdownOpen, setMessageDropdownOpen] = useState(false);
+  const msgDropdownRef = useRef(null);
   
   // Notification State
   const [notifications, setNotifications] = useState([]);
@@ -24,6 +27,8 @@ const UserTopbar = ({ onToggleSidebar }) => {
       const unreadInConv = messages.filter(m => !m.isRead && m.senderId !== user?.id).length;
       return total + unreadInConv;
     }, 0);
+
+  const totalUnread = conversationsList.reduce((sum, c) => sum + (c.unread || 0), 0);
 
   // Calculate unread notifications count
   const unreadNotificationsCount = notifications.filter(n => !n.isRead).length;
@@ -294,6 +299,17 @@ const UserTopbar = ({ onToggleSidebar }) => {
       
       // Update conversations with new message using the helper function
       updateConversationsWithNewMessage(message);
+      
+      // Also update conversations list for dropdown
+      setConversationsList(prev => {
+        const updated = prev.map(c =>
+          c.conversationId === message.conversationId
+            ? { ...c, lastMessage: message.text, time: formatTimeAgo(message.timestamp), unread: message.senderId !== user?.id ? (c.unread || 0) + 1 : c.unread }
+            : c
+        );
+        localStorage.setItem("userConversations", JSON.stringify(updated));
+        return updated;
+      });
     });
 
     socket.on('messageRead', (data) => {
@@ -318,6 +334,42 @@ const UserTopbar = ({ onToggleSidebar }) => {
     };
   }, [user]);
 
+  // Fetch conversations list for dropdown
+  const fetchConversationsList = useCallback(async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+      const res = await fetch(`${import.meta.env.REACT_APP_BACKEND_URL || 'http://localhost:5000'}/api/conversations/conversations`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (data.success) {
+        setConversationsList(data.data);
+        localStorage.setItem("userConversations", JSON.stringify(data.data));
+      }
+    } catch {
+      const stored = localStorage.getItem("userConversations");
+      if (stored) setConversationsList(JSON.parse(stored));
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchConversationsList();
+    const interval = setInterval(fetchConversationsList, 30000);
+    return () => clearInterval(interval);
+  }, [fetchConversationsList]);
+
+  // Close message dropdown on outside click
+  useEffect(() => {
+    const handleClick = (e) => {
+      if (msgDropdownRef.current && !msgDropdownRef.current.contains(e.target)) {
+        setMessageDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, []);
+
   // Get redirect URL based on notification type and user role
   const getRedirectUrl = (type, data) => {
     const userRole = user?.role?.toLowerCase();
@@ -335,9 +387,11 @@ const UserTopbar = ({ onToggleSidebar }) => {
         break;
       case 'connection':
         if (userRole === 'student') {
-          return '/dashboard/connections';
+          return '/dashboard/messages';
         }
         break;
+      case 'message':
+        return '/dashboard/messages';
       case 'content_approval':
         if (userRole === 'alumni') {
           return '/dashboard/activity/content';
@@ -479,32 +533,38 @@ const UserTopbar = ({ onToggleSidebar }) => {
 
         {/* Right - Professional Icons */}
         <div className="flex items-center gap-4">
-          {!['alumni', 'student'].includes(user?.role?.toLowerCase()) && (
-            <>
-              <div className="relative" ref={notificationRef}>
-                <IconButton
-                  label="Notifications"
-                  badge={unreadNotificationsCount > 0 ? unreadNotificationsCount.toString() : null}
-                  onClick={() => setIsNotificationPanelOpen(true)}
-                >
-                  <svg className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-                    <path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
-                    <path d="M13.73 21a2 2 0 01-3.46 0" />
-                  </svg>
-                </IconButton>
-              </div>
-              <div className="relative" ref={messageRef}>
-                <IconButton
-                  label="Messages"
-                  badge={unreadCount > 0 ? unreadCount.toString() : null}
-                >
-                  <svg className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-                    <path d="M21 14a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
-                  </svg>
-                </IconButton>
-              </div>
-            </>
-          )}
+          <div className="relative" ref={notificationRef}>
+            <IconButton
+              label="Notifications"
+              badge={unreadNotificationsCount > 0 ? unreadNotificationsCount.toString() : null}
+              onClick={() => setIsNotificationPanelOpen(true)}
+            >
+              <svg className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+                <path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
+                <path d="M13.73 21a2 2 0 01-3.46 0" />
+              </svg>
+            </IconButton>
+          </div>
+          <div className="relative" ref={msgDropdownRef}>
+            <IconButton
+              label="Messages"
+              badge={totalUnread > 0 ? totalUnread.toString() : null}
+              onClick={() => setMessageDropdownOpen(prev => !prev)}
+            >
+              <svg className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+                <path d="M21 14a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
+              </svg>
+            </IconButton>
+            {messageDropdownOpen && (
+              <MessageDropdown
+                conversations={conversationsList.slice(0, 3)}
+                currentUserId={user?.id || user?._id}
+                onViewAll={() => { navigate('/dashboard/messages'); setMessageDropdownOpen(false); }}
+                onSelectConversation={(convId) => { navigate('/dashboard/messages'); setMessageDropdownOpen(false); }}
+                formatTime={formatTimeAgo}
+              />
+            )}
+          </div>
 
           {/* Responsive Profile Dropdown - Only visible on mobile */}
           <div className="relative lg:hidden">
@@ -780,5 +840,66 @@ const NotificationCard = ({ notification, onClick, onMarkAsRead, formatTimeAgo }
     </div>
   );
 };
+
+const MessageDropdown = ({ conversations, currentUserId, onViewAll, onSelectConversation, formatTime }) => (
+  <div className="absolute right-0 mt-3 w-80 rounded-2xl border border-slate-100 bg-white shadow-xl z-50">
+    <div className="p-4">
+      <div className="flex items-center justify-between text-sm font-semibold text-slate-700 mb-3">
+        <span>Messages</span>
+        {conversations.length > 0 && (
+          <span className="text-xs text-slate-400">{conversations.length} recent</span>
+        )}
+      </div>
+      {conversations.length > 0 ? (
+        <div className="space-y-2">
+          {conversations.map((conv) => {
+            const other = conv.participants?.find((p) => p.userId !== currentUserId);
+            const name = other?.userName || conv.name || 'User';
+            const avatar = other?.userAvatar || conv.avatar || '';
+            return (
+              <button
+                key={conv.conversationId || conv._id}
+                onClick={() => onSelectConversation(conv.conversationId)}
+                className="flex w-full items-center gap-3 rounded-xl border border-transparent px-3 py-2.5 text-left transition hover:border-primary/40 hover:bg-slate-50"
+              >
+                {avatar ? (
+                  <img src={avatar} alt={name} className="w-10 h-10 rounded-full object-cover" />
+                ) : (
+                  <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-semibold text-sm flex-shrink-0">
+                    {name?.charAt(0)?.toUpperCase() || 'U'}
+                  </div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between">
+                    <p className="font-semibold text-slate-900 text-sm truncate">{name}</p>
+                    <span className="text-xs text-slate-400 ml-2 whitespace-nowrap">{conv.time || formatTime(conv.updatedAt) || ''}</span>
+                  </div>
+                  <p className="text-xs text-slate-500 truncate mt-0.5">{conv.lastMessage || 'No messages yet'}</p>
+                </div>
+                {conv.unread > 0 && (
+                  <span className="bg-blue-600 text-white text-xs rounded-full min-w-[20px] h-5 flex items-center justify-center px-1.5 flex-shrink-0">
+                    {conv.unread}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      ) : (
+        <p className="text-center text-sm text-slate-400 py-4">No conversations yet</p>
+      )}
+    </div>
+    {conversations.length > 0 && (
+      <div className="border-t border-slate-100 p-3">
+        <button
+          onClick={onViewAll}
+          className="w-full rounded-xl bg-slate-100 py-2 text-xs font-semibold text-primary transition hover:bg-slate-200"
+        >
+          View All Messages
+        </button>
+      </div>
+    )}
+  </div>
+);
 
 export default UserTopbar;

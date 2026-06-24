@@ -75,6 +75,12 @@ const MessagesPanel = ({
     return () => newSocket.close();
   }, [isOpen, user]);
 
+  /* ================= JOIN CONVERSATION ROOM ================= */
+  useEffect(() => {
+    if (!socket || !activeConversationId) return;
+    socket.emit("joinConversation", activeConversationId);
+  }, [socket, activeConversationId]);
+
   /* ================= SYNC ================= */
   useEffect(() => {
     setLocalConversations(conversations);
@@ -131,13 +137,19 @@ const MessagesPanel = ({
   const handleSend = async () => {
     if (!draft.trim() || !activeConversationId) return;
 
+    const msgs = localConversations[activeConversationId] || [];
+    const otherMsg = msgs.find((m) => m.senderId !== user?.id) || msgs[0];
+    const recipientId = otherMsg?.senderId || "";
+
     const tempMsg = {
       _id: Date.now(),
       senderId: user?.id,
-      senderName: user?.name,
+      senderName: user?.name || ([user?.firstName, user?.lastName].filter(Boolean).join(" ") || "You"),
       text: draft.trim(),
       timestamp: new Date().toISOString(),
       isRead: false,
+      conversationId: activeConversationId,
+      recipientId,
     };
 
     // ✅ Optimistic UI

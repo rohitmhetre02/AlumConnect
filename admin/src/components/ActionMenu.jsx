@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 
-const ActionMenu = ({ member, onProfileView, onStatusChange, onDelete, userRole = 'admin' }) => {
+const ActionMenu = ({ member, onProfileView, onStatusChange, onDelete, onMessage, userRole = 'admin' }) => {
   const [isOpen, setIsOpen] = useState(false)
   const menuRef = useRef(null)
 
@@ -38,6 +38,11 @@ const ActionMenu = ({ member, onProfileView, onStatusChange, onDelete, userRole 
     onStatusChange(member, 'Inactive')
   }
 
+  const handleMessage = () => {
+    setIsOpen(false)
+    onMessage(member)
+  }
+
   const isCoordinator = userRole === 'coordinator'
 
   return (
@@ -56,7 +61,17 @@ const ActionMenu = ({ member, onProfileView, onStatusChange, onDelete, userRole 
         <div className="absolute right-0 z-10 mt-2 w-48 rounded-lg border border-slate-200 bg-white py-1 shadow-lg">
           {isCoordinator ? (
             <>
-              {/* Coordinator Actions - Only Suspend and Delete */}
+              {/* Coordinator Actions */}
+              <button
+                onClick={handleMessage}
+                className="flex w-full items-center px-4 py-2 text-sm text-blue-600 hover:bg-blue-50"
+              >
+                <svg className="mr-3 h-4 w-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                </svg>
+                Message
+              </button>
+              <div className="border-t border-slate-100"></div>
               <button
                 onClick={handleSuspend}
                 className="flex w-full items-center px-4 py-2 text-sm text-orange-600 hover:bg-orange-50"
@@ -79,7 +94,17 @@ const ActionMenu = ({ member, onProfileView, onStatusChange, onDelete, userRole 
             </>
           ) : (
             <>
-              {/* Admin Actions - Only Suspend and Delete */}
+              {/* Admin Actions */}
+              <button
+                onClick={handleMessage}
+                className="flex w-full items-center px-4 py-2 text-sm text-blue-600 hover:bg-blue-50"
+              >
+                <svg className="mr-3 h-4 w-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                </svg>
+                Message
+              </button>
+              <div className="border-t border-slate-100"></div>
               <button
                 onClick={handleSuspend}
                 className="flex w-full items-center px-4 py-2 text-sm text-orange-600 hover:bg-orange-50"

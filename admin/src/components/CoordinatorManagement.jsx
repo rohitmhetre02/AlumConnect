@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import useDirectoryMembers from '../hooks/useDirectoryMembers'
 import getStatusBadgeClass from '../utils/status'
 import ActionMenu from './ActionMenu'
@@ -17,6 +18,8 @@ const CoordinatorManagement = () => {
   const provisionModal = useModal(false)
 
   const { data: coordinators, isLoading, error, refetch } = useDirectoryMembers('coordinator')
+
+  const navigate = useNavigate()
 
   // Get current user info for department filtering
   const adminUser = JSON.parse(localStorage.getItem('adminUser') || '{}')
@@ -121,6 +124,21 @@ const CoordinatorManagement = () => {
 
   const handleStatusChange = (coordinator) => {
     setStatusModalMember(coordinator)
+  }
+
+  const handleMessage = (member) => {
+    const path = isCoordinator ? '/coordinator/messages' : '/admin/messages'
+    navigate(path, {
+      state: {
+        startChatWith: {
+          userId: member.id,
+          userName: member.name,
+          userAvatar: member.avatar || '',
+          userRole: member.role || 'coordinator',
+          userDepartment: member.department || ''
+        }
+      }
+    })
   }
 
   const handleCoordinatorClick = (coordinator) => {
@@ -358,7 +376,9 @@ const CoordinatorManagement = () => {
                         <div className="flex items-center gap-2">
                           <ActionMenu
                             member={coordinator}
+                            onProfileView={handleCoordinatorClick}
                             onStatusChange={handleStatusChange}
+                            onMessage={handleMessage}
                             userRole={adminUser.role || 'admin'}
                           />
                         </div>

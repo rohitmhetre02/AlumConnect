@@ -1,6 +1,7 @@
 import { Routes, Route } from 'react-router-dom'
 import AdminDashboard from './AdminDashboard'
 import AdminActivityPage from './AdminActivityPage'
+import AdminMessages from './AdminMessages'
 
 // Dashboard Overview
 import DashboardOverview from './DashboardOverview'
@@ -98,6 +99,7 @@ const DashboardRoutes = () => {
         <Route path="post-approval" element={<PostApprovalManagement />} />
         <Route path="post-approval/pending" element={<PostApprovalManagement />} />
         <Route path="post-approval/approved" element={<PostApprovalManagement />} />
+        <Route path="messages" element={<AdminMessages />} />
         <Route path="profile" element={<AdminProfile />} />
         <Route path="profile/edit" element={<Profile />} />
         <Route path="settings" element={<Settings />} />
@@ -140,6 +142,7 @@ const DashboardRoutes = () => {
         <Route path="profile-approval" element={<ProfileApprovalManagement />} />
         <Route path="profile-approval/pending" element={<ProfileApprovalManagement />} />
         <Route path="profile-approval/approved" element={<ProfileApprovalManagement />} />
+        <Route path="messages" element={<AdminMessages />} />
         <Route path="profile" element={<AdminProfile />} />
         <Route path="profile/edit" element={<Profile />} />
         <Route path="settings" element={<Settings />} />
