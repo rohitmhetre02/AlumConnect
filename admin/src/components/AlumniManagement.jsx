@@ -186,10 +186,12 @@ const AlumniManagement = () => {
 
       const matchesYear = filterYear === 'all' || alumnus.graduationYear === filterYear
       const matchesStatus = filterStatus === 'all' || alumnus.status === filterStatus
+      const matchesDepartment = !isCoordinator || !userDepartment ||
+        alumnus.department.toLowerCase() === userDepartment.toLowerCase()
 
-      return matchesSearch && matchesYear && matchesStatus
+      return matchesSearch && matchesYear && matchesStatus && matchesDepartment
     })
-  }, [normalizedAlumni, searchTerm, filterYear, filterStatus])
+  }, [normalizedAlumni, searchTerm, filterYear, filterStatus, isCoordinator, userDepartment])
 
   if (selectedAlumni) {
     const originalAlumni = getOriginalAlumni(selectedAlumni)

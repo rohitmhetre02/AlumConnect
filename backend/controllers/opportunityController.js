@@ -136,11 +136,18 @@ const listAllOpportunitiesForAdmin = async (req, res) => {
       return res.status(error.status).json({ success: false, message: error.message })
     }
 
-    if (role !== 'admin') {
+    if (role !== 'admin' && role !== 'coordinator') {
       return res.status(403).json({ success: false, message: 'You do not have permission to access admin opportunities.' })
     }
 
-    const items = await Opportunity.find({ approvalStatus: CONTENT_APPROVAL_STATUS.APPROVED })
+    const { department = '' } = req.query
+    const filter = { approvalStatus: CONTENT_APPROVAL_STATUS.APPROVED }
+
+    if (role === 'coordinator' && department) {
+      filter.department = { $regex: department, $options: 'i' }
+    }
+
+    const items = await Opportunity.find(filter)
       .sort({ createdAt: -1 })
       .lean()
 

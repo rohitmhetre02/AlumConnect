@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 
 import { useNavigate } from 'react-router-dom'
 
-import { Bell, Search, LogOut, Settings, User } from 'lucide-react'
+import { Search, LogOut, Settings, User } from 'lucide-react'
 
 import AdminMessagesPanel from '../AdminMessagesPanelPlaceholder'
 
@@ -331,61 +331,7 @@ const AdminTopbar = ({ onToggleSidebar }) => {
 
         <div className="flex items-center gap-3" ref={actionsRef}>
 
-          {/* Notifications */}
 
-          <DropdownTrigger
-
-            label="notifications"
-
-            activeKey={openDropdown}
-
-            onToggle={setOpenDropdown}
-
-            indicator={notificationItems.length}
-
-            icon={Bell}
-
-          >
-
-            <NotificationDropdown
-
-              items={notificationItems}
-
-              onViewAll={() => navigate('/admin/analytics')}
-
-            />
-
-          </DropdownTrigger>
-
-
-
-          {/* Messages */}
-
-          <DropdownTrigger
-
-            label="messages"
-
-            activeKey={openDropdown}
-
-            onToggle={setOpenDropdown}
-
-            indicator={unreadCount}
-
-            icon={MessageIcon}
-
-          >
-
-            <MessageDropdown
-
-              conversations={conversations}
-
-              onViewAllMessages={() => openMessagesPanel(null)}
-
-              onSelectConversation={openMessagesPanel}
-
-            />
-
-          </DropdownTrigger>
 
 
 

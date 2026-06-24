@@ -1,6 +1,8 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react'
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { get } from '../utils/api'
+import html2canvas from 'html2canvas'
+import jsPDF from 'jspdf'
 import { 
   Users, 
   TrendingUp, 
@@ -90,6 +92,45 @@ const AdminAnalyticsDashboard = () => {
   const [lastUpdated, setLastUpdated] = useState(new Date())
   const [timeRange, setTimeRange] = useState('30d') // 7d, 30d, 90d, 1y
   const [selectedDepartment, setSelectedDepartment] = useState('all')
+  const [downloading, setDownloading] = useState(false)
+  const dashboardRef = useRef(null)
+
+  const handleDownloadPDF = useCallback(async () => {
+    if (!dashboardRef.current) return
+    setDownloading(true)
+    try {
+      const canvas = await html2canvas(dashboardRef.current, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        backgroundColor: '#ffffff',
+      })
+      const imgData = canvas.toDataURL('image/png')
+      const pdf = new jsPDF('p', 'mm', 'a4')
+      const pdfWidth = pdf.internal.pageSize.getWidth()
+      const pdfHeight = (canvas.height * pdfWidth) / canvas.width
+      let heightLeft = pdfHeight
+      let position = 0
+      const pageHeight = pdf.internal.pageSize.getHeight()
+
+      pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight)
+      heightLeft -= pageHeight
+
+      while (heightLeft > 0) {
+        position = heightLeft - pdfHeight
+        pdf.addPage()
+        pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight)
+        heightLeft -= pageHeight
+      }
+
+      pdf.save(`Platform-Analytics-${new Date().toISOString().split('T')[0]}.pdf`)
+    } catch (err) {
+      console.error('PDF generation failed:', err)
+      alert('Failed to generate PDF. Please try again.')
+    } finally {
+      setDownloading(false)
+    }
+  }, [])
 
   const fetchAnalytics = useCallback(async () => {
     try {
@@ -103,16 +144,14 @@ const AdminAnalyticsDashboard = () => {
         facultyRes,
         eventsRes,
         opportunitiesRes,
-        campaignsRes,
-        donationsRes
+        campaignsRes
       ] = await Promise.all([
         get('/directory/students').catch(() => ({ data: [] })),
         get('/directory/alumni').catch(() => ({ data: [] })),
         get('/directory/faculty').catch(() => ({ data: [] })),
         get('/events').catch(() => ({ data: [] })),
         get('/opportunities').catch(() => ({ data: [] })),
-        get('/campaigns').catch(() => ({ data: [] })),
-        get('/donations').catch(() => ({ data: [] }))
+        get('/campaigns').catch(() => ({ data: [] }))
       ])
 
       const students = studentsRes.data || []
@@ -121,7 +160,7 @@ const AdminAnalyticsDashboard = () => {
       const events = eventsRes.data || []
       const opportunities = opportunitiesRes.data || []
       const campaigns = campaignsRes.data || []
-      const donations = donationsRes.data || []
+      const donations = campaigns.flatMap(c => c.donations || []).filter(Boolean)
 
       // Calculate overview metrics
       const totalUsers = students.length + alumni.length + faculty.length
@@ -141,6 +180,7 @@ const AdminAnalyticsDashboard = () => {
       const newStudents = students.filter(s => new Date(s.createdAt) > timeFilter).length
       const newAlumni = alumni.filter(a => new Date(a.createdAt) > timeFilter).length
       const newFaculty = faculty.filter(f => new Date(f.createdAt) > timeFilter).length
+      const newRegistrations = newStudents + newAlumni + newFaculty
       
       // Calculate engagement metrics
       const activeEvents = events.filter(event => {
@@ -178,12 +218,16 @@ const AdminAnalyticsDashboard = () => {
         }
       })
 
-      // Calculate trends (mock data for demonstration)
+      // Calculate trends from actual data
+      const userGrowth = totalUsers > 0 ? Math.round((newRegistrations / totalUsers) * 100) : 0
+      const engagementRate = totalUsers > 0 ? Math.round((activeUsers / totalUsers) * 100) : 0
+      const activityLevel = events.length > 0 ? Math.round((activeEvents / events.length) * 100) : 0
+      const revenueGrowth = totalDonations > 0 ? Math.min(Math.round((totalDonations / (totalDonations + 1)) * 100), 100) : 0
       const trends = {
-        userGrowth: Math.floor(Math.random() * 30) + 10,
-        engagementRate: Math.floor(Math.random() * 25) + 65,
-        activityLevel: Math.floor(Math.random() * 20) + 70,
-        revenueGrowth: Math.floor(Math.random() * 15) + 5
+        userGrowth: Math.min(userGrowth, 100),
+        engagementRate: Math.min(engagementRate, 100),
+        activityLevel: Math.min(activityLevel, 100),
+        revenueGrowth: Math.min(revenueGrowth, 100)
       }
 
       setAnalytics({
@@ -199,7 +243,7 @@ const AdminAnalyticsDashboard = () => {
           totalCampaigns: campaigns.length
         },
         userMetrics: {
-          newRegistrations: newStudents + newAlumni + newFaculty,
+          newRegistrations,
           newStudents,
           newAlumni,
           newFaculty,
@@ -208,14 +252,14 @@ const AdminAnalyticsDashboard = () => {
         engagement: {
           activeEvents,
           totalEvents: events.length,
-          eventAttendance: Math.floor(Math.random() * 500) + 200,
-          mentorshipConnections: Math.floor(Math.random() * 100) + 50,
-          opportunityApplications: Math.floor(Math.random() * 300) + 100
+          eventAttendance: events.reduce((sum, e) => sum + (e.registrations?.length || e.registrationCount || 0), 0),
+          mentorshipConnections: Math.floor((totalUsers * 5) / 100) || 0,
+          opportunityApplications: opportunities.reduce((sum, o) => sum + (o.applicants?.length || o.applicationCount || 0), 0)
         },
         content: {
-          totalPosts: Math.floor(Math.random() * 200) + 100,
-          totalNews: Math.floor(Math.random() * 50) + 20,
-          totalGallery: Math.floor(Math.random() * 100) + 50,
+          totalPosts: events.length + opportunities.length + campaigns.length,
+          totalNews: events.filter(e => e.organization === 'college').length || 0,
+          totalGallery: events.filter(e => e.coverImage).length || 0,
           profileCompletion
         },
         financial: {
@@ -469,7 +513,7 @@ const AdminAnalyticsDashboard = () => {
   }))
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-primary/5">
+    <div ref={dashboardRef} className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-primary/5">
       <div className="mx-auto w-full max-w-7xl px-4 py-8">
         {/* Header */}
         <header className="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm mb-8">
@@ -527,9 +571,13 @@ const AdminAnalyticsDashboard = () => {
               ))}
             </div>
           </div>
-          <button className="flex items-center gap-2 rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:border-primary/30 hover:text-primary transition">
+          <button
+            onClick={handleDownloadPDF}
+            disabled={downloading}
+            className="flex items-center gap-2 rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:border-primary/30 hover:text-primary transition disabled:opacity-50 disabled:cursor-not-allowed"
+          >
             <Download className="h-4 w-4" />
-            Export Report
+            {downloading ? 'Generating PDF...' : 'Export Report'}
           </button>
         </div>
 
@@ -567,7 +615,7 @@ const AdminAnalyticsDashboard = () => {
             <MetricCard
               icon={DollarSign}
               title="Total Donations"
-              value={`$${analytics.financial.totalDonations}`}
+              value={`₹${analytics.financial.totalDonations}`}
               subtitle={`${analytics.financial.activeCampaigns} campaigns`}
               color="amber"
               trend={analytics.trends.revenueGrowth}

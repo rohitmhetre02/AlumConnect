@@ -303,7 +303,7 @@ const AdminSidebar = ({ isMobile = false, onClose }) => {
             <div className="flex items-center space-x-3">
               <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold text-xl">A</div>
               <div>
-                <h1 className="text-slate-900 font-bold text-lg leading-tight">APCORE Alumni</h1>
+                <h1 className="text-slate-900 font-bold text-lg leading-tight">APCOER Alumni</h1>
                 <p className="text-[10px] text-slate-400 tracking-widest uppercase font-semibold">Admin Portal</p>
               </div>
             </div>
@@ -419,22 +419,7 @@ const AdminSidebar = ({ isMobile = false, onClose }) => {
                   <p className="text-xs font-semibold text-slate-900 truncate">{displayName}</p>
                   <p className="text-[10px] text-slate-500 capitalize">
                     {normalizedRole || 'user'} •
-                    <span className={`ml-1 font-medium ${isProfileApproved
-                        ? 'text-green-600'
-                        : isProfileInReview
-                          ? 'text-amber-600'
-                          : isProfileRejected
-                            ? 'text-red-600'
-                            : 'text-slate-500'
-                      }`}>
-                      {isProfileApproved
-                        ? 'Approved'
-                        : isProfileInReview
-                          ? 'Pending'
-                        : isProfileRejected
-                            ? 'Rejected'
-                            : 'Unknown'}
-                    </span>
+                   
                   </p>
                 </div>
                 <div className="relative">

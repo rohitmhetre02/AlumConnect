@@ -6,6 +6,9 @@ const { sendUserCredentialsEmail, isEmailConfigured } = require('../utils/email'
 const { generateTemporaryPassword } = require('../utils/password')
 const { getModelByRole } = require('../utils/roleModels')
 
+
+const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms)); // ✅ ADD HERE
+
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
@@ -59,19 +62,22 @@ const provisionUsers = async ({ payloads, role }) => {
 
   const emailConfigured = isEmailConfigured()
 
-  await Promise.all(
-    users.map(async ({ sanitized, password }) => {
-      if (!emailConfigured) return null
+  for (const { sanitized, password } of users) {
+  if (!emailConfigured) continue;
 
-      return sendUserCredentialsEmail({
-        to: sanitized.email,
-        name: sanitized.name,
-        email: sanitized.email,
-        password,
-        role: sanitized.role,
-      })
-    })
-  )
+  await sendUserCredentialsEmail({
+    to: sanitized.email,
+    name: sanitized.name,
+    email: sanitized.email,
+    password,
+    role: sanitized.role,
+  });
+
+  console.log("Email sent to:", sanitized.email);
+
+  // 🔥 MAIN FIX (2 sec delay)
+  await delay(2000);
+}
 
   return {
     emailConfigured,

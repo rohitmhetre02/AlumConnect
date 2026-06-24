@@ -352,24 +352,24 @@ const ContentPosted = () => {
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full border-collapse">
+          <table className="w-full border-collapse min-w-[640px]">
             <thead>
               <tr className="border-b border-slate-200 bg-slate-50">
-                <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-700">Content Title</th>
-                <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-700">Type</th>
-                <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-700">Location</th>
-                <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-700">Date/Deadline</th>
-                <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-700">Status</th>
-                <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-700">Approval Status</th>
-                <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-700">View</th>
-                <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-700">Applications</th>
-                <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-700">Actions</th>
+                <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700">Content Title</th>
+                <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700">Type</th>
+                <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 hidden md:table-cell">Location</th>
+                <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 hidden lg:table-cell">Date</th>
+                <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700">Status</th>
+                <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 hidden sm:table-cell">Approval</th>
+                <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700">View</th>
+                <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 hidden sm:table-cell">Apps</th>
+                <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {dataLoading ? (
                 <tr>
-                  <td colSpan="9" className="px-6 py-12 text-center text-sm text-slate-500">
+                  <td colSpan="9" className="px-3 py-8 text-center text-sm text-slate-500">
                     <div className="flex flex-col items-center gap-2">
                       <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-red-600"></div>
                       Loading your content...
@@ -378,13 +378,13 @@ const ContentPosted = () => {
                 </tr>
               ) : filteredContent.length === 0 ? (
                 <tr>
-                  <td colSpan="9" className="px-6 py-12 text-center text-sm text-slate-500">
+                  <td colSpan="9" className="px-3 py-8 text-center text-sm text-slate-500">
                     <div className="flex flex-col items-center gap-2">
                       <svg className="h-12 w-12 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
                       </svg>
                       <div>No content found.</div>
-                      <div className="flex gap-2">
+                      <div className="flex flex-wrap gap-2 justify-center">
                         <button 
                           onClick={() => navigate('/dashboard/opportunities/post')}
                           className="inline-flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 transition-colors"
@@ -410,33 +410,32 @@ const ContentPosted = () => {
               ) : (
                 filteredContent.map((content) => (
                   <tr key={`${content.contentType}-${content.id}`} className="hover:bg-slate-50 transition-colors">
-                    <td className="px-6 py-4">
-                      <div className="text-sm font-medium text-slate-900 max-w-xs truncate">{content.title}</div>
-                      <div className="text-xs text-slate-500 mt-1">{content.company}</div>
+                    <td className="px-3 py-3">
+                      <div className="text-sm font-medium text-slate-900 max-w-[200px] truncate">{content.title}</div>
+                      <div className="text-xs text-slate-500 mt-0.5 truncate">{content.company}</div>
                     </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-2">
+                    <td className="px-3 py-3">
+                      <div className="flex items-center gap-1.5">
                         {getTypeIcon(content.contentType)}
                         <span className="text-sm text-slate-700 capitalize">{content.contentType}</span>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-sm text-slate-700">{content.location || '—'}</td>
-                    <td className="px-6 py-4 text-sm text-slate-700">{formatDate(content.deadline)}</td>
-                    <td className="px-6 py-4">
-                      <span className={`inline-flex rounded-full px-3 py-1 text-xs font-medium ${getStatusBadgeClass(content.status || 'active')}`}>
+                    <td className="px-3 py-3 text-sm text-slate-700 hidden md:table-cell truncate max-w-[120px]">{content.location || '—'}</td>
+                    <td className="px-3 py-3 text-sm text-slate-700 hidden lg:table-cell whitespace-nowrap">{formatDate(content.deadline)}</td>
+                    <td className="px-3 py-3">
+                      <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${getStatusBadgeClass(content.status || 'active')}`}>
                         {(content.status || 'active').charAt(0).toUpperCase() + (content.status || 'active').slice(1)}
                       </span>
                     </td>
-                    <td className="px-6 py-4">
-                      <span className={`inline-flex rounded-full px-3 py-1 text-xs font-medium ${getApprovalStatusBadgeClass(content.approvalStatus || 'PENDING')}`}>
-                        {content.approvalStatus === 'APPROVED' ? '' : content.approvalStatus === 'REJECTED' ? ' ' : ''}
+                    <td className="px-3 py-3 hidden sm:table-cell">
+                      <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${getApprovalStatusBadgeClass(content.approvalStatus || 'PENDING')}`}>
                         {content.approvalStatus || 'PENDING'}
                       </span>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-3 py-3">
                       <button
                         onClick={() => handleView(content)}
-                        className="inline-flex items-center gap-1 rounded-lg bg-green-600 px-3 py-2 text-xs font-medium text-white hover:bg-green-700 transition-colors"
+                        className="inline-flex items-center gap-1 rounded-lg bg-green-600 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-green-700 transition-colors"
                         title="View Details"
                       >
                         <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -446,49 +445,49 @@ const ContentPosted = () => {
                         View
                       </button>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-3 py-3 hidden sm:table-cell">
                       {content.contentType === 'opportunity' && content.approvalStatus === 'APPROVED' ? (
                         <button
                           onClick={() => handleApplications(content)}
-                          className="inline-flex items-center gap-1 rounded-lg bg-purple-600 px-3 py-2 text-xs font-medium text-white hover:bg-purple-700 transition-colors"
+                          className="inline-flex items-center gap-1 rounded-lg bg-purple-600 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-purple-700 transition-colors"
                           title="View Applications"
                         >
                           <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
                           </svg>
-                          Applications
+                          Apps
                         </button>
                       ) : content.contentType === 'event' ? (
                         <button
                           onClick={() => handleRegistrations(content)}
-                          className="inline-flex items-center gap-1 rounded-lg bg-blue-600 px-3 py-2 text-xs font-medium text-white hover:bg-blue-700 transition-colors"
+                          className="inline-flex items-center gap-1 rounded-lg bg-blue-600 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-blue-700 transition-colors"
                           title="View Registrations"
                         >
                           <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                           </svg>
-                          Registrations
+                          Regs
                         </button>
                       ) : content.contentType === 'campaign' ? (
                         <button
                           onClick={() => handleDonations(content)}
-                          className="inline-flex items-center gap-1 rounded-lg bg-green-600 px-3 py-2 text-xs font-medium text-white hover:bg-green-700 transition-colors"
+                          className="inline-flex items-center gap-1 rounded-lg bg-green-600 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-green-700 transition-colors"
                           title="View Donations"
                         >
                           <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
                           </svg>
-                          Donations
+                          Donors
                         </button>
                       ) : (
                         <span className="text-xs text-slate-400">—</span>
                       )}
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-3 py-3">
                       <div className="flex items-center gap-1">
                         <button
                           onClick={() => handleEdit(content)}
-                          className="inline-flex items-center gap-1 rounded-lg bg-blue-600 px-3 py-2 text-xs font-medium text-white hover:bg-blue-700 transition-colors"
+                          className="inline-flex items-center gap-1 rounded-lg bg-blue-600 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-blue-700 transition-colors"
                           title="Edit Content"
                         >
                           <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -499,15 +498,16 @@ const ContentPosted = () => {
                         
                         <div className="relative group">
                           <button
-                            className="inline-flex items-center gap-1 rounded-lg bg-slate-100 px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-200 transition-colors"
+                            className="inline-flex items-center gap-1 rounded-lg bg-slate-100 px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-200 transition-colors"
                           >
-                            More
                             <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                              <circle cx="12" cy="5" r="1.5" fill="currentColor" />
+                              <circle cx="12" cy="12" r="1.5" fill="currentColor" />
+                              <circle cx="12" cy="19" r="1.5" fill="currentColor" />
                             </svg>
                           </button>
                           
-                          <div className="absolute right-0 z-10 mt-1 w-48 bg-white rounded-lg border border-slate-200 shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
+                          <div className="absolute right-0 z-10 mt-1 w-40 bg-white rounded-lg border border-slate-200 shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
                             <div className="py-1">
                               <button
                                 onClick={() => handleDelete(content)}

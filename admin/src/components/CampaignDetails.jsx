@@ -3,10 +3,10 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { get, del } from '../utils/api'
 
 const formatCurrency = (amount) => {
-  if (!Number.isFinite(amount)) return "$0";
-  return new Intl.NumberFormat(undefined, {
+  if (!Number.isFinite(amount)) return "₹0";
+  return new Intl.NumberFormat('en-IN', {
     style: 'currency',
-    currency: 'USD',
+    currency: 'INR',
     maximumFractionDigits: 0,
   }).format(amount);
 };
@@ -52,10 +52,10 @@ const CampaignDetails = () => {
   }, [campaignId])
 
   const formatCurrency = (amount) => {
-    if (!Number.isFinite(amount)) return "$0"
-    return new Intl.NumberFormat(undefined, {
+    if (!Number.isFinite(amount)) return "₹0"
+    return new Intl.NumberFormat('en-IN', {
       style: "currency",
-      currency: "USD",
+      currency: "INR",
       maximumFractionDigits: 0,
     }).format(amount)
   }

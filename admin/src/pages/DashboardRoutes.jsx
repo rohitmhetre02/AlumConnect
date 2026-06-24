@@ -37,6 +37,7 @@ import AdminAnalyticsDashboard from '../components/AdminAnalyticsDashboard'
 import ProfileApprovalManagement from '../components/ProfileApprovalManagement'
 import PostApprovalManagement from '../components/PostApprovalManagement'
 import AdminProfile from './AdminProfile'
+import Profile from './Profile'
 import Settings from './Settings'
 
 // Coordinator Dashboard Components
@@ -98,6 +99,7 @@ const DashboardRoutes = () => {
         <Route path="post-approval/pending" element={<PostApprovalManagement />} />
         <Route path="post-approval/approved" element={<PostApprovalManagement />} />
         <Route path="profile" element={<AdminProfile />} />
+        <Route path="profile/edit" element={<Profile />} />
         <Route path="settings" element={<Settings />} />
       </Route>
 
@@ -107,8 +109,6 @@ const DashboardRoutes = () => {
         <Route path="dashboard" element={<CoordinatorDashboardHome />} />
         <Route path="users" element={<UserManagement />} />
         <Route path="users/:memberId" element={<UserManagement />} />
-        <Route path="faculty" element={<FacultyManagement />} />
-        <Route path="faculty/:memberId" element={<FacultyManagement />} />
         <Route path="alumni" element={<AlumniManagement />} />
         <Route path="alumni/:memberId" element={<AlumniManagement />} />
         <Route path="events" element={<EventsManagement />} />
@@ -140,9 +140,9 @@ const DashboardRoutes = () => {
         <Route path="profile-approval" element={<ProfileApprovalManagement />} />
         <Route path="profile-approval/pending" element={<ProfileApprovalManagement />} />
         <Route path="profile-approval/approved" element={<ProfileApprovalManagement />} />
+        <Route path="profile" element={<AdminProfile />} />
+        <Route path="profile/edit" element={<Profile />} />
         <Route path="settings" element={<Settings />} />
-        
-        
       </Route>
     </Routes>
   )

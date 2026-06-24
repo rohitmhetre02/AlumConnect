@@ -479,32 +479,32 @@ const UserTopbar = ({ onToggleSidebar }) => {
 
         {/* Right - Professional Icons */}
         <div className="flex items-center gap-4">
-          {/* Notifications */}
-          <div className="relative" ref={notificationRef}>
-            <IconButton
-              label="Notifications"
-              badge={unreadNotificationsCount > 0 ? unreadNotificationsCount.toString() : null}
-              onClick={() => setIsNotificationPanelOpen(true)}
-            >
-              <svg className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-                <path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
-                <path d="M13.73 21a2 2 0 01-3.46 0" />
-              </svg>
-            </IconButton>
-          </div>
-
-          {/* Messages */}
-          <div className="relative" ref={messageRef}>
-            <IconButton
-              label="Messages"
-              badge={unreadCount > 0 ? unreadCount.toString() : null}
-              // onClick={openMessagesPanel}
-            >
-              <svg className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-                <path d="M21 14a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
-              </svg>
-            </IconButton>
-          </div>
+          {!['alumni', 'student'].includes(user?.role?.toLowerCase()) && (
+            <>
+              <div className="relative" ref={notificationRef}>
+                <IconButton
+                  label="Notifications"
+                  badge={unreadNotificationsCount > 0 ? unreadNotificationsCount.toString() : null}
+                  onClick={() => setIsNotificationPanelOpen(true)}
+                >
+                  <svg className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+                    <path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
+                    <path d="M13.73 21a2 2 0 01-3.46 0" />
+                  </svg>
+                </IconButton>
+              </div>
+              <div className="relative" ref={messageRef}>
+                <IconButton
+                  label="Messages"
+                  badge={unreadCount > 0 ? unreadCount.toString() : null}
+                >
+                  <svg className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+                    <path d="M21 14a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
+                  </svg>
+                </IconButton>
+              </div>
+            </>
+          )}
 
           {/* Responsive Profile Dropdown - Only visible on mobile */}
           <div className="relative lg:hidden">

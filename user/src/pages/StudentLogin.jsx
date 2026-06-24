@@ -61,11 +61,11 @@ const StudentLogin = () => {
     const fetchProviders = async () => {
       try {
         setIsFetchingProviders(true)
-        const response = await get('/auth/oauth/providers', { includeAuth: false })
+        const response = await get('/api/auth/oauth/providers', { includeAuth: false })
         setOauthProviders(response)
       } catch (error) {
-        console.error('Failed to load OAuth providers:', error)
-        addToast({ type: 'error', message: 'Unable to load social login options right now.' })
+        console.warn('OAuth providers unavailable')
+        setOauthProviders([])
       } finally {
         setIsFetchingProviders(false)
       }

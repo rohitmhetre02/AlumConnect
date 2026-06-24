@@ -5,6 +5,7 @@ import { useAuth } from '../../context/AuthContext'
 import useToast from '../../hooks/useToast'
 import { useCampaign } from '../../hooks/useCampaigns'
 import { loadStripe } from '@stripe/stripe-js'
+import { post } from '../../utils/api'
 
 // Initialize Stripe with real test key
 const stripePromise = loadStripe('pk_test_51234567890abcdef123456789')
@@ -168,24 +169,16 @@ const CampaignDetail = () => {
     setIsSubmitting(true)
     try {
       // Create Stripe checkout session
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/create-checkout-session`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          amount: finalAmount,
-          campaignId: campaignId,
-          donorName: donorName.trim(),
-          donorEmail: donorEmail.trim(),
-          message: donorMessage.trim(),
-          anonymous,
-          success_url: `${window.location.origin}/#/dashboard/campaigns/${campaignId}?payment=success`,
-          cancel_url: `${window.location.origin}/#/dashboard/campaigns/${campaignId}?payment=cancelled`,
-        }),
-      })
-
-      const result = await response.json()
+      const result = await post('/api/create-checkout-session', {
+        amount: finalAmount,
+        campaignId: campaignId,
+        donorName: donorName.trim(),
+        donorEmail: donorEmail.trim(),
+        message: donorMessage.trim(),
+        anonymous,
+        success_url: `${window.location.origin}/dashboard/campaigns/${campaignId}?payment=success`,
+        cancel_url: `${window.location.origin}/dashboard/campaigns/${campaignId}?payment=cancelled`,
+      }, { includeAuth: false })
 
       if (!result.success) {
         throw new Error(result.error || 'Failed to create payment session')

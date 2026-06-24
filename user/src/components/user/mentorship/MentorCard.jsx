@@ -2,15 +2,29 @@ const MentorCard = ({ mentor, onViewProfile }) => {
   const { name, position, avatar, rating } = mentor
 
   const displayRating = typeof rating === 'number' && !Number.isNaN(rating)
+  const hasAvatar = avatar && (avatar.startsWith('http') || avatar.startsWith('/'))
 
   return (
     <article className="relative flex flex-col items-center gap-4 rounded-[28px] border border-slate-100 bg-white p-6 text-center shadow-[0_12px_30px_-18px_rgba(30,64,175,0.35)] transition hover:-translate-y-1 hover:shadow-[0_20px_50px_-18px_rgba(30,64,175,0.4)]">
-      <div className="size-24 rounded-full border-4 border-white bg-slate-100 shadow-[0_8px_25px_-12px_rgba(15,23,42,0.45)]">
-        <img
-          src={avatar}
-          alt={`${name} avatar`}
-          className="size-full rounded-full object-cover"
-        />
+      <div className="size-24 rounded-full border-4 border-white bg-slate-100 shadow-[0_8px_25px_-12px_rgba(15,23,42,0.45)] overflow-hidden">
+        {hasAvatar ? (
+          <img
+            src={avatar}
+            alt={`${name} avatar`}
+            className="size-full rounded-full object-cover"
+            onError={(e) => {
+              e.target.style.display = 'none'
+              e.target.nextElementSibling.style.display = 'flex'
+            }}
+          />
+        ) : null}
+        <div
+          className={`size-full items-center justify-center bg-gradient-to-br from-primary/20 to-primary/10 text-2xl font-bold text-primary ${
+            hasAvatar ? 'hidden' : 'flex'
+          }`}
+        >
+          {name ? name.charAt(0).toUpperCase() : 'M'}
+        </div>
       </div>
       <div className="space-y-1">
         <h3 className="text-lg font-semibold text-slate-900">{name}</h3>

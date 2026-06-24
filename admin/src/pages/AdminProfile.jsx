@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { get } from '../utils/api'
 
 const AdminProfile = () => {
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const navigate = useNavigate()
 
   const emptyProfile = {
     name: '',
@@ -259,6 +260,7 @@ const AdminProfile = () => {
             <div className="flex gap-2 pb-2">
               <button
                 type="button"
+                onClick={() => navigate('/admin/profile/edit')}
                 className="inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-xs font-semibold uppercase tracking-[0.1em] text-white shadow-sm transition hover:bg-primary-dark"
               >
                 <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

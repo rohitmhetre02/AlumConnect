@@ -1,5 +1,6 @@
 import { createRoot } from 'react-dom/client'
-import { HashRouter } from 'react-router-dom'
+import { StrictMode } from "react";
+import { BrowserRouter } from "react-router-dom";
 import './index.css'
 import App from './App.jsx'
 
@@ -40,7 +41,9 @@ console.warn = (...args) => {
 };
 
 createRoot(document.getElementById('root')).render(
-  <HashRouter>
+  <StrictMode>
+  <BrowserRouter>
     <App />
-  </HashRouter>
+  </BrowserRouter>
+</StrictMode>
 )

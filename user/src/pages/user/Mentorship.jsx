@@ -203,11 +203,15 @@ const Mentorship = () => {
                       mentor={{
                         name: mentor.fullName,
                         position: mentor.currentJobTitle,
-                        avatar: mentor.profilePhoto ? 
-                          (mentor.profilePhoto.startsWith('http') ? 
-                            mentor.profilePhoto : 
-                            `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${mentor.profilePhoto}`) : 
-                          null,
+                        avatar: mentor.profilePhoto
+                          ? (mentor.profilePhoto.startsWith('http')
+                            ? mentor.profilePhoto
+                            : `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${mentor.profilePhoto}`)
+                          : mentor.avatar
+                            ? (mentor.avatar.startsWith('http')
+                              ? mentor.avatar
+                              : `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${mentor.avatar}`)
+                            : `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent((mentor.fullName || 'M').slice(0, 2))}`,
                         company: mentor.company,
                         department: mentor.department,
                         location: mentor.currentLocation,

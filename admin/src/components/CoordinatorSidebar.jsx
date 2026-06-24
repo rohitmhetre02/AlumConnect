@@ -291,7 +291,6 @@ const CoordinatorSidebar = ({ isMobile = false, onClose }) => {
                 path={`${basePath}/users`} 
                 subOptions={[
                   { label: 'Students', path: `${basePath}/users`, icon: <Users size={14} /> },
-                  { label: 'Faculty', path: `${basePath}/mentors`, icon: <UserCheck size={14} /> },
                   { label: 'Alumni', path: `${basePath}/alumni`, icon: <UserCheck size={14} /> }
                 ]}
               />

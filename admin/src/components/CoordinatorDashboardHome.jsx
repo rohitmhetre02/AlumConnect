@@ -1,290 +1,312 @@
-import React, { useState, useMemo } from 'react'
-
-const reviewRequests = [
-  {
-    id: 1,
-    type: 'Student',
-    name: 'Rohit Sharma',
-    email: 'rohit.sharma@university.edu',
-    requestTitle: 'Mentorship Request for AI/ML Guidance',
-    department: 'Computer Science',
-    cohort: 'CSE 2025',
-    submittedAt: '2024-01-28T09:15:00Z',
-    status: 'Pending',
-    details: 'Seeking guidance on applied AI career path and project ideation for final year.',
-  },
-  {
-    id: 2,
-    type: 'Alumni',
-    name: 'Priya Nair',
-    email: 'priya.nair@alumni.edu',
-    requestTitle: 'Event Speaker Proposal',
-    department: 'Business Analytics',
-    cohort: 'MBA 2022',
-    submittedAt: '2024-01-27T14:30:00Z',
-    status: 'Pending',
-    details: 'Proposed to conduct a workshop on data storytelling for current students.',
-  },
-  {
-    id: 3,
-    type: 'Student',
-    name: 'Anjali Verma',
-    email: 'anjali.verma@university.edu',
-    requestTitle: 'Research Collaboration Request',
-    department: 'Electronics & Communication',
-    cohort: 'ECE 2024',
-    submittedAt: '2024-01-26T11:45:00Z',
-    status: 'Approved',
-    details: 'Request to collaborate on IoT-based health monitoring research project.',
-  },
-  {
-    id: 4,
-    type: 'Alumni',
-    name: 'Karan Mehta',
-    email: 'karan.mehta@alumni.edu',
-    requestTitle: 'Alumni Mentorship Onboarding',
-    department: 'Mechanical Engineering',
-    cohort: 'ME 2021',
-    submittedAt: '2024-01-25T16:20:00Z',
-    status: 'Rejected',
-    details: 'Applied to become a mentor for mechanical engineering students.',
-  },
-  {
-    id: 5,
-    type: 'Student',
-    name: 'Sneha Iyer',
-    email: 'sneha.iyer@university.edu',
-    requestTitle: 'Placement Preparation Guidance',
-    department: 'Information Technology',
-    cohort: 'IT 2024',
-    submittedAt: '2024-01-24T10:00:00Z',
-    status: 'Pending',
-    details: 'Seeking mock interview preparation and resume review for upcoming placements.',
-  },
-]
-
-const statusBadge = {
-  Pending: 'bg-amber-100 text-amber-700',
-  Approved: 'bg-emerald-100 text-emerald-700',
-  Rejected: 'bg-red-100 text-red-700',
-}
-
-const typeBadge = {
-  Student: 'bg-blue-100 text-blue-700',
-  Alumni: 'bg-purple-100 text-purple-700',
-}
+import { useState, useEffect, useMemo } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { get } from '../utils/api'
+import useToast from '../hooks/useToast'
 
 const CoordinatorDashboardHome = () => {
-  const [filterStatus, setFilterStatus] = useState('all')
-  const [filterType, setFilterType] = useState('all')
-  const [searchTerm, setSearchTerm] = useState('')
+  const [stats, setStats] = useState(null)
+  const [pendingItems, setPendingItems] = useState([])
+  const [recentActivity, setRecentActivity] = useState([])
+  const [loading, setLoading] = useState(true)
+  const addToast = useToast()
+  const navigate = useNavigate()
 
-  const filteredRequests = useMemo(() => {
-    const query = searchTerm.toLowerCase()
-    return reviewRequests.filter((req) => {
-      const matchesSearch =
-        req.name.toLowerCase().includes(query) ||
-        req.email.toLowerCase().includes(query) ||
-        req.requestTitle.toLowerCase().includes(query) ||
-        req.department.toLowerCase().includes(query)
-
-      const matchesStatus = filterStatus === 'all' || req.status === filterStatus
-      const matchesType = filterType === 'all' || req.type === filterType
-
-      return matchesSearch && matchesStatus && matchesType
-    })
-  }, [searchTerm, filterStatus, filterType])
-
-  const stats = useMemo(() => {
-    const total = reviewRequests.length
-    const pending = reviewRequests.filter((r) => r.status === 'Pending').length
-    const approved = reviewRequests.filter((r) => r.status === 'Approved').length
-    const rejected = reviewRequests.filter((r) => r.status === 'Rejected').length
-    return { total, pending, approved, rejected }
+  const coordinator = useMemo(() => {
+    try {
+      const stored = localStorage.getItem('adminUser')
+      return stored ? JSON.parse(stored) : {}
+    } catch {
+      return {}
+    }
   }, [])
 
-  const formatDate = (iso) => new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+  const department = coordinator.department || ''
+  const userName = coordinator.firstName
+    ? `${coordinator.firstName} ${coordinator.lastName || ''}`
+    : coordinator.email || 'Coordinator'
+
+  useEffect(() => {
+    fetchDashboardData()
+  }, [department])
+
+  const fetchDashboardData = async () => {
+    try {
+      setLoading(true)
+      const params = `role=coordinator&department=${encodeURIComponent(department)}`
+
+      const [statsRes, pendingRes, activityRes] = await Promise.all([
+        get(`/admin/dashboard/stats?${params}`).catch(() => null),
+        get(`/admin/dashboard/pending?${params}`).catch(() => null),
+        get(`/admin/dashboard/activity?${params}`).catch(() => null),
+      ])
+
+      if (statsRes?.data) setStats(statsRes.data)
+      if (pendingRes?.data) setPendingItems(pendingRes.data)
+      if (activityRes?.data) setRecentActivity(activityRes.data)
+    } catch (error) {
+      addToast({ type: 'error', message: 'Failed to load dashboard data' })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const pendingProfiles = useMemo(() => {
+    return (pendingItems || []).filter(item => item.type === 'profile')
+  }, [pendingItems])
+
+  const recentItems = useMemo(() => {
+    return (recentActivity || []).slice(0, 5)
+  }, [recentActivity])
+
+  const formatDate = (iso) => {
+    if (!iso) return ''
+    return new Date(iso).toLocaleDateString('en-IN', {
+      day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
+    })
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-primary"></div>
+      </div>
+    )
+  }
+
+  const totalStudents = stats?.totalStudents ?? 0
+  const totalAlumni = stats?.totalAlumni ?? 0
+  const pendingApprovals = stats?.pendingApprovals ?? 0
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <header>
         <h1 className="text-2xl font-bold text-slate-900">Coordinator Dashboard</h1>
-        <p className="text-slate-600">Review and manage student and alumni requests.</p>
+        <p className="text-slate-600">
+          Welcome back, {userName}! {department ? `Managing ${department} department.` : ''}
+        </p>
       </header>
 
-      <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      {/* Top Stat Cards */}
+      <section className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
         <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-soft">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-slate-500">Total Requests</p>
-              <p className="text-2xl font-bold text-slate-900">{stats.total}</p>
+              <p className="text-sm font-medium text-slate-500">Department Students</p>
+              <p className="text-3xl font-bold text-blue-600 mt-1">{totalStudents}</p>
             </div>
-            <span className="grid h-12 w-12 place-items-center rounded-full bg-slate-100 text-lg font-semibold text-slate-600">
-              📋
+            <span className="grid h-12 w-12 place-items-center rounded-full bg-blue-100 text-blue-600">
+              <svg className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                <circle cx="9" cy="7" r="4" />
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+              </svg>
             </span>
           </div>
-        </div>
-        <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-soft">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-slate-500">Pending</p>
-              <p className="text-2xl font-bold text-amber-600">{stats.pending}</p>
-            </div>
-            <span className="grid h-12 w-12 place-items-center rounded-full bg-amber-100 text-lg font-semibold text-amber-600">
-              ⏳
-            </span>
+          <div className="mt-3 flex items-center gap-2 text-xs text-slate-400">
+            <span>in {department || 'your department'}</span>
           </div>
         </div>
+
         <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-soft">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-slate-500">Approved</p>
-              <p className="text-2xl font-bold text-emerald-600">{stats.approved}</p>
+              <p className="text-sm font-medium text-slate-500">Department Alumni</p>
+              <p className="text-3xl font-bold text-purple-600 mt-1">{totalAlumni}</p>
             </div>
-            <span className="grid h-12 w-12 place-items-center rounded-full bg-emerald-100 text-lg font-semibold text-emerald-600">
-              ✅
+            <span className="grid h-12 w-12 place-items-center rounded-full bg-purple-100 text-purple-600">
+              <svg className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                <path d="M22 10v6M2 10l10-5 10 5-10 5z" />
+                <path d="M6 12v5c3 3 9 3 12 0v-5" />
+              </svg>
             </span>
           </div>
+          <div className="mt-3 flex items-center gap-2 text-xs text-slate-400">
+            <span>in {department || 'your department'}</span>
+          </div>
         </div>
+
         <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-soft">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-slate-500">Rejected</p>
-              <p className="text-2xl font-bold text-red-600">{stats.rejected}</p>
+              <p className="text-sm font-medium text-slate-500">Profile Verification Requests</p>
+              <p className="text-3xl font-bold text-amber-600 mt-1">{pendingApprovals}</p>
             </div>
-            <span className="grid h-12 w-12 place-items-center rounded-full bg-red-100 text-lg font-semibold text-red-600">
-              ❌
+            <span className="grid h-12 w-12 place-items-center rounded-full bg-amber-100 text-amber-600">
+              <svg className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                <path d="M9 12l2 2 4-4" />
+                <path d="M12 2a10 10 0 1 0 10 10" />
+              </svg>
             </span>
+          </div>
+          <div className="mt-3">
+            <button
+              onClick={() => navigate('/coordinator/profile-approval')}
+              className="text-xs font-semibold text-primary hover:text-primary-dark transition"
+            >
+              Review Pending &rarr;
+            </button>
           </div>
         </div>
       </section>
 
-      <section className="rounded-3xl border border-slate-100 bg-white p-6 shadow-soft">
-        <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex flex-1 flex-col gap-4 sm:flex-row sm:items-center sm:gap-3">
-            <div className="relative flex-1 max-w-sm">
-              <input
-                type="text"
-                placeholder="Search by name, email, title..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 pl-11 text-sm text-slate-700 placeholder:text-slate-400 shadow-sm transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40"
-              />
-              <svg className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-            </div>
-
-            <select
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
-              className="rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40"
+      {/* Requires Your Attention */}
+      <section className="rounded-2xl border border-slate-100 bg-white p-6 shadow-soft">
+        <div className="flex items-center justify-between mb-5">
+          <h2 className="text-lg font-semibold text-slate-900">Requires Your Attention</h2>
+          {pendingProfiles.length > 3 && (
+            <button
+              onClick={() => navigate('/coordinator/profile-approval')}
+              className="text-sm font-semibold text-primary hover:text-primary-dark transition"
             >
-              <option value="all">All Status</option>
-              <option value="Pending">Pending</option>
-              <option value="Approved">Approved</option>
-              <option value="Rejected">Rejected</option>
-            </select>
-
-            <select
-              value={filterType}
-              onChange={(e) => setFilterType(e.target.value)}
-              className="rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40"
-            >
-              <option value="all">All Types</option>
-              <option value="Student">Student</option>
-              <option value="Alumni">Alumni</option>
-            </select>
-          </div>
+              View All &rarr;
+            </button>
+          )}
         </div>
 
-        <div className="space-y-4">
-          {filteredRequests.map((request) => (
-            <article
-              key={request.id}
-              className="rounded-2xl border border-slate-100 bg-white p-6 shadow-soft transition hover:shadow-lg"
-            >
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex-1 space-y-3">
-                  <div className="flex flex-wrap items-center gap-3">
-                    <span
-                      className={`inline-flex rounded-full px-2 py-0.5 text-xs font-semibold ${
-                        typeBadge[request.type] ?? 'bg-slate-100 text-slate-700'
-                      }`}
-                    >
-                      {request.type}
-                    </span>
-                    <span
-                      className={`inline-flex rounded-full px-2 py-0.5 text-xs font-semibold ${
-                        statusBadge[request.status] ?? 'bg-slate-100 text-slate-700'
-                      }`}
-                    >
-                      {request.status}
-                    </span>
-                  </div>
-
-                  <div>
-                    <h3 className="text-base font-semibold text-slate-900">{request.requestTitle}</h3>
-                    <p className="mt-1 text-sm text-slate-600">{request.details}</p>
-                  </div>
-
-                  <div className="grid grid-cols-1 gap-2 text-xs text-slate-500 sm:grid-cols-2 sm:gap-4">
-                    <div className="flex items-center gap-2">
-                      <svg className="h-4 w-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 12H8m8 4H8m8-8H8m12-2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V4a2 2 0 012-2h10l4 4z" />
-                      </svg>
-                      <span>{request.name}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <svg className="h-4 w-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                      </svg>
-                      <span>{request.email}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <svg className="h-4 w-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 2C6.48 2 2 6.48 2 12s10 2 10 10 10 10-4.48 10-10S17.52 2 12 2z" />
-                        <circle cx="12" cy="12" r="3" />
-                      </svg>
-                      <span>{request.department}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <svg className="h-4 w-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                      <span>{request.cohort}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <svg className="h-4 w-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                      <span>{formatDate(request.submittedAt)}</span>
-                    </div>
-                  </div>
-                </div>
-
-                {request.status === 'Pending' && (
-                  <div className="flex gap-2">
-                    <button className="rounded-full border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-600 transition hover:border-emerald-200 hover:text-emerald-600">
-                      Approve
-                    </button>
-                    <button className="rounded-full border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-600 transition hover:border-red-200 hover:text-red-600">
-                      Reject
-                    </button>
-                  </div>
-                )}
-              </div>
-            </article>
-          ))}
-        </div>
-
-        {filteredRequests.length === 0 && (
-          <div className="py-12 text-center">
-            <svg className="mx-auto h-12 w-12 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4L8 11m0 0l8-4m0 4L8 15m0 0l8-4" />
+        {pendingProfiles.length === 0 ? (
+          <div className="flex items-center gap-3 rounded-xl bg-emerald-50 border border-emerald-200 px-5 py-4">
+            <svg className="h-5 w-5 text-emerald-500 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+              <polyline points="22 4 12 14.01 9 11.01" />
             </svg>
-            <h3 className="mt-2 text-sm font-medium text-slate-900">No requests match the filters</h3>
-            <p className="mt-1 text-sm text-slate-500">Try adjusting your search or filter criteria.</p>
+            <p className="text-sm font-medium text-emerald-700">All caught up! No pending verification requests.</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {pendingProfiles.slice(0, 3).map((item) => {
+              const itemId = item.id || item._id
+              return (
+                <div
+                  key={itemId}
+                  onClick={() => navigate('/coordinator/profile-approval')}
+                  className="flex items-center justify-between gap-4 rounded-xl border border-slate-100 bg-amber-50/50 px-5 py-4 cursor-pointer transition hover:bg-amber-50 hover:border-amber-200"
+                >
+                  <div className="flex items-center gap-4 min-w-0">
+                    <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-amber-100 text-amber-600">
+                      <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                        <path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                      </svg>
+                    </span>
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-slate-900 truncate">{item.title}</p>
+                      <p className="text-xs text-slate-500">
+                        {item.department} &middot; {formatDate(item.date)}
+                      </p>
+                    </div>
+                  </div>
+                  <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-700">
+                    <span className="h-1.5 w-1.5 rounded-full bg-amber-500"></span>
+                    Pending
+                  </span>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </section>
+
+      {/* Quick Management */}
+      <section className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+        <button
+          onClick={() => navigate('/coordinator/users')}
+          className="rounded-2xl border border-slate-100 bg-white p-5 shadow-soft text-left transition hover:border-primary/30 hover:shadow-md"
+        >
+          <span className="grid h-10 w-10 place-items-center rounded-full bg-blue-100 text-blue-600 mb-3">
+            <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+              <circle cx="9" cy="7" r="4" />
+            </svg>
+          </span>
+          <h3 className="text-sm font-semibold text-slate-900">User Management</h3>
+          <p className="text-xs text-slate-500 mt-1">Manage students, alumni & faculty</p>
+        </button>
+
+        <button
+          onClick={() => navigate('/coordinator/events')}
+          className="rounded-2xl border border-slate-100 bg-white p-5 shadow-soft text-left transition hover:border-primary/30 hover:shadow-md"
+        >
+          <span className="grid h-10 w-10 place-items-center rounded-full bg-orange-100 text-orange-600 mb-3">
+            <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+              <path d="M16 2v4M8 2v4M3 10h18" />
+            </svg>
+          </span>
+          <h3 className="text-sm font-semibold text-slate-900">Events</h3>
+          <p className="text-xs text-slate-500 mt-1">Create & manage department events</p>
+        </button>
+
+        <button
+          onClick={() => navigate('/coordinator/opportunities')}
+          className="rounded-2xl border border-slate-100 bg-white p-5 shadow-soft text-left transition hover:border-primary/30 hover:shadow-md"
+        >
+          <span className="grid h-10 w-10 place-items-center rounded-full bg-emerald-100 text-emerald-600 mb-3">
+            <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+              <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+          </span>
+          <h3 className="text-sm font-semibold text-slate-900">Opportunities</h3>
+          <p className="text-xs text-slate-500 mt-1">Post jobs & opportunities</p>
+        </button>
+
+        <button
+          onClick={() => navigate('/coordinator/profile-approval')}
+          className="rounded-2xl border border-slate-100 bg-white p-5 shadow-soft text-left transition hover:border-primary/30 hover:shadow-md"
+        >
+          <span className="grid h-10 w-10 place-items-center rounded-full bg-purple-100 text-purple-600 mb-3">
+            <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+              <path d="M9 12l2 2 4-4" />
+              <path d="M12 2a10 10 0 1 0 10 10" />
+            </svg>
+          </span>
+          <h3 className="text-sm font-semibold text-slate-900">Profile Approval</h3>
+          <p className="text-xs text-slate-500 mt-1">Verify pending profiles</p>
+        </button>
+      </section>
+
+      {/* Recent Activity */}
+      <section className="rounded-2xl border border-slate-100 bg-white p-6 shadow-soft">
+        <h2 className="text-lg font-semibold text-slate-900 mb-5">Recent Activity</h2>
+
+        {recentItems.length === 0 ? (
+          <div className="flex items-center gap-3 rounded-xl bg-slate-50 border border-slate-200 px-5 py-4">
+            <svg className="h-5 w-5 text-slate-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="12" cy="12" r="10" />
+              <path d="M12 6v6l4 2" />
+            </svg>
+            <p className="text-sm font-medium text-slate-500">No recent activity in your department.</p>
+          </div>
+        ) : (
+          <div className="space-y-1">
+            {recentItems.map((item, index) => (
+              <div
+                key={item.id || index}
+                className="flex items-center gap-4 px-4 py-3 rounded-xl transition hover:bg-slate-50"
+              >
+                <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-full ${
+                  item.type === 'job' ? 'bg-emerald-100 text-emerald-600' :
+                  item.type === 'event' ? 'bg-orange-100 text-orange-600' :
+                  item.type === 'donation' ? 'bg-cyan-100 text-cyan-600' :
+                  'bg-blue-100 text-blue-600'
+                }`}>
+                  <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    {item.type === 'job' ? <><rect x="2" y="7" width="20" height="14" rx="2" ry="2" /><path d="M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16" /></> :
+                     item.type === 'event' ? <><rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><path d="M16 2v4M8 2v4M3 10h18" /></> :
+                     item.type === 'donation' ? <><path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" /></> :
+                     <><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" /><circle cx="12" cy="7" r="4" /></>}
+                  </svg>
+                </span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-slate-900 truncate">
+                    <span className="font-semibold">{item.user}</span>
+                    <span className="text-slate-500"> {item.action}</span>
+                    {item.entity && <span className="text-slate-500"> &mdash; </span>}
+                    {item.entity && <span className="font-medium">{item.entity}</span>}
+                  </p>
+                </div>
+                <span className="text-xs text-slate-400 shrink-0">{item.timestamp}</span>
+              </div>
+            ))}
           </div>
         )}
       </section>

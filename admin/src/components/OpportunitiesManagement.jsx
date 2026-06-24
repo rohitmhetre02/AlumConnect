@@ -48,13 +48,24 @@ const OpportunitiesManagement = () => {
   const [filterStatus, setFilterStatus] = useState('all')
   const [isLoading, setIsLoading] = useState(false)
   
-  // Fetch all opportunities for admin management
-  const { data: opportunities, isLoading: dataLoading, error, refetch } = useApiList('/opportunities/admin/all')
-
   // Get user role from localStorage
   const adminUser = JSON.parse(localStorage.getItem('adminUser') || '{}')
   const userRole = adminUser.role ? adminUser.role.toString().toLowerCase() : 'admin'
   const isCoordinator = userRole === 'coordinator'
+  const adminUserId = adminUser.id || adminUser._id || ''
+  const userDepartment = adminUser.department || ''
+
+  // Build API path with department filter for coordinators
+  const apiPath = useMemo(() => {
+    const base = '/opportunities/admin/all'
+    if (isCoordinator && userDepartment) {
+      return `${base}?department=${encodeURIComponent(userDepartment)}`
+    }
+    return base
+  }, [isCoordinator, userDepartment])
+
+  // Fetch all opportunities for admin management
+  const { data: opportunities, isLoading: dataLoading, error, refetch } = useApiList(apiPath)
 
   const normalizedOpportunities = useMemo(() => {
     return opportunities.map((opportunity) => {
@@ -76,6 +87,7 @@ const OpportunitiesManagement = () => {
         deadline: deadline,
         applicants: applicants,
         postedAt: opportunity.postedAt || opportunity.createdAt || null,
+        createdBy: opportunity.createdBy || '',
         postedBy: opportunity.createdByName || '—',
         postedByRole: opportunity.createdByRole || 'alumni',
         status: status,
@@ -265,24 +277,24 @@ const OpportunitiesManagement = () => {
           <table className="w-full border-collapse">
             <thead>
               <tr className="border-b border-slate-200 bg-slate-50">
-                <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-700">Opportunity Title</th>
-                <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-700">Company</th>
-                <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-700">Location</th>
-                <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-700">Type</th>
-                <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-700">Posted By</th>
-                <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-700">Deadline</th>
-                <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-700">Applicants</th>
-                <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-700">Status</th>
-                <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-700">View</th>
+                <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 whitespace-nowrap">Title</th>
+                <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 whitespace-nowrap">Company</th>
+                <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 whitespace-nowrap">Location</th>
+                <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 whitespace-nowrap">Type</th>
+                <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 whitespace-nowrap">Posted By</th>
+                <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 whitespace-nowrap">Deadline</th>
+                <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 whitespace-nowrap">Applicants</th>
+                <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 whitespace-nowrap">Status</th>
+                <th className="px-3 py-3 text-center text-xs font-semibold uppercase tracking-wider text-slate-700 whitespace-nowrap">View</th>
                 {!isCoordinator && (
-                  <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-700">Actions</th>
+                  <th className="px-3 py-3 text-center text-xs font-semibold uppercase tracking-wider text-slate-700 whitespace-nowrap">Actions</th>
                 )}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {dataLoading ? (
                 <tr>
-                  <td colSpan={isCoordinator ? 9 : 10} className="px-6 py-12 text-center text-sm text-slate-500">
+                  <td colSpan={isCoordinator ? 9 : 10} className="px-3 py-10 text-center text-sm text-slate-500">
                     <div className="flex flex-col items-center gap-2">
                       <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-red-600"></div>
                       Loading opportunities...
@@ -291,7 +303,7 @@ const OpportunitiesManagement = () => {
                 </tr>
               ) : filteredOpportunities.length === 0 ? (
                 <tr>
-                  <td colSpan={isCoordinator ? 9 : 10} className="px-6 py-12 text-center text-sm text-slate-500">
+                  <td colSpan={isCoordinator ? 9 : 10} className="px-3 py-10 text-center text-sm text-slate-500">
                     <div className="flex flex-col items-center gap-2">
                       <svg className="h-12 w-12 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
@@ -314,24 +326,22 @@ const OpportunitiesManagement = () => {
               ) : (
                 filteredOpportunities.map((opportunity) => (
                   <tr key={opportunity.id} className="hover:bg-slate-50 transition-colors">
-                    <td className="px-6 py-4">
-                      <div className="text-sm font-medium text-slate-900 max-w-xs truncate" title={opportunity.title}>
+                    <td className="px-3 py-3">
+                      <div className="text-sm font-medium text-slate-900 max-w-[160px] truncate" title={opportunity.title}>
                         {truncateTitle(opportunity.title)}
                       </div>
                       <div className="flex flex-wrap gap-1 mt-1">
                         {opportunity.isRemote && (
                           <span className="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800">
-                            🌐 Remote
+                            Remote
                           </span>
                         )}
                       </div>
                     </td>
-                    <td className="px-6 py-4">
-                      <div className="text-sm font-medium text-slate-900">{opportunity.company}</div>
-                    </td>
-                    <td className="px-6 py-4 text-sm text-slate-700">{opportunity.location}</td>
-                    <td className="px-6 py-4">
-                      <span className={`inline-flex rounded-full px-3 py-1 text-xs font-medium ${
+                    <td className="px-3 py-3 text-sm font-medium text-slate-900 max-w-[120px] truncate" title={opportunity.company}>{opportunity.company}</td>
+                    <td className="px-3 py-3 text-sm text-slate-700 max-w-[100px] truncate" title={opportunity.location}>{opportunity.location}</td>
+                    <td className="px-3 py-3">
+                      <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium whitespace-nowrap ${
                         opportunity.type === 'Internship'
                           ? 'bg-purple-100 text-purple-800'
                           : 'bg-blue-100 text-blue-800'
@@ -339,48 +349,45 @@ const OpportunitiesManagement = () => {
                         {opportunity.type}
                       </span>
                     </td>
-                    <td className="px-6 py-4">
-                      <div>
-                        <div className="text-sm font-medium text-slate-900">{opportunity.postedBy}</div>
-                        <div className="text-xs text-slate-500">{capitalize(opportunity.postedByRole)}</div>
-                      </div>
+                    <td className="px-3 py-3 max-w-[120px] truncate" title={`${opportunity.postedBy} (${capitalize(opportunity.postedByRole)})`}>
+                      <div className="text-sm font-medium text-slate-900 truncate">{opportunity.postedBy}</div>
+                      <div className="text-xs text-slate-500">{capitalize(opportunity.postedByRole)}</div>
                     </td>
-                    <td className="px-6 py-4 text-sm text-slate-700">{formatDate(opportunity.deadline)}</td>
-                    <td className="px-6 py-4">
+                    <td className="px-3 py-3 text-sm text-slate-700 whitespace-nowrap">{formatDate(opportunity.deadline)}</td>
+                    <td className="px-3 py-3">
                       <button
                         onClick={() => navigate(`/admin/opportunities/${opportunity.id}/applicants`)}
-                        className="inline-flex items-center gap-1 rounded-lg bg-slate-100 px-2 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-200 transition-colors"
+                        className="inline-flex items-center gap-1 rounded-lg bg-slate-100 px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-200 transition-colors whitespace-nowrap"
                         title="View Applicants"
                       >
                         <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
                         </svg>
-                        Applicants
+                        {opportunity.applicants}
                       </button>
                     </td>
-                    <td className="px-6 py-4">
-                      <span className={`inline-flex rounded-full px-3 py-1 text-xs font-medium ${getStatusBadgeClass(opportunity.status)}`}>
+                    <td className="px-3 py-3">
+                      <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium whitespace-nowrap ${getStatusBadgeClass(opportunity.status)}`}>
                         {opportunity.status.charAt(0).toUpperCase() + opportunity.status.slice(1)}
                       </span>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-3 py-3 text-center">
                       <button
                         onClick={() => navigate(`/admin/opportunities/${opportunity.id}`)}
-                        className="inline-flex items-center gap-1 rounded-lg bg-slate-100 px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-200 transition-colors"
-                        title="View Opportunity Details"
+                        className="inline-flex items-center justify-center gap-1 rounded-lg bg-slate-100 px-2 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-200 transition-colors whitespace-nowrap"
+                        title="View Details"
                       >
-                        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                         </svg>
-                        View
                       </button>
                     </td>
                     {!isCoordinator && (
-                      <td className="px-6 py-4">
-                        <div className="relative group">
+                      <td className="px-3 py-3 text-center">
+                        <div className="relative group inline-block">
                           <button
-                            className="inline-flex items-center gap-2 rounded-lg bg-slate-100 px-3 py-2 text-xs font-medium text-slate-600 hover:bg-slate-200 transition-colors"
+                            className="inline-flex items-center gap-1 rounded-lg bg-slate-100 px-2 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-200 transition-colors"
                           >
                             Actions
                             <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -388,17 +395,19 @@ const OpportunitiesManagement = () => {
                             </svg>
                           </button>
                           
-                          <div className="absolute right-0 z-10 mt-1 w-40 bg-white rounded-lg border border-slate-200 shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
+                          <div className="absolute right-0 z-10 mt-1 w-36 bg-white rounded-lg border border-slate-200 shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
                             <div className="py-1">
-                              <button
-                                onClick={() => handleEdit(opportunity.id)}
-                                className="flex w-full items-center gap-2 px-3 py-2 text-sm text-slate-700 hover:bg-blue-50 hover:text-blue-700 transition-colors"
-                              >
-                                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                </svg>
-                                Edit
-                              </button>
+                              {opportunity.createdBy === adminUserId && (
+                                <button
+                                  onClick={() => handleEdit(opportunity.id)}
+                                  className="flex w-full items-center gap-2 px-3 py-2 text-sm text-slate-700 hover:bg-blue-50 hover:text-blue-700 transition-colors"
+                                >
+                                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                  </svg>
+                                  Edit
+                                </button>
+                              )}
                               
                               {opportunity.status !== 'closed' && (
                                 <button
@@ -438,7 +447,7 @@ const OpportunitiesManagement = () => {
         </div>
 
         {filteredOpportunities.length > 0 && (
-          <div className="px-6 py-4 border-t border-slate-200 bg-slate-50">
+          <div className="px-3 py-3 border-t border-slate-200 bg-slate-50">
             <div className="flex items-center justify-between text-sm text-slate-600">
               <div>Showing {filteredOpportunities.length} of {normalizedOpportunities.length} opportunities</div>
             </div>

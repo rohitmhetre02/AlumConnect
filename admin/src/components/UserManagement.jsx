@@ -96,10 +96,12 @@ const UserManagement = () => {
 
       const matchesYear = filterYear === 'all' || student.currentYear === String(filterYear)
       const matchesStatus = filterStatus === 'all' || student.status === filterStatus
+      const matchesDepartment = !isCoordinator || !userDepartment ||
+        student.department.toLowerCase() === userDepartment.toLowerCase()
 
-      return matchesSearch && matchesYear && matchesStatus
+      return matchesSearch && matchesYear && matchesStatus && matchesDepartment
     })
-  }, [normalizedStudents, searchTerm, filterYear, filterStatus])
+  }, [normalizedStudents, searchTerm, filterYear, filterStatus, isCoordinator, userDepartment])
 
   const yearOptions = useMemo(() => {
     const years = new Set()

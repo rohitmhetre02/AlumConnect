@@ -53,6 +53,7 @@ const EventsManagement = () => {
   const adminUser = JSON.parse(localStorage.getItem('adminUser') || '{}')
   const userRole = adminUser.role ? adminUser.role.toString().toLowerCase() : 'admin'
   const isCoordinator = userRole === 'coordinator'
+  const adminUserId = adminUser.id || adminUser._id || ''
 
   const normalizedEvents = useMemo(() => {
     return events.map((event) => {
@@ -69,6 +70,7 @@ const EventsManagement = () => {
         startAt,
         endAt,
         registrationCount: Number(event.registrationCount ?? 0),
+        createdBy: event.createdBy || '',
         createdByName: event.createdByName || '—',
         createdByRole: event.createdByRole || '',
         status: determineEventStatus(startAt, endAt),
@@ -353,15 +355,17 @@ const EventsManagement = () => {
                           
                           <div className="absolute right-0 z-10 mt-1 w-40 bg-white rounded-lg border border-slate-200 shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
                             <div className="py-1">
-                              <button
-                                onClick={() => handleEdit(event.id)}
-                                className="flex w-full items-center gap-2 px-3 py-2 text-sm text-slate-700 hover:bg-blue-50 hover:text-blue-700 transition-colors"
-                              >
-                                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                </svg>
-                                Edit
-                              </button>
+                              {event.createdBy === adminUserId && (
+                                <button
+                                  onClick={() => handleEdit(event.id)}
+                                  className="flex w-full items-center gap-2 px-3 py-2 text-sm text-slate-700 hover:bg-blue-50 hover:text-blue-700 transition-colors"
+                                >
+                                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                  </svg>
+                                  Edit
+                                </button>
+                              )}
                               
                               {event.status !== 'Completed' && (
                                 <button

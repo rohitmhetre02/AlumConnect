@@ -1,5 +1,4 @@
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
-import { Router } from 'react-router-dom'
 import Login from './pages/Login'
 import Signup from './pages/Signup'
 import Profile from './pages/Profile'
@@ -26,7 +25,7 @@ const RedirectIfAuthenticated = ({ children }) => {
   if (isAuthenticated) {
     // Get user role from localStorage or wherever it's stored
     const userRole = localStorage.getItem('userRole') || 'admin'
-    const basePath = userRole === 'admin' ? '/admin' : '/coordinator'
+    const basePath = userRole === 'admin' ? 'admin' : 'coordinator'
     return <Navigate to={`/${basePath}/dashboard`} replace />
   }
   return children
@@ -45,7 +44,7 @@ function App() {
           }
         />
         <Route
-          path="login"
+          path="/login"
           element={
             <RedirectIfAuthenticated>
               <Login />
@@ -53,7 +52,7 @@ function App() {
           }
         />
         <Route
-          path="signup"
+          path="/signup"
           element={
             <RedirectIfAuthenticated>
               <Signup />

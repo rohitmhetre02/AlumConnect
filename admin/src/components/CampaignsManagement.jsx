@@ -5,10 +5,10 @@ import { api } from "../utils/api";
 import getStatusBadgeClass from "../utils/status";
 
 const formatCurrency = (amount) => {
-  if (!Number.isFinite(amount)) return "$0";
-  return new Intl.NumberFormat(undefined, {
+  if (!Number.isFinite(amount)) return "₹0";
+  return new Intl.NumberFormat('en-IN', {
     style: "currency",
-    currency: "USD",
+    currency: "INR",
     maximumFractionDigits: 0,
   }).format(amount);
 };
@@ -59,6 +59,10 @@ const CampaignsManagement = () => {
   const [rowsPerPage, setRowsPerPage] = useState(10);
 
   const { data: campaigns = [], isLoading, error } = useApiList("/campaigns");
+
+  // Get current admin user
+  const adminUser = JSON.parse(localStorage.getItem('adminUser') || '{}')
+  const adminUserId = adminUser.id || adminUser._id || ''
 
   // Calculate summary stats
   const summaryStats = useMemo(() => {
@@ -416,12 +420,14 @@ const CampaignsManagement = () => {
                         
                         {actionsDropdown === campaign.id && (
                           <div className="absolute right-0 z-10 mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-lg">
-                            <button
-                              onClick={() => handleEdit(campaign.id)}
-                              className="block w-full text-left px-4 py-2 text-sm hover:bg-blue-50 text-gray-700"
-                            >
-                              Edit
-                            </button>
+                            {campaign.createdBy === adminUserId && (
+                              <button
+                                onClick={() => handleEdit(campaign.id)}
+                                className="block w-full text-left px-4 py-2 text-sm hover:bg-blue-50 text-gray-700"
+                              >
+                                Edit
+                              </button>
+                            )}
                             <button
                               onClick={() => handlePause(campaign.id)}
                               className="block w-full text-left px-4 py-2 text-sm hover:bg-yellow-50 text-gray-700"

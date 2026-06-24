@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { Link } from 'react-router-dom'
-import { Clock, CheckCircle, XCircle, AlertCircle, Eye, Users, Calendar, Briefcase, Heart, TrendingUp } from 'lucide-react'
+import { Clock, CheckCircle, XCircle, AlertCircle, Eye, FileText, Users, Calendar, Briefcase, Heart, TrendingUp } from 'lucide-react'
 import { get, post } from '../utils/api'
 
 const PROFILE_STATUS = {
@@ -19,6 +19,7 @@ const AdminDashboardHome = () => {
   const adminUser = JSON.parse(localStorage.getItem('adminUser') || '{}')
   const displayName = adminUser.name || 'Admin User'
   const [pendingProfiles, setPendingProfiles] = useState([])
+  const [pendingPosts, setPendingPosts] = useState([])
   const [loading, setLoading] = useState(true)
   const [selectedUser, setSelectedUser] = useState(null)
   const [showUserModal, setShowUserModal] = useState(false)
@@ -132,23 +133,39 @@ const AdminDashboardHome = () => {
     }
   }, [])
 
+  const fetchPendingPosts = useCallback(async () => {
+    try {
+      const response = await get('/admin/content-approval/pending')
+      if (response?.success) {
+        setPendingPosts(response.data || [])
+      } else {
+        setPendingPosts([])
+      }
+    } catch (error) {
+      console.error('Failed to fetch pending posts:', error)
+      setPendingPosts([])
+    }
+  }, [])
+
   useEffect(() => {
     fetchDashboardStats()
     fetchPendingProfiles()
+    fetchPendingPosts()
     
     // Set up real-time updates (every 10 seconds for better responsiveness)
     const interval = setInterval(() => {
       fetchDashboardStats()
       fetchPendingProfiles()
+      fetchPendingPosts()
     }, 10000)
     
     return () => clearInterval(interval)
-  }, [fetchDashboardStats, fetchPendingProfiles])
+  }, [fetchDashboardStats, fetchPendingProfiles, fetchPendingPosts])
 
   const refreshData = useCallback(async () => {
     setLoading(true)
-    await Promise.all([fetchPendingProfiles(), fetchDashboardStats()])
-  }, [fetchPendingProfiles, fetchDashboardStats])
+    await Promise.all([fetchPendingProfiles(), fetchPendingPosts(), fetchDashboardStats()])
+  }, [fetchPendingProfiles, fetchPendingPosts, fetchDashboardStats])
 
   const handleApprove = useCallback(
     async (profile) => {
@@ -296,7 +313,7 @@ const AdminDashboardHome = () => {
         </div>
       </section>
 
-      {/* Profile Approval Requests Section */}
+      {/* Approval Requests Section */}
       <section className="rounded-3xl border border-slate-100 bg-white p-6 shadow-soft">
         <header className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
@@ -310,10 +327,10 @@ const AdminDashboardHome = () => {
           </div>
           <div className="flex items-center gap-4">
             <span className="flex items-center gap-2 px-3 py-1 rounded-full bg-amber-100 text-amber-700 text-sm font-medium">
-              {pendingProfiles.length} pending
+              {pendingProfiles.length + pendingPosts.length} pending
             </span>
             <Link
-              to="/profile-approval"
+              to="/post-approval/pending"
               className="text-sm font-semibold text-primary hover:text-primary-dark transition"
             >
               View all →
@@ -333,15 +350,45 @@ const AdminDashboardHome = () => {
               </div>
             ))}
           </div>
-        ) : pendingProfiles.length === 0 ? (
+        ) : pendingProfiles.length === 0 && pendingPosts.length === 0 ? (
           <div className="text-center py-8">
             <CheckCircle className="h-12 w-12 text-emerald-500 mx-auto mb-4" />
             <h3 className="text-lg font-semibold text-slate-900 mb-2">All caught up!</h3>
-            <p className="text-sm text-slate-600">No pending profile approvals at the moment.</p>
+            <p className="text-sm text-slate-600">No pending items requiring your attention.</p>
           </div>
         ) : (
           <div className="space-y-3">
-            {pendingProfiles.slice(0, 3).map((profile) => (
+            {/* Pending Content Posts */}
+            {pendingPosts.slice(0, 3).map((post) => (
+              <div key={post.id} className="flex items-center gap-4 p-4 border border-slate-100 rounded-xl hover:border-amber-200 transition-colors">
+                <div className="w-12 h-12 bg-indigo-100 rounded-full flex items-center justify-center">
+                  <FileText className="h-5 w-5 text-indigo-600" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <h4 className="font-semibold text-slate-900 truncate">{post.title || 'Untitled'}</h4>
+                    <span className="px-2 py-1 text-xs font-medium rounded-full bg-indigo-100 text-indigo-700 uppercase">
+                      {post.contentType}
+                    </span>
+                  </div>
+                  <p className="text-sm text-slate-600 truncate">by {post.createdByName || 'Unknown'}</p>
+                  <p className="text-xs text-slate-500">
+                    {post.department || 'Department not specified'} • 
+                    {post.createdAt ? new Date(post.createdAt).toLocaleDateString() : ''}
+                  </p>
+                </div>
+                <Link
+                  to="/post-approval/pending"
+                  className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                  title="View in Pending Posts"
+                >
+                  <Eye className="h-5 w-5" />
+                </Link>
+              </div>
+            ))}
+
+            {/* Pending Profile Approvals */}
+            {pendingProfiles.slice(0, pendingPosts.length >= 3 ? 0 : 3 - pendingPosts.length).map((profile) => (
               <div key={profile._id || profile.id} className="flex items-center gap-4 p-4 border border-slate-100 rounded-xl hover:border-amber-200 transition-colors">
                 <div className="w-12 h-12 bg-slate-200 rounded-full flex items-center justify-center">
                   <span className="text-lg font-semibold text-slate-600">
@@ -397,13 +444,13 @@ const AdminDashboardHome = () => {
               </div>
             ))}
             
-            {pendingProfiles.length > 3 && (
+            {(pendingProfiles.length + pendingPosts.length) > 3 && (
               <div className="text-center pt-2">
                 <Link
-                  to="/profile-approval"
+                  to="/post-approval/pending"
                   className="text-sm font-medium text-primary hover:text-primary-dark transition"
                 >
-                  View {pendingProfiles.length - 3} more pending requests →
+                  View {pendingProfiles.length + pendingPosts.length - 3} more pending requests →
                 </Link>
               </div>
             )}

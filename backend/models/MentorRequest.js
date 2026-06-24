@@ -83,7 +83,7 @@ const mentorshipRequestSchema = new mongoose.Schema({
     type: String,
     trim: true,
     default: '',
-    maxlength: 500,
+    maxlength: 2000,
   },
   preferredDateTime: {
     type: Date,

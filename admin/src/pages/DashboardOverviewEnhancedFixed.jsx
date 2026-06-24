@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { 
   Users, UserCheck, Briefcase, Calendar, Heart, Clock,
-  TrendingUp, TrendingDown, CheckCircle, XCircle, Eye,
+  TrendingUp, TrendingDown, CheckCircle, XCircle,
   Bell, Search, LogOut, Settings, Building2, FileText,
   Activity, BarChart3, PieChart, Filter,
   Download, UserPlus, AlertCircle, ArrowRight
@@ -203,10 +203,6 @@ const DashboardOverviewEnhanced = () => {
       console.error('Error rejecting item:', err)
       alert('Failed to reject item')
     }
-  }
-
-  const handleView = (id, type) => {
-    navigate(`/admin/${type}s/${id}`)
   }
 
   const handleLogout = () => {
@@ -480,9 +476,12 @@ const DashboardOverviewEnhanced = () => {
                         <span className={`px-2 py-1 text-xs font-medium rounded ${
                           item.type === 'profile' ? 'bg-blue-100 text-blue-800' :
                           item.type === 'job' ? 'bg-purple-100 text-purple-800' :
+                          item.type === 'campaign' ? 'bg-amber-100 text-amber-800' :
                           'bg-green-100 text-green-800'
                         }`}>
-                          {item.type.charAt(0).toUpperCase() + item.type.slice(1)}
+                          {item.type === 'profile' ? 'Profile' :
+                           item.type === 'job' ? 'Job' :
+                           item.type.charAt(0).toUpperCase() + item.type.slice(1)}
                         </span>
                         <h3 className="font-medium text-gray-900">{item.title}</h3>
                       </div>
@@ -495,13 +494,6 @@ const DashboardOverviewEnhanced = () => {
                       </div>
                     </div>
                     <div className="flex items-center space-x-2 ml-4">
-                      <button
-                        onClick={() => handleView(item.id, item.type)}
-                        className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-                        title="View Details"
-                      >
-                        <Eye className="w-4 h-4" />
-                      </button>
                       <button
                         onClick={() => handleApprove(item.id, item.type)}
                         className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"

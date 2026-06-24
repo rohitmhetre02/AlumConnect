@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import useMentorRequests from '../../hooks/useMentorRequests'
+import { post } from '../../utils/api'
 
 const STATUS_TONE = {
   pending: 'bg-yellow-100 text-yellow-700',
@@ -178,31 +179,7 @@ const MentorshipRequestsPage = () => {
 
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/mentors/my-requests/${selectedReviewRequest.id}/review`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify(reviewData)
-      })
-
-
-
-      if (!response.ok) {
-        let errorMessage = 'Failed to submit review'
-        try {
-          const errorData = await response.json()
-          errorMessage = errorData.message || errorMessage
-        } catch (jsonError) {
-          // If response is not JSON, use status text
-          errorMessage = response.statusText || errorMessage
-        }
-        throw new Error(errorMessage)
-      }
-
-      const result = await response.json()
-
+      await post(`/mentors/my-requests/${selectedReviewRequest.id}/review`, reviewData)
 
       setReviewModalOpen(false)
       setSelectedReviewRequest(null)

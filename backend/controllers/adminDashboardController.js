@@ -78,8 +78,12 @@ const getDashboardStats = async (req, res) => {
       })
       
       // Get pending approvals in this department
-      const pendingProfiles = await Alumni.countDocuments({ 
-        approvalStatus: 'pending',
+      const pendingAlumniProfiles = await Alumni.countDocuments({ 
+        profileApprovalStatus: 'IN_REVIEW',
+        department: { $regex: department, $options: 'i' }
+      })
+      const pendingStudentProfiles = await Student.countDocuments({ 
+        profileApprovalStatus: 'IN_REVIEW',
         department: { $regex: department, $options: 'i' }
       })
       const pendingJobs = await Opportunity.countDocuments({ 
@@ -87,10 +91,10 @@ const getDashboardStats = async (req, res) => {
         department: { $regex: department, $options: 'i' }
       })
       const pendingEvents = await Event.countDocuments({ 
-        approvalStatus: 'pending',
+        status: 'pending',
         department: { $regex: department, $options: 'i' }
       })
-      const pendingApprovals = pendingProfiles + pendingJobs + pendingEvents
+      const pendingApprovals = pendingAlumniProfiles + pendingStudentProfiles + pendingJobs + pendingEvents
       
       // Calculate growth percentages for department
       const previousStartDate = new Date(startDate)
@@ -152,7 +156,11 @@ const getDashboardStats = async (req, res) => {
         ((currentCampaigns - previousCampaigns) / previousCampaigns * 100).toFixed(1) : 0
       
       const previousApprovals = await Alumni.countDocuments({ 
-        approvalStatus: 'pending',
+        profileApprovalStatus: 'IN_REVIEW',
+        department: { $regex: department, $options: 'i' },
+        createdAt: { $gte: previousStartDate, $lt: startDate }
+      }) + await Student.countDocuments({ 
+        profileApprovalStatus: 'IN_REVIEW',
         department: { $regex: department, $options: 'i' },
         createdAt: { $gte: previousStartDate, $lt: startDate }
       }) + await Opportunity.countDocuments({ 
@@ -160,13 +168,17 @@ const getDashboardStats = async (req, res) => {
         department: { $regex: department, $options: 'i' },
         createdAt: { $gte: previousStartDate, $lt: startDate }
       }) + await Event.countDocuments({ 
-        approvalStatus: 'pending',
+        status: 'pending',
         department: { $regex: department, $options: 'i' },
         createdAt: { $gte: previousStartDate, $lt: startDate }
       })
       
       const currentApprovals = await Alumni.countDocuments({ 
-        approvalStatus: 'pending',
+        profileApprovalStatus: 'IN_REVIEW',
+        department: { $regex: department, $options: 'i' },
+        createdAt: { $gte: startDate }
+      }) + await Student.countDocuments({ 
+        profileApprovalStatus: 'IN_REVIEW',
         department: { $regex: department, $options: 'i' },
         createdAt: { $gte: startDate }
       }) + await Opportunity.countDocuments({ 
@@ -174,7 +186,7 @@ const getDashboardStats = async (req, res) => {
         department: { $regex: department, $options: 'i' },
         createdAt: { $gte: startDate }
       }) + await Event.countDocuments({ 
-        approvalStatus: 'pending',
+        status: 'pending',
         department: { $regex: department, $options: 'i' },
         createdAt: { $gte: startDate }
       })
@@ -217,10 +229,11 @@ const getDashboardStats = async (req, res) => {
       })
       
       // Get pending approvals
-      const pendingProfiles = await Alumni.countDocuments({ approvalStatus: 'pending' })
+      const pendingAlumniProfiles = await Alumni.countDocuments({ profileApprovalStatus: 'IN_REVIEW' })
+      const pendingStudentProfiles = await Student.countDocuments({ profileApprovalStatus: 'IN_REVIEW' })
       const pendingJobs = await Opportunity.countDocuments({ approvalStatus: 'pending' })
-      const pendingEvents = await Event.countDocuments({ approvalStatus: 'pending' })
-      const pendingApprovals = pendingProfiles + pendingJobs + pendingEvents
+      const pendingEvents = await Event.countDocuments({ status: 'pending' })
+      const pendingApprovals = pendingAlumniProfiles + pendingStudentProfiles + pendingJobs + pendingEvents
       
       // Calculate growth percentages
       const previousStartDate = new Date(startDate)
@@ -272,24 +285,30 @@ const getDashboardStats = async (req, res) => {
         ((currentCampaigns - previousCampaigns) / previousCampaigns * 100).toFixed(1) : 0
       
       const previousApprovals = await Alumni.countDocuments({ 
-        approvalStatus: 'pending',
+        profileApprovalStatus: 'IN_REVIEW',
+        createdAt: { $gte: previousStartDate, $lt: startDate }
+      }) + await Student.countDocuments({ 
+        profileApprovalStatus: 'IN_REVIEW',
         createdAt: { $gte: previousStartDate, $lt: startDate }
       }) + await Opportunity.countDocuments({ 
         approvalStatus: 'pending',
         createdAt: { $gte: previousStartDate, $lt: startDate }
       }) + await Event.countDocuments({ 
-        approvalStatus: 'pending',
+        status: 'pending',
         createdAt: { $gte: previousStartDate, $lt: startDate }
       })
       
       const currentApprovals = await Alumni.countDocuments({ 
-        approvalStatus: 'pending',
+        profileApprovalStatus: 'IN_REVIEW',
+        createdAt: { $gte: startDate }
+      }) + await Student.countDocuments({ 
+        profileApprovalStatus: 'IN_REVIEW',
         createdAt: { $gte: startDate }
       }) + await Opportunity.countDocuments({ 
         approvalStatus: 'pending',
         createdAt: { $gte: startDate }
       }) + await Event.countDocuments({ 
-        approvalStatus: 'pending',
+        status: 'pending',
         createdAt: { $gte: startDate }
       })
       
@@ -331,22 +350,42 @@ const getPendingItems = async (req, res) => {
     const pendingItems = []
     const { role = 'admin', department = '' } = req.query
 
+    // Get pending student profiles
+    try {
+      const pendingStudents = await Student.find({ profileApprovalStatus: 'IN_REVIEW' })
+        .select('firstName lastName department createdAt profileApprovalStatus')
+        .lean()
+
+      pendingStudents.forEach(student => {
+        pendingItems.push({
+          id: student._id,
+          type: 'profile',
+          title: `${student.firstName || ''} ${student.lastName || ''}`.trim() || 'Unknown - Student Profile',
+          submittedBy: `${student.firstName || ''} ${student.lastName || ''}`.trim() || 'Unknown',
+          department: student.department || 'Not specified',
+          date: student.createdAt,
+          status: student.profileApprovalStatus
+        })
+      })
+    } catch (error) {
+      // Continue silently
+    }
+
     // Get pending alumni profiles
     try {
-      const pendingAlumni = await Alumni.find({ approvalStatus: 'pending' })
-        .populate('userId', 'name email')
-        .select('userId department createdAt approvalStatus')
+      const pendingAlumni = await Alumni.find({ profileApprovalStatus: 'IN_REVIEW' })
+        .select('firstName lastName department createdAt profileApprovalStatus')
         .lean()
 
       pendingAlumni.forEach(alumni => {
         pendingItems.push({
           id: alumni._id,
           type: 'profile',
-          title: `${alumni.userId?.name || 'Unknown'} - Alumni Profile`,
-          submittedBy: alumni.userId?.name || 'Unknown',
+          title: `${alumni.firstName || ''} ${alumni.lastName || ''}`.trim() || 'Unknown - Alumni Profile',
+          submittedBy: `${alumni.firstName || ''} ${alumni.lastName || ''}`.trim() || 'Unknown',
           department: alumni.department || 'Not specified',
           date: alumni.createdAt,
-          status: alumni.approvalStatus
+          status: alumni.profileApprovalStatus
         })
       })
     } catch (error) {
@@ -450,13 +489,17 @@ const getRecentActivity = async (req, res) => {
     const dashboardData = { recentActivities: [] }
     const activities = []
     const limit = 10
+    const { role = 'admin', department = '' } = req.query
+    const deptFilter = role === 'coordinator' && department
+      ? { department: { $regex: department, $options: 'i' } }
+      : {}
 
     // Get recent job postings
     try {
-      const recentJobs = await Opportunity.find()
+      const recentJobs = await Opportunity.find({ ...deptFilter })
         .sort({ createdAt: -1 })
         .limit(limit)
-        .select('title createdByName createdAt')
+        .select('title createdByName createdAt department')
         .lean()
 
       recentJobs.forEach(job => {
@@ -475,10 +518,10 @@ const getRecentActivity = async (req, res) => {
 
     // Get recent events
     try {
-      const recentEvents = await Event.find()
+      const recentEvents = await Event.find({ ...deptFilter })
         .sort({ createdAt: -1 })
         .limit(limit)
-        .select('title createdByName createdAt')
+        .select('title createdByName createdAt department')
         .lean()
 
       recentEvents.forEach(event => {
@@ -536,10 +579,10 @@ const getRecentActivity = async (req, res) => {
 
     // Get recent alumni registrations
     try {
-      const recentAlumni = await Alumni.find()
+      const recentAlumni = await Alumni.find({ ...deptFilter })
         .sort({ createdAt: -1 })
         .limit(limit)
-        .select('firstName lastName createdAt')
+        .select('firstName lastName createdAt department')
         .lean()
 
       recentAlumni.forEach(alumni => {
@@ -554,6 +597,28 @@ const getRecentActivity = async (req, res) => {
       })
     } catch (alumniError) {
       console.error('Error fetching recent alumni:', alumniError)
+    }
+
+    // Get recent student registrations
+    try {
+      const recentStudents = await Student.find({ ...deptFilter })
+        .sort({ createdAt: -1 })
+        .limit(limit)
+        .select('firstName lastName createdAt department')
+        .lean()
+
+      recentStudents.forEach(student => {
+        activities.push({
+          id: `student-${student._id}`,
+          user: `${student.firstName} ${student.lastName}`,
+          action: 'registered as student',
+          entity: 'Student Network',
+          timestamp: formatTimeAgo(student.createdAt),
+          type: 'registration'
+        })
+      })
+    } catch (studentError) {
+      console.error('Error fetching recent students:', studentError)
     }
 
     // Sort all activities by createdAt (newest first)
@@ -678,9 +743,16 @@ const approveItem = async (req, res) => {
       case 'profile':
         updateResult = await Alumni.findByIdAndUpdate(
           id,
-          { approvalStatus: 'approved', approvedAt: new Date() },
+          { profileApprovalStatus: 'APPROVED', isProfileApproved: true, approvedAt: new Date() },
           { new: true }
         )
+        if (!updateResult) {
+          updateResult = await Student.findByIdAndUpdate(
+            id,
+            { profileApprovalStatus: 'APPROVED', isProfileApproved: true, approvedAt: new Date() },
+            { new: true }
+          )
+        }
         break
       case 'job':
         updateResult = await Opportunity.findByIdAndUpdate(
@@ -692,7 +764,7 @@ const approveItem = async (req, res) => {
       case 'event':
         updateResult = await Event.findByIdAndUpdate(
           id,
-          { approvalStatus: 'approved', approvedAt: new Date() },
+          { status: 'approved', approvedAt: new Date() },
           { new: true }
         )
         break
@@ -735,9 +807,16 @@ const rejectItem = async (req, res) => {
       case 'profile':
         updateResult = await Alumni.findByIdAndUpdate(
           id,
-          { approvalStatus: 'rejected', rejectedAt: new Date() },
+          { profileApprovalStatus: 'REJECTED', isProfileApproved: false, rejectedAt: new Date() },
           { new: true }
         )
+        if (!updateResult) {
+          updateResult = await Student.findByIdAndUpdate(
+            id,
+            { profileApprovalStatus: 'REJECTED', isProfileApproved: false, rejectedAt: new Date() },
+            { new: true }
+          )
+        }
         break
       case 'job':
         updateResult = await Opportunity.findByIdAndUpdate(
@@ -749,7 +828,7 @@ const rejectItem = async (req, res) => {
       case 'event':
         updateResult = await Event.findByIdAndUpdate(
           id,
-          { approvalStatus: 'rejected', rejectedAt: new Date() },
+          { status: 'rejected', rejectedAt: new Date() },
           { new: true }
         )
         break

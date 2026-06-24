@@ -947,35 +947,10 @@ const getMentorReviews = async (req, res) => {
       return res.status(401).json({ message: 'Authentication required.' })
     }
 
-    // Direct mapping based on the database structure you provided
-    // Alumni ID: 69c7a96c8efdaae2ce67ebd8 -> User ID: 69c5933f3228ea437440937f
-    let mentorUserId = mentorId
-    
-    // If this is the specific mentor ID you provided, use the correct user ID
-    if (mentorId === '69c7a96c8efdaae2ce67ebd8') {
-      mentorUserId = '69c5933f3228ea437440937f'
-      console.log('Using direct mapping for Rohit Mhetre')
-    } else {
-      // Try to get from Alumni collection for other mentors
-      try {
-        const Alumni = require('../models/Alumni')
-        const alumni = await Alumni.findById(mentorId)
-        if (alumni && alumni.user) {
-          mentorUserId = alumni.user
-          console.log('Found Alumni user ID:', mentorUserId)
-        } else {
-          console.log('Alumni not found, using original ID')
-        }
-      } catch (error) {
-        console.log('Alumni lookup failed, using original ID:', error.message)
-      }
-    }
-
-    console.log('Final mentor user ID for query:', mentorUserId)
-
-    // Find all completed requests with reviews for this mentor using user ID
+    // The mentor field on MentorRequest references the Alumni collection (ref: 'Alumni'),
+    // so we query directly using the mentorId from the URL (which is the Alumni ID).
     const requests = await MentorRequest.find({ 
-      mentor: mentorUserId,
+      mentor: mentorId,
       status: 'completed',
       reviewSubmitted: true 
     })

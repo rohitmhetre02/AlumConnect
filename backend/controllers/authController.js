@@ -58,6 +58,7 @@ const sanitizeUser = (user, role) => {
     lastName: user.lastName ?? '',
     name: buildUserDisplayName(user),
     avatar: user.avatar ?? '',
+    department: user.department ?? '',
     isProfileApproved,
     profileApprovalStatus,
     registrationStatus,
